@@ -21,6 +21,8 @@ final readonly class OpenReply
         public DateTimeImmutable $replyDue,
         public ReceiptSource $receiptSource,
         public string $body,
+        public ?string $draftSubject = null,
+        public ?string $draftBody = null,
     ) {}
 
     public function overdueAt(DateTimeImmutable $now): bool
@@ -44,6 +46,9 @@ final readonly class OpenReply
             'receipt_source' => $this->receiptSource->value,
             'overdue' => $this->overdueAt($now),
             'body' => $this->body,
+            'draft_subject' => $this->draftSubject ?? '',
+            'draft_body' => $this->draftBody ?? '',
+            'has_draft' => $this->draftSubject !== null,
         ];
     }
 

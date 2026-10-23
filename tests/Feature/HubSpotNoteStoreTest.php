@@ -7,8 +7,11 @@ use App\Desk\DeskException;
 use App\Desk\HubSpotNoteStore;
 use App\Desk\ListOpenReplies;
 use App\Desk\LogInbound;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+
+uses(RefreshDatabase::class);
 
 beforeEach(function () {
     config([

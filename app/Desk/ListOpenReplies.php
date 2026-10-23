@@ -6,6 +6,7 @@ use App\Clock\ClockNote;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
 use App\Clock\ReplyClock;
+use App\Models\Draft;
 use DateTimeImmutable;
 
 final class ListOpenReplies
@@ -37,6 +38,10 @@ final class ListOpenReplies
         }
 
         $open = [];
+        $drafts = Draft::query()
+            ->whereIn('inbound_note_id', array_map(fn (array $row): string => $row[0]->id, $inbound))
+            ->get()
+            ->keyBy('inbound_note_id');
 
         foreach ($inbound as [$note, $parsed]) {
             if (isset($closed[$note->id])) {
@@ -45,6 +50,7 @@ final class ListOpenReplies
 
             $schedule = $this->clock->schedule($parsed->receipt);
             $contact = $note->contactName !== '' ? $note->contactName : $note->contactEmail;
+            $draft = $drafts->get($note->id);
 
             $open[] = new OpenReply(
                 $note->id,
@@ -58,6 +64,8 @@ final class ListOpenReplies
                 $schedule->replyDue,
                 $parsed->receiptSource,
                 $note->body,
+                $draft?->subject,
+                $draft?->body,
             );
         }
 

@@ -5,6 +5,7 @@ namespace App\Desk;
 use App\Clock\ClockNote;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
+use App\Models\Draft;
 use DateTimeImmutable;
 
 final class MarkReplySent
@@ -31,10 +32,14 @@ final class MarkReplySent
             throw new DeskException("No open inbound {$inboundId}.");
         }
 
-        return $this->notes->writeNote(
+        $id = $this->notes->writeNote(
             ClockNote::sent($inboundId, $sent, $subject),
             $inbound->companyId,
             $inbound->contactId,
         );
+
+        Draft::query()->where('inbound_note_id', $inboundId)->delete();
+
+        return $id;
     }
 }

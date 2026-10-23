@@ -5,11 +5,14 @@ namespace App\Filament\Tables;
 use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
 use App\Desk\DeskException;
+use App\Desk\DiscardDraft;
 use App\Desk\ListOpenReplies;
 use App\Desk\LondonTime;
 use App\Desk\MarkReplySent;
 use App\Desk\OpenReply;
+use App\Desk\SaveDraft;
 use App\Filament\Pages\OpenQueue;
+use App\Filament\Schemas\DraftForm;
 use App\Filament\Schemas\MarkSentForm;
 use App\Filament\Schemas\ReplyInfolist;
 use DateTimeImmutable;
@@ -50,6 +53,11 @@ final class OpenRepliesTable
                 TextColumn::make('id')
                     ->label('Note')
                     ->toggleable(),
+                TextColumn::make('has_draft')
+                    ->label('Draft')
+                    ->badge()
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Draft' : '')
+                    ->color('info'),
             ])
             ->filters([
                 TernaryFilter::make('overdue')
@@ -65,6 +73,39 @@ final class OpenRepliesTable
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close')
                     ->schema(fn (array $record): array => ReplyInfolist::forRecord($record)),
+                Action::make('saveDraft')
+                    ->label('Draft')
+                    ->fillForm(fn (array $record): array => [
+                        'subject' => $record['draft_subject'],
+                        'body' => $record['draft_body'],
+                    ])
+                    ->schema(DraftForm::components())
+                    ->action(function (array $record, array $data, OpenQueue $livewire): void {
+                        try {
+                            app(SaveDraft::class)(
+                                (string) $record['id'],
+                                (string) $data['subject'],
+                                (string) $data['body'],
+                            );
+                        } catch (DeskException $exception) {
+                            Notification::make()->title($exception->getMessage())->danger()->send();
+
+                            throw new Halt;
+                        }
+
+                        $livewire->flushCachedTableRecords();
+                        Notification::make()->title('Draft saved. The reply is still due.')->success()->send();
+                    }),
+                Action::make('discardDraft')
+                    ->label('Discard draft')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (array $record): bool => $record['has_draft'] === true)
+                    ->action(function (array $record, OpenQueue $livewire): void {
+                        app(DiscardDraft::class)((string) $record['id']);
+                        $livewire->flushCachedTableRecords();
+                        Notification::make()->title('Draft discarded')->success()->send();
+                    }),
                 Action::make('markSent')
                     ->label('Mark sent')
                     ->schema(MarkSentForm::components())
