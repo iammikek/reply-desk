@@ -80,9 +80,9 @@ class OpenQueue extends Page implements HasTable
                 ->schema(LogInboundForm::components())
                 ->action(function (array $data): void {
                     try {
-                        app(LogInbound::class)(
-                            (string) $data['company'],
-                            (string) $data['email'],
+                        app(LogInbound::class)->record(
+                            (string) $data['company_id'],
+                            (string) $data['contact_id'],
                             LondonTime::parse($data['receipt']),
                             ReceiptSource::from((string) $data['receipt_source']),
                             (string) $data['summary'],

@@ -67,7 +67,8 @@ The same actions the panel uses:
 
 ```bash
 php artisan reply:list-open
-php artisan reply:log-inbound {company} {email} {receipt} {source} {summary}
+php artisan reply:directory
+php artisan reply:log-inbound {company} {email} {receipt} {source} {summary} {client?}
 php artisan reply:save-draft {inbound} {subject} {body}
 php artisan reply:discard-draft {inbound}
 php artisan reply:mark-sent {inbound} {sent} {subject} {reply}
@@ -83,7 +84,7 @@ Start the stdio server from this repo:
 npm run mcp
 ```
 
-Cursor runs `node mcp-server/index.mjs`. The tools are `list_open_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. There is no send tool. The process shells to the Artisan commands. It does not talk to HubSpot itself.
+Cursor runs `node mcp-server/index.mjs`. The tools are `list_companies`, `list_open_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. `list_companies` is the cached company and contact list. `log_inbound` records a client email against one of those contacts. There is no send tool. The process shells to the Artisan commands. It does not talk to HubSpot itself.
 
 ## Tests
 

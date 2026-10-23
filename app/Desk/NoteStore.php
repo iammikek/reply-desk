@@ -18,4 +18,11 @@ interface NoteStore
      * @return list<StoredNote>
      */
     public function notes(): array;
+
+    /**
+     * Companies already on the store, with the contacts on each company.
+     *
+     * @return list<array{id: string, name: string, contacts: list<array{id: string, name: string, email: string}>}>
+     */
+    public function directory(): array;
 }

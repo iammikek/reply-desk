@@ -7,7 +7,7 @@ use App\Desk\LogInbound;
 
 class LogInboundCommand extends ReplyDeskCommand
 {
-    protected $signature = 'reply:log-inbound {company} {email} {receipt} {source} {summary}';
+    protected $signature = 'reply:log-inbound {company} {email} {receipt} {source} {summary} {client?}';
 
     protected $description = 'Record one inbound client email';
 
@@ -20,6 +20,7 @@ class LogInboundCommand extends ReplyDeskCommand
                 $this->moment((string) $this->argument('receipt')),
                 $this->source((string) $this->argument('source')),
                 (string) $this->argument('summary'),
+                (string) ($this->argument('client') ?? ''),
             );
 
             return $this->json(['id' => $id]);

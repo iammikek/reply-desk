@@ -18,9 +18,9 @@ beforeEach(function () {
     $this->travelTo(london('2026-10-23 12:00'));
     $this->actingAs(User::factory()->create());
     replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example');
+    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
     replyDeskParty('company', '11', 'Harbour Cafe');
-    replyDeskParty('contact', '21', 'Ned Harbour', 'ned@harbour.example');
+    replyDeskParty('contact', '21', 'Ned Harbour', 'ned@harbour.example', '11');
 });
 
 it('shows an open reply on the queue', function () {
@@ -159,11 +159,23 @@ it('shows none due when the queue is empty', function () {
         ->assertSee('None');
 });
 
+it('offers only the contacts on the chosen company', function () {
+    Livewire::test(OpenQueue::class)
+        ->mountAction('logInbound')
+        ->assertFormFieldExists('company_id')
+        ->assertFormFieldExists('contact_id')
+        ->assertMountedActionModalSee('Northwharf Bakery')
+        ->assertMountedActionModalSee('Harbour Cafe')
+        ->setActionData(['company_id' => '10'])
+        ->assertMountedActionModalSee('ada@northwharf.example')
+        ->assertMountedActionModalDontSee('ned@harbour.example');
+});
+
 it('logs an inbound from the queue', function () {
     Livewire::test(OpenQueue::class)
         ->callAction('logInbound', [
-            'company' => 'Northwharf Bakery',
-            'email' => 'ada@northwharf.example',
+            'company_id' => '10',
+            'contact_id' => '20',
             'receipt' => '2026-10-23 11:00:00',
             'receipt_source' => 'mail client',
             'summary' => 'The form can come off',

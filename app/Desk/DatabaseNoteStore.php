@@ -72,6 +72,39 @@ final class DatabaseNoteStore implements NoteStore
             ->all();
     }
 
+    public function directory(): array
+    {
+        $contacts = [];
+
+        foreach (DB::table('fake_parties')->where('kind', 'contact')->orderBy('name')->get() as $row) {
+            $companyId = (string) ($row->company_id ?? '');
+            $email = (string) $row->email;
+
+            if ($companyId === '' || $email === '') {
+                continue;
+            }
+
+            $contacts[$companyId][] = [
+                'id' => (string) $row->id,
+                'name' => (string) $row->name,
+                'email' => $email,
+            ];
+        }
+
+        $directory = [];
+
+        foreach (DB::table('fake_parties')->where('kind', 'company')->orderBy('name')->get() as $row) {
+            $id = (string) $row->id;
+            $directory[] = [
+                'id' => $id,
+                'name' => (string) $row->name,
+                'contacts' => $contacts[$id] ?? [],
+            ];
+        }
+
+        return $directory;
+    }
+
     private function findParty(string $kind, string $column, string $value, string $label): Party
     {
         if ($value === '') {

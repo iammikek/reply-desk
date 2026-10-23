@@ -145,7 +145,8 @@ The note is associated with the company and the contact already on the portal. F
 | Action | Does |
 | --- | --- |
 | `list_open_replies` | Reads clock notes, returns inbound rows with no sent note, including clock start and reply due calculated at call time. Includes the saved draft when one exists. The draft does not change the due time. |
-| `log_inbound` | Writes one inbound clock note. Arguments: company, contact email, receipt time, receipt source, a one-line summary. |
+| `list_companies` | Lists companies and the contacts on each company. The list is cached. |
+| `log_inbound` | Writes one inbound clock note for a company and contact from that list. Arguments: company, contact email, receipt time, receipt source, a one-line summary, and the client email text. |
 | `save_draft` | Creates or replaces the local draft for an open inbound id. Arguments: subject, body. Refuses if that inbound is already closed. Writes no HubSpot note. |
 | `discard_draft` | Deletes the local draft for an inbound id. Writes no HubSpot note. |
 | `mark_reply_sent` | Writes one sent clock note for an open inbound id. Arguments: sent time, subject, and the reply text pasted from Mail. Refuses if that inbound is already closed. Deletes any draft for that id. |
@@ -158,6 +159,7 @@ Stdio, started by Cursor, same pattern as `yarn mcp:scripts` in automica-public.
 
 | Tool | Calls |
 | --- | --- |
+| `list_companies` | `reply:directory` |
 | `list_open_replies` | `list_open_replies` |
 | `log_inbound` | `log_inbound` |
 | `save_draft` | `save_draft` |

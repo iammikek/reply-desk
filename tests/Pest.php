@@ -13,13 +13,14 @@ function london(string $time): DateTimeImmutable
     return new DateTimeImmutable($time, new DateTimeZone('Europe/London'));
 }
 
-function replyDeskParty(string $kind, string $id, string $name, string $email = ''): void
+function replyDeskParty(string $kind, string $id, string $name, string $email = '', ?string $companyId = null): void
 {
     DB::table('fake_parties')->insert([
         'kind' => $kind,
         'id' => $id,
         'name' => $name,
         'email' => $email,
+        'company_id' => $companyId,
         'created_at' => now(),
         'updated_at' => now(),
     ]);

@@ -36,6 +36,11 @@ final class HubSpotNoteStore implements NoteStore
      */
     private const NOTE_CACHE_SECONDS = 60;
 
+    /**
+     * Companies and their contacts change rarely. The log form and the MCP read this list.
+     */
+    private const DIRECTORY_CACHE_SECONDS = 3600;
+
     public function assertPortal(): void
     {
         if ($this->portalChecked) {
@@ -356,6 +361,139 @@ final class HubSpotNoteStore implements NoteStore
         return 'reply-desk.notes.'.((string) config('reply-desk.portal_id'));
     }
 
+    public function directory(): array
+    {
+        $cached = $this->directoryFromCache(Cache::get($this->directoryCacheKey()));
+
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        $this->assertPortal();
+
+        $companies = $this->listCompanies();
+        $links = $this->associated('companies', 'contacts', array_column($companies, 'id'));
+        $contactIds = [];
+
+        foreach ($links as $ids) {
+            foreach ($ids as $id) {
+                $contactIds[$id] = $id;
+            }
+        }
+
+        $people = [];
+
+        foreach (array_chunk(array_values($contactIds), 100) as $chunk) {
+            $people += $this->contacts($chunk);
+        }
+
+        $directory = [];
+
+        foreach ($companies as $company) {
+            $contacts = [];
+
+            foreach ($links[$company['id']] ?? [] as $contactId) {
+                $person = $people[$contactId] ?? null;
+
+                if ($person === null || $person['email'] === '') {
+                    continue;
+                }
+
+                $contacts[] = [
+                    'id' => $contactId,
+                    'name' => $person['name'],
+                    'email' => $person['email'],
+                ];
+            }
+
+            usort($contacts, fn (array $left, array $right): int => strcasecmp($left['name'].$left['email'], $right['name'].$right['email']));
+
+            $directory[] = [
+                'id' => $company['id'],
+                'name' => $company['name'],
+                'contacts' => $contacts,
+            ];
+        }
+
+        usort($directory, fn (array $left, array $right): int => strcasecmp($left['name'], $right['name']));
+        Cache::put($this->directoryCacheKey(), $directory, self::DIRECTORY_CACHE_SECONDS);
+
+        return $directory;
+    }
+
+    /**
+     * @return list<array{id: string, name: string, contacts: list<array{id: string, name: string, email: string}>}>|null
+     */
+    private function directoryFromCache(mixed $cached): ?array
+    {
+        if (! is_array($cached)) {
+            if ($cached !== null) {
+                Cache::forget($this->directoryCacheKey());
+            }
+
+            return null;
+        }
+
+        foreach ($cached as $company) {
+            if (! is_array($company) || ! is_string($company['id'] ?? null) || ! is_string($company['name'] ?? null) || ! is_array($company['contacts'] ?? null)) {
+                Cache::forget($this->directoryCacheKey());
+
+                return null;
+            }
+
+            foreach ($company['contacts'] as $contact) {
+                if (! is_array($contact) || ! is_string($contact['id'] ?? null) || ! is_string($contact['name'] ?? null) || ! is_string($contact['email'] ?? null)) {
+                    Cache::forget($this->directoryCacheKey());
+
+                    return null;
+                }
+            }
+        }
+
+        return $cached;
+    }
+
+    /**
+     * @return list<array{id: string, name: string}>
+     */
+    private function listCompanies(): array
+    {
+        $companies = [];
+        $after = null;
+
+        for ($page = 0; $page < 10; $page++) {
+            $query = ['limit' => 100, 'properties' => 'name'];
+
+            if ($after !== null) {
+                $query['after'] = $after;
+            }
+
+            $found = $this->send('GET', '/crm/objects/2026-03/companies', null, $query);
+
+            foreach ($found['results'] ?? [] as $row) {
+                $id = (string) ($row['id'] ?? '');
+                $name = trim((string) ($row['properties']['name'] ?? ''));
+
+                if ($id !== '' && $name !== '') {
+                    $companies[$id] = ['id' => $id, 'name' => $name];
+                }
+            }
+
+            $after = $found['paging']['next']['after'] ?? null;
+
+            if (! is_string($after) || $after === '') {
+                break;
+            }
+        }
+
+        return array_values($companies);
+    }
+
+    private function directoryCacheKey(): string
+    {
+        return 'reply-desk.directory.'.((string) config('reply-desk.portal_id'));
+    }
+
     /**
      * @return list<array<string, mixed>>
      */
@@ -422,8 +560,8 @@ final class HubSpotNoteStore implements NoteStore
         }
 
         $ids = array_column($notes, 'id');
-        $companies = $this->associated('companies', $ids);
-        $contacts = $this->associated('contacts', $ids);
+        $companies = $this->associated('notes', 'companies', $ids);
+        $contacts = $this->associated('notes', 'contacts', $ids);
 
         foreach ($notes as $index => $note) {
             $notes[$index]['associations'] = [
@@ -439,12 +577,12 @@ final class HubSpotNoteStore implements NoteStore
      * @param  list<string>  $ids
      * @return array<string, list<string>>
      */
-    private function associated(string $object, array $ids): array
+    private function associated(string $fromObject, string $object, array $ids): array
     {
         $linked = [];
 
         foreach (array_chunk($ids, 100) as $chunk) {
-            $found = $this->send('POST', "/crm/associations/2026-03/notes/{$object}/batch/read", [
+            $found = $this->send('POST', "/crm/associations/2026-03/{$fromObject}/{$object}/batch/read", [
                 'inputs' => array_map(fn (string $id): array => ['id' => $id], $chunk),
             ]);
 
@@ -577,7 +715,10 @@ final class HubSpotNoteStore implements NoteStore
      * @param  array<string, mixed>|null  $body
      * @return array<string, mixed>
      */
-    private function send(string $method, string $path, ?array $body = null): array
+    /**
+     * @param  array<string, mixed>  $query
+     */
+    private function send(string $method, string $path, ?array $body = null, array $query = []): array
     {
         $pending = Http::withToken($this->token())
             ->acceptJson()
@@ -588,7 +729,7 @@ final class HubSpotNoteStore implements NoteStore
 
         for ($attempt = 0; $attempt < 4; $attempt++) {
             $response = match ($method) {
-                'GET' => $pending->get($path),
+                'GET' => $pending->get($path, $query),
                 'POST' => $pending->post($path, $body ?? []),
                 'PUT' => $pending->put($path, $body ?? []),
                 'PATCH' => $pending->patch($path, $body ?? []),

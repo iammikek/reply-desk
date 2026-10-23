@@ -467,6 +467,67 @@ it('lists the queue from a serialized cache', function () {
         ->and($searches())->toBe(1);
 });
 
+it('caches companies and the contacts on them', function () {
+    config([
+        'cache.default' => 'note-cache',
+        'cache.stores.note-cache' => [
+            'driver' => 'array',
+            'serialize' => true,
+        ],
+        'cache.serializable_classes' => false,
+    ]);
+
+    Http::fake(function (Request $request) {
+        $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
+
+        if (str_contains($path, 'account-info')) {
+            return Http::response(['portalId' => 145255358]);
+        }
+
+        if ($request->method() === 'GET' && str_ends_with($path, '/companies')) {
+            return Http::response(['results' => [
+                ['id' => '11', 'properties' => ['name' => 'Harbour Cafe']],
+                ['id' => '10', 'properties' => ['name' => 'Northwharf Bakery']],
+            ]]);
+        }
+
+        if (str_contains($path, '/companies/contacts/batch/read')) {
+            return Http::response(['results' => [
+                ['from' => ['id' => '10'], 'to' => [['toObjectId' => 20], ['toObjectId' => 22]]],
+                ['from' => ['id' => '11'], 'to' => [['toObjectId' => 21]]],
+            ]]);
+        }
+
+        if (str_ends_with($path, '/contacts/batch/read')) {
+            return Http::response(['results' => [
+                ['id' => '20', 'properties' => ['email' => 'ada@northwharf.example', 'firstname' => 'Ada', 'lastname' => 'North']],
+                ['id' => '21', 'properties' => ['email' => 'ned@harbour.example', 'firstname' => 'Ned', 'lastname' => 'Shore']],
+                ['id' => '22', 'properties' => ['email' => '', 'firstname' => 'No', 'lastname' => 'Address']],
+            ]]);
+        }
+
+        return Http::response('unexpected '.$path, 500);
+    });
+
+    $reads = fn (): int => collect(Http::recorded())
+        ->filter(fn (array $pair): bool => $pair[0]->method() === 'GET'
+            && str_ends_with(parse_url($pair[0]->url(), PHP_URL_PATH) ?: '', '/companies'))
+        ->count();
+
+    $directory = app(HubSpotNoteStore::class)->directory();
+
+    expect($directory)->toHaveCount(2)
+        ->and($directory[0]['name'])->toBe('Harbour Cafe')
+        ->and($directory[0]['contacts'][0]['email'])->toBe('ned@harbour.example')
+        ->and($directory[1]['contacts'])->toHaveCount(1)
+        ->and($directory[1]['contacts'][0]['name'])->toBe('Ada North')
+        ->and($reads())->toBe(1)
+        ->and(Cache::get('reply-desk.directory.145255358')[0])->toBeArray();
+
+    expect(app(HubSpotNoteStore::class)->directory()[1]['contacts'][0]['email'])->toBe('ada@northwharf.example')
+        ->and($reads())->toBe(1);
+});
+
 it('redacts the access token from a HubSpot error', function () {
     Http::fake([
         'https://api.hubapi.com/account-info/v3/details' => Http::response('token pat-test-token was rejected', 401),

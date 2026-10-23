@@ -13,7 +13,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example');
+    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
 });
 
 it('lists an open inbound with the due time from the clock', function () {
@@ -111,6 +111,53 @@ it('keeps the pasted reply and shows that thread on the next open note', functio
         ->and($open[0]->earlier[0]->clientEmail)->toBe('Which loaf for Friday.')
         ->and($open[0]->earlier[0]->replies[0]['subject'])->toBe('PHP on the new server')
         ->and($open[0]->earlier[0]->replies[0]['body'])->toBe("Use 8.3 on the new box.\n\nMike");
+});
+
+it('lists the contacts on each company', function () {
+    replyDeskParty('company', '11', 'Harbour Cafe');
+    replyDeskParty('contact', '21', 'Ned Shore', 'ned@harbour.example', '11');
+    replyDeskParty('contact', '22', 'Loose End', 'loose@example.com');
+    replyDeskParty('contact', '23', 'No Address', '', '10');
+
+    Artisan::call('reply:directory');
+    $directory = json_decode(Artisan::output(), true);
+    $northwharf = collect($directory)->firstWhere('id', '10');
+
+    expect($directory)->toHaveCount(2)
+        ->and($directory[0]['name'])->toBe('Harbour Cafe')
+        ->and($directory[0]['contacts'])->toHaveCount(1)
+        ->and($directory[0]['contacts'][0]['email'])->toBe('ned@harbour.example')
+        ->and($northwharf['contacts'])->toHaveCount(1)
+        ->and($northwharf['contacts'][0]['email'])->toBe('ada@northwharf.example');
+});
+
+it('stores the pasted client email on the inbound note', function () {
+    Artisan::call('reply:log-inbound', [
+        'company' => 'Northwharf Bakery',
+        'email' => 'ada@northwharf.example',
+        'receipt' => '2026-10-20 10:00',
+        'source' => 'mail client',
+        'summary' => 'Which PHP to use',
+        'client' => "Which loaf for Friday.\n\nAda",
+    ]);
+
+    expect((string) DB::table('fake_notes')->value('body'))
+        ->toContain("Which loaf for Friday.\n\nAda");
+});
+
+it('refuses a contact who is not on that company', function () {
+    replyDeskParty('company', '11', 'Harbour Cafe');
+    replyDeskParty('contact', '21', 'Ned Shore', 'ned@harbour.example', '11');
+
+    expect(fn () => app(LogInbound::class)->record(
+        '10',
+        '21',
+        london('2026-10-20 10:00'),
+        ReceiptSource::Logged,
+        'Which PHP to use',
+    ))->toThrow(DeskException::class, 'No contact matched.');
+
+    expect(DB::table('fake_notes')->count())->toBe(0);
 });
 
 it('prints the open queue as json', function () {

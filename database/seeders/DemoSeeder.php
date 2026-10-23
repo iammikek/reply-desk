@@ -26,9 +26,9 @@ class DemoSeeder extends Seeder
         $now = DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE));
 
         $this->party('company', '10', 'Northwharf Bakery', '');
-        $this->party('contact', '20', 'Ada North', 'ada@northwharf.example');
+        $this->party('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
         $this->party('company', '11', 'Harbour Cafe', '');
-        $this->party('contact', '21', 'Ned Shore', 'ned@harbour.example');
+        $this->party('contact', '21', 'Ned Shore', 'ned@harbour.example', '11');
 
         $overdue = app(LogInbound::class)(
             'Northwharf Bakery',
@@ -65,7 +65,7 @@ class DemoSeeder extends Seeder
         throw new DeskException('Could not place an overdue demo row.');
     }
 
-    private function party(string $kind, string $id, string $name, string $email): void
+    private function party(string $kind, string $id, string $name, string $email, ?string $companyId = null): void
     {
         $existing = DB::table('fake_parties')->where('kind', $kind)->where('id', $id)->exists();
 
@@ -74,6 +74,7 @@ class DemoSeeder extends Seeder
             [
                 'name' => $name,
                 'email' => $email,
+                'company_id' => $companyId,
                 'updated_at' => now(),
                 ...($existing ? [] : ['created_at' => now()]),
             ],

@@ -48,8 +48,8 @@ test('lists the desk tools and returns the same open row', async () => {
         $app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
         $now = now();
         Illuminate\\Support\\Facades\\DB::table('fake_parties')->insert([
-            ['kind' => 'company', 'id' => '10', 'name' => 'Northwharf Bakery', 'email' => '', 'created_at' => $now, 'updated_at' => $now],
-            ['kind' => 'contact', 'id' => '20', 'name' => 'Ada North', 'email' => 'ada@northwharf.example', 'created_at' => $now, 'updated_at' => $now],
+            ['kind' => 'company', 'id' => '10', 'name' => 'Northwharf Bakery', 'email' => '', 'company_id' => null, 'created_at' => $now, 'updated_at' => $now],
+            ['kind' => 'contact', 'id' => '20', 'name' => 'Ada North', 'email' => 'ada@northwharf.example', 'company_id' => '10', 'created_at' => $now, 'updated_at' => $now],
         ]);`,
     ]);
 
@@ -69,20 +69,28 @@ test('lists the desk tools and returns the same open row', async () => {
 
         assert.deepEqual(names, [
             'discard_draft',
+            'list_companies',
             'list_open_replies',
             'log_inbound',
             'mark_reply_sent',
             'save_draft',
         ]);
 
+        const companies = await client.callTool({ name: 'list_companies', arguments: {} });
+        assert.equal(companies.isError, undefined);
+        const directory = JSON.parse(companies.content[0].text);
+        assert.equal(directory[0].name, 'Northwharf Bakery');
+        assert.equal(directory[0].contacts[0].email, 'ada@northwharf.example');
+
         const logged = await client.callTool({
             name: 'log_inbound',
             arguments: {
-                company: 'Northwharf Bakery',
-                email: 'ada@northwharf.example',
+                company: directory[0].name,
+                email: directory[0].contacts[0].email,
                 receipt: '2026-10-20 10:00',
                 source: 'mail client',
                 summary: 'Which PHP to use',
+                client: 'Which loaf for Friday.',
             },
         });
         assert.equal(logged.isError, undefined);
@@ -110,6 +118,7 @@ test('lists the desk tools and returns the same open row', async () => {
         assert.equal(rows[0].reply_due, '2026-10-21 10:00');
         assert.equal(rows[0].draft_body, 'Use 8.3 on the new box.');
         assert.equal(rows[0].has_draft, true);
+        assert.match(rows[0].body, /Which loaf for Friday\./);
     } finally {
         await client.close();
     }
