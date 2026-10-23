@@ -38,7 +38,7 @@ An open queue:
 
 Due time is calculated when the page or the tool runs. It is not stored.
 
-A filter shows rows whose reply is overdue. Sending a reply from the row, or marking a reply sent, fills the sent time and the row leaves the queue.
+A filter shows rows whose reply is overdue. Marking a reply sent fills the sent time and the row leaves the queue.
 
 ```mermaid
 flowchart LR
@@ -77,17 +77,11 @@ HubSpot's own created time is when the note was written. The mail-client time, w
 
 Each inbound that needs a reply is one clock note. HubSpot's note id is the row id. A sent note names that id. The open queue is every inbound note that has no sent note pointing at it.
 
-### 4.3 The panel can send the reply
+### 4.3 The reply goes out from Mail
 
-`log_inbound` records that a client email arrived. `send_reply` sends one message from the row, then calls `mark_reply_sent`. `mark_reply_sent` records a reply Mike has already sent from his mail client.
+`log_inbound` records that a client email arrived. Mike replies in Mail, on the Mac or the iPad. `mark_reply_sent` records that reply: the sent time and the subject. The desk does not send mail.
 
-The send form is a subject and a body. The To address is the contact on that inbound note. The From address is the mailbox in the env file. Laravel sends through that mailbox over SMTP. The client sees that mailbox.
-
-The clock stops when the mail server accepts the message. That time is the sent time on the note. If the server refuses the message, there is no sent note and the row stays open. A saved draft is still there.
-
-The send form opens with the saved subject and body when a draft exists. Sending uses the text in the form, including any edit made before send.
-
-The mailbox keeps the body. The sent note keeps the subject. HubSpot does not send the mail. Cursor cannot call `send_reply`.
+The clock stops when the reply is marked sent. That time is the sent time on the note. The mailbox keeps the body. The sent note keeps the subject.
 
 ### 4.4 A draft is saved text
 
@@ -95,7 +89,7 @@ One draft per open inbound note. The local row stores the inbound note id, the s
 
 `save_draft` creates or replaces that row for an open inbound id. `discard_draft` deletes it. `list_open_replies` includes the draft when one exists. The row stays on the queue. The due time does not change.
 
-A draft does not stop the clock. When the server accepts a send, the draft is deleted. When `mark_reply_sent` closes the row, the draft is deleted. When the server refuses a send, the draft remains.
+A draft does not stop the clock. When `mark_reply_sent` closes the row, the draft is deleted.
 
 ### 4.5 Filament reads the API
 
@@ -103,7 +97,7 @@ The queue uses Filament custom data (`records()`), not an Eloquent model of clie
 
 ### 4.6 Cursor and the panel share the actions
 
-Cursor does not drive Filament. A local stdio MCP server, the same shape as `automica-public-scripts`, calls `list_open_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. It does not call `send_reply`. The HubSpot token stays in an env file and is never committed or printed.
+Cursor does not drive Filament. A local stdio MCP server, the same shape as `automica-public-scripts`, calls `list_open_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. The HubSpot token stays in an env file and is never committed or printed.
 
 ## 5. Clock
 
@@ -154,10 +148,9 @@ The note is associated with the company and the contact already on the portal. F
 | `log_inbound` | Writes one inbound clock note. Arguments: company, contact email, receipt time, receipt source, a one-line summary. |
 | `save_draft` | Creates or replaces the local draft for an open inbound id. Arguments: subject, body. Refuses if that inbound is already closed. Writes no HubSpot note. |
 | `discard_draft` | Deletes the local draft for an inbound id. Writes no HubSpot note. |
-| `mark_reply_sent` | Writes one sent clock note for an open inbound id. Arguments: sent time, subject. Refuses if that inbound is already closed. Deletes any draft for that id. |
-| `send_reply` | Sends one message to the contact on an open inbound note, then calls `mark_reply_sent` with the time the server accepted it. Arguments: subject, body. Refuses if that inbound is already closed. If the server refuses the message, writes nothing and leaves the draft in place. |
+| `mark_reply_sent` | Writes one sent clock note for an open inbound id. Arguments: sent time, subject, and the reply text pasted from Mail. Refuses if that inbound is already closed. Deletes any draft for that id. |
 
-Filament can call all of these. MCP can call all of them except `send_reply`. `save_draft` and `discard_draft` write no clock note. `send_reply` writes no note of its own. The only note it can create is the sent note from `mark_reply_sent`.
+Filament and MCP can call all of these. `save_draft` and `discard_draft` write no clock note. The only note that closes a row is the sent note from `mark_reply_sent`.
 
 ## 8. MCP
 
@@ -171,7 +164,7 @@ Stdio, started by Cursor, same pattern as `yarn mcp:scripts` in automica-public.
 | `discard_draft` | `discard_draft` |
 | `mark_reply_sent` | `mark_reply_sent` |
 
-The Node process shells to the PHP actions. It does not talk to HubSpot itself. It does not send mail. After a write, the open queue in the panel changes because both read the same notes.
+The Node process shells to the PHP actions. It does not talk to HubSpot itself. After a write, the open queue in the panel changes because both read the same notes.
 
 ## 9. Build order
 
@@ -180,21 +173,20 @@ The Node process shells to the PHP actions. It does not talk to HubSpot itself. 
 3. The three clock actions, still without a panel.
 4. Filament page: open queue, overdue filter, mark sent.
 5. Save and discard a draft. The row stays open and the due time stays the same.
-6. Send from the row, using the draft when one is saved. The sent note is written only after the server accepts.
-7. MCP tools over the clock actions and the draft actions. No send tool.
+6. MCP tools over the clock actions and the draft actions.
 8. Cutover.
 
 ## 10. Cutover
 
 Backfill whatever is in the Open table of `docs/client-communications.md` on the day of the cutover. On 23 Oct 2026 that was V8 Hosting / Lawrence Farr and Ashton Vale Pre-School / Hayley Branson. Re-read the file on the day. Do not trust this sentence if the file has moved on.
 
-Write one inbound clock note per open row. Say `logged` where the mail-client time was not on the original paste. Leave sent history in the markdown file.
+Write one inbound clock note per open row. Import each sent row that has a clock time and an email address as an inbound note plus the sent note that closes it. A second send at a different minute on the same receipt is another sent note on that inbound. Skip a row with no clock time or no email address. Say `logged` where the mail-client time was not on the original paste. Where the row links a client email or a reply, copy that message onto the note. An unsent reply also becomes the draft. The queue can then be read away from the machine that holds the files.
 
 After the backfill, that markdown file is an archive. New receipts and sends go through the actions only.
 
 ## 11. Public demo
 
-A separate copy, with stand-in companies and a fake note store. No token, no real names, no real mail. It shows the queue, the overdue filter, a saved draft, mark sent, and the send form. The send form uses the log mailer and does not deliver. Saving a draft on that copy leaves the row open. That copy is the one that can be shown. The live desk stays on Mike's machine.
+A separate copy, with stand-in companies and a fake note store. No token, no real names. It shows the queue, the overdue filter, a saved draft, and mark sent. Saving a draft on that copy leaves the row open. That copy is the one that can be shown. The live desk stays on Mike's machine.
 
 ## 12. Out of this release
 
@@ -221,15 +213,14 @@ Action tests use an in-memory note store and a local draft table:
 - Mark sent closes the row and deletes the draft. Marking a closed row is refused.
 - A company or contact search that is not exactly one match stops, and no note is written.
 - A portal id that does not match the env value stops before any write.
-- Send addresses the contact on the row, from the mailbox in the env file. When the mailer accepts, the sent note is written and the draft is deleted. When the mailer throws, nothing is written and the draft remains.
 
-Panel tests drive the Filament page through Livewire. The open row renders, the overdue filter hides a row that is not due, the note infolist opens, and save, discard, mark sent, and both send outcomes behave as the action tests describe.
+Panel tests drive the Filament page through Livewire. The open row renders, the overdue filter hides a row that is not due, the note infolist opens, and save, discard, and mark sent behave as the action tests describe.
 
-The MCP test starts the stdio server and checks its tool list: list, log inbound, save draft, discard draft, and mark sent. There is no send tool. One tool call shells to the PHP action and returns the same row the action test already proved.
+The MCP test starts the stdio server and checks its tool list: list, log inbound, save draft, discard draft, and mark sent. One tool call shells to the PHP action and returns the same row the action test already proved.
 
-Cutover is tested against a saved copy of an Open table. The command prints the inbound notes it would write. The test does not pass `--write` and does not touch the live portal.
+Cutover is tested against a saved copy of the communications file. The command prints the notes it would write. The test does not pass `--write` and does not touch the live portal.
 
-Before the real backfill, one manual check confirms the account info call returns portal `145255358`. On the demo copy, the same check is that the seeded queue loads, a draft saves, and the log mailer records a send without delivering it.
+Before the real backfill, one manual check confirms the account info call returns portal `145255358`. On the demo copy, the same check is that the seeded queue loads and a draft saves.
 
 ## 14. Done when
 
@@ -237,5 +228,4 @@ Before the real backfill, one manual check confirms the account info call return
 - The open queue lists only inbound notes with no sent note, and the due time matches the clock.
 - Mark sent in the panel and mark sent through MCP close the same row.
 - A saved draft leaves the row open, and the due time is unchanged. The panel and MCP return the same draft.
-- A send the server accepts closes that same row and deletes the draft. A send the server refuses leaves the row open and leaves the draft in place.
 - The markdown log is no longer the live record.
