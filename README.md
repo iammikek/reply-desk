@@ -1,58 +1,97 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Reply desk
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Reply desk is the open queue for practice client email. Filament is the screen. HubSpot clock notes are the record. A draft stays on this machine and does not stop the clock.
 
-## About Laravel
+The panel has a single sign-in, for the person working the queue.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+[![Tests](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml/badge.svg)](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## What the queue shows
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Each open row is an inbound clock note with no matching sent note.
 
-## Learning Laravel
+- Client, shown as company and contact
+- Summary
+- Inbound time
+- Clock start
+- Reply due
+- A draft, when one is saved
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Due time is calculated when the page or a command runs. It is not stored. Monday to Friday, 08:00 to 20:00 Europe/London, the clock starts at receipt and the reply is due 24 hours later. Outside that window, including the weekend, the clock starts at 08:00 on the next working day.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Where the panel lives
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+The site is the Filament panel. Sign-in is at `/login`.
 
-## Agentic Development
+- `app/Filament/Pages/OpenQueue.php` is the queue
+- `app/Filament/Tables/OpenRepliesTable.php` is the table, the overdue filter, and the row actions
+- `app/Filament/Widgets/OpenQueueOverview.php` counts open and overdue rows
+- `app/Providers/Filament/AdminPanelProvider.php` registers the panel
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Log inbound, save a draft, discard a draft, send, and mark sent are actions on that page. Send stays on the panel.
+
+## Run the showable copy
+
+The memory store needs no HubSpot token and no real names. Mail uses the log mailer and is not delivered.
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate
+php artisan db:seed
+npm install
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Sign in as `desk@example.com` with password `password`. The seed loads two stand-in companies, one overdue row and one open row, and a draft on the overdue row.
 
-## Contributing
+`php artisan db:seed` refuses to run when `REPLY_DESK_STORE` is `hubspot`, and it refuses portal `145255358`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Leave these in `.env` for the showable copy:
 
-## Code of Conduct
+```
+REPLY_DESK_STORE=memory
+MAIL_MAILER=log
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Live desk
 
-## Security Vulnerabilities
+Set `REPLY_DESK_STORE=hubspot`, `HUBSPOT_ACCESS_TOKEN`, and `HUBSPOT_PORTAL_ID`. A write stops unless the token's portal matches `HUBSPOT_PORTAL_ID`. The token stays in `.env` and is never printed.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+`php artisan reply:backfill {path}` prints the inbound notes it would write from an Open table. It writes only with `--write`, and only when the store is HubSpot and the portal is `145255358`.
 
-## License
+## Commands
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+The same actions the panel uses, except send:
+
+```bash
+php artisan reply:list-open
+php artisan reply:log-inbound {company} {email} {receipt} {source} {summary}
+php artisan reply:save-draft {inbound} {subject} {body}
+php artisan reply:discard-draft {inbound}
+php artisan reply:mark-sent {inbound} {sent} {subject}
+```
+
+`receipt`, `sent`, and `--now` are `Y-m-d H:i` in Europe/London. `source` is `mail client` or `logged`.
+
+## Cursor
+
+Start the stdio server from this repo:
+
+```bash
+npm run mcp
+```
+
+Cursor runs `node mcp-server/index.mjs`. The tools are `list_open_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. There is no send tool. The process shells to the Artisan commands. It does not talk to HubSpot itself.
+
+## Tests
+
+```bash
+composer test
+```
+
+That runs the Pest suite. One test starts the MCP server and checks the tool list. The suite uses the memory store, recorded HubSpot responses, and the array mailer. It does not call a live portal or a real mailbox.
+
+GitHub Actions runs the same command on every push and pull request: [`.github/workflows/tests.yml`](.github/workflows/tests.yml). The job uses PHP 8.4 and Node 22.

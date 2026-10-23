@@ -1,0 +1,44 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, sqlite, pdo_sqlite
+          coverage: none
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Prepare the environment
+        run: cp .env.example .env
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+
+      - name: Generate the application key
+        run: php artisan key:generate
+
+      - name: Discover packages
+        run: composer dump-autoload --no-interaction
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: composer test
