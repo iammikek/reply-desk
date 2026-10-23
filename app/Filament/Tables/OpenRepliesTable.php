@@ -11,6 +11,7 @@ use App\Desk\LondonTime;
 use App\Desk\MarkReplySent;
 use App\Desk\OpenReply;
 use App\Desk\SaveDraft;
+use App\Desk\SendReply;
 use App\Filament\Pages\OpenQueue;
 use App\Filament\Schemas\DraftForm;
 use App\Filament\Schemas\MarkSentForm;
@@ -105,6 +106,29 @@ final class OpenRepliesTable
                         app(DiscardDraft::class)((string) $record['id']);
                         $livewire->flushCachedTableRecords();
                         Notification::make()->title('Draft discarded')->success()->send();
+                    }),
+                Action::make('send')
+                    ->label('Send')
+                    ->fillForm(fn (array $record): array => [
+                        'subject' => $record['draft_subject'],
+                        'body' => $record['draft_body'],
+                    ])
+                    ->schema(DraftForm::components())
+                    ->action(function (array $record, array $data, OpenQueue $livewire): void {
+                        try {
+                            app(SendReply::class)(
+                                (string) $record['id'],
+                                (string) $data['subject'],
+                                (string) $data['body'],
+                            );
+                        } catch (DeskException $exception) {
+                            Notification::make()->title($exception->getMessage())->danger()->send();
+
+                            throw new Halt;
+                        }
+
+                        $livewire->flushCachedTableRecords();
+                        Notification::make()->title('Reply sent. The clock has stopped.')->success()->send();
                     }),
                 Action::make('markSent')
                     ->label('Mark sent')
