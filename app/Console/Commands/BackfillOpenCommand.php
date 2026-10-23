@@ -2,21 +2,32 @@
 
 namespace App\Console\Commands;
 
+use App\Clock\ClockNote;
+use App\Clock\ParsedInbound;
+use App\Clock\ParsedSent;
 use App\Desk\DeskException;
+use App\Desk\FiledEmail;
 use App\Desk\LogInbound;
+use App\Desk\MarkReplySent;
 use App\Desk\NoteStore;
 use App\Desk\OpenTable;
+use App\Desk\SaveDraft;
+use App\Desk\SentTableRow;
+use App\Desk\StoredNote;
+use App\Models\Draft;
+use DateTimeImmutable;
 
 class BackfillOpenCommand extends ReplyDeskCommand
 {
-    protected $signature = 'reply:backfill {path} {--write : Write the inbound notes to portal 145255358}';
+    protected $signature = 'reply:backfill {path} {--write : Write the notes to portal 145255358}';
 
-    protected $description = 'Print the Open table as inbound clock notes, and write them only for the live portal';
+    protected $description = 'Print open and sent rows from the communications file, and write them only for the live portal';
 
-    public function handle(OpenTable $openTable, LogInbound $logInbound, NoteStore $notes): int
+    public function handle(OpenTable $openTable, LogInbound $logInbound, MarkReplySent $markReplySent, SaveDraft $saveDraft, NoteStore $notes): int
     {
         try {
-            $markdown = file_get_contents((string) $this->argument('path'));
+            $path = (string) $this->argument('path');
+            $markdown = file_get_contents($path);
 
             if ($markdown === false) {
                 throw new DeskException('That Open table could not be read.');
@@ -37,15 +48,260 @@ class BackfillOpenCommand extends ReplyDeskCommand
             }
 
             $notes->assertPortal();
+            $existing = $notes->notes();
 
             foreach ($rows as $row) {
-                $id = $logInbound($row->company, $row->email, $row->receipt, $row->receiptSource, $row->summary);
+                try {
+                    $company = $notes->findCompany($row->company);
+                } catch (DeskException $exception) {
+                    if ($this->unmatched($exception)) {
+                        $this->line('Skipped: '.$exception->getMessage());
+
+                        continue;
+                    }
+
+                    throw $exception;
+                }
+
+                $client = $this->mail($path, $row->clientEmailPath, $row->company, 'client email');
+                $reply = $this->mail($path, $row->replyPath, $row->company, 'reply');
+
+                if ($this->alreadyOpen($existing, $company->id, $row->receipt)) {
+                    $this->fileOnto($existing, $company->id, $row->receipt, $client, $reply, $notes);
+                    $this->saveDraft($this->inboundId($existing, $company->id, $row->receipt), $reply, $saveDraft, $company->name);
+                    $this->line("Already open for {$company->name}");
+
+                    continue;
+                }
+
+                $id = $logInbound(
+                    $row->company,
+                    $row->email,
+                    $row->receipt,
+                    $row->receiptSource,
+                    $row->summary,
+                    $client?->text() ?? '',
+                    $reply?->text() ?? '',
+                );
+                $existing[] = new StoredNote($id, ClockNote::withMail(ClockNote::inbound($row->receipt, $row->receiptSource, $row->summary), $client?->text() ?? '', $reply?->text() ?? ''), $company->id, $company->name, '', '', $row->email);
                 $this->line("Wrote {$id} for {$row->company}");
+                $this->saveDraft($id, $reply, $saveDraft, $company->name);
+            }
+
+            $sent = $openTable->sent($markdown);
+
+            foreach ($sent['skipped'] as $message) {
+                $this->line('Skipped: '.$message);
+            }
+
+            foreach ($sent['rows'] as $row) {
+                $this->writeSent($row, $path, $logInbound, $markReplySent, $notes, $existing);
             }
 
             return 0;
         } catch (DeskException $exception) {
             return $this->failure($exception);
         }
+    }
+
+    /**
+     * @param  list<StoredNote>  $existing
+     */
+    private function writeSent(SentTableRow $row, string $markdownPath, LogInbound $logInbound, MarkReplySent $markReplySent, NoteStore $notes, array &$existing): void
+    {
+        try {
+            $company = $notes->findCompany($row->company);
+            $client = $this->mail($markdownPath, $row->clientEmailPath, $row->company, 'client email');
+            $reply = $this->mail($markdownPath, $row->replyPath, $row->company, 'reply');
+            $subject = $reply instanceof FiledEmail && $reply->subject !== '' ? $reply->subject : $row->subject;
+            $inboundId = $this->inboundId($existing, $company->id, $row->receipt);
+
+            if ($inboundId === null) {
+                $inboundId = $logInbound($row->company, $row->email, $row->receipt, $row->receiptSource, $row->summary, $client?->text() ?? '');
+                $existing[] = new StoredNote($inboundId, ClockNote::withMail(ClockNote::inbound($row->receipt, $row->receiptSource, $row->summary), $client?->text() ?? ''), $company->id, $company->name, '', '', $row->email);
+                $this->line("Wrote {$inboundId} for {$company->name}");
+            } else {
+                $this->fileOnto($existing, $company->id, $row->receipt, $client, null, $notes);
+            }
+
+            if ($this->alreadySent($existing, $inboundId, $row->sentAt)) {
+                $this->line("Already sent for {$company->name}");
+
+                return;
+            }
+
+            $replyText = $reply?->text() ?? '';
+
+            if ($this->alreadyClosed($existing, $inboundId)) {
+                $contact = $notes->findContact($row->email);
+                $sentId = $notes->writeNote(
+                    ClockNote::sent($inboundId, $row->sentAt, $subject, $replyText),
+                    $company->id,
+                    $contact->id,
+                );
+            } else {
+                $sentId = $markReplySent($inboundId, $row->sentAt, $subject, $replyText);
+            }
+
+            $existing[] = new StoredNote($sentId, ClockNote::sent($inboundId, $row->sentAt, $subject, $replyText), $company->id, $company->name, '', '', $row->email);
+            $this->line("Wrote {$sentId} closing {$inboundId} for {$company->name}");
+        } catch (DeskException $exception) {
+            if ($this->unmatched($exception)) {
+                $this->line('Skipped: '.$exception->getMessage());
+
+                return;
+            }
+
+            throw $exception;
+        }
+    }
+
+    /**
+     * @param  list<StoredNote>  $existing
+     */
+    private function fileOnto(array &$existing, string $companyId, DateTimeImmutable $receipt, ?FiledEmail $client, ?FiledEmail $reply, NoteStore $notes): void
+    {
+        foreach ($existing as $index => $note) {
+            $parsed = ClockNote::parse($note->body);
+
+            if (! $parsed instanceof ParsedInbound || $note->companyId !== $companyId) {
+                continue;
+            }
+
+            if ($parsed->receipt->format('Y-m-d H:i') !== $receipt->format('Y-m-d H:i')) {
+                continue;
+            }
+
+            $next = ClockNote::withMail($note->body, $client?->text() ?? '', $reply?->text() ?? '');
+
+            if ($next === $note->body) {
+                return;
+            }
+
+            $notes->replaceNote($note->id, $next);
+            $existing[$index] = new StoredNote($note->id, $next, $note->companyId, $note->companyName, $note->contactId, $note->contactName, $note->contactEmail);
+            $this->line("Filed the email on {$note->id} for {$note->companyName}");
+
+            return;
+        }
+    }
+
+    private function saveDraft(?string $inboundId, ?FiledEmail $reply, SaveDraft $saveDraft, string $company): void
+    {
+        if ($inboundId === null || ! $reply instanceof FiledEmail || $reply->body === '') {
+            return;
+        }
+
+        if (Draft::query()->where('inbound_note_id', $inboundId)->exists()) {
+            return;
+        }
+
+        $saveDraft($inboundId, $reply->subject !== '' ? $reply->subject : 'Reply', $reply->body);
+        $this->line("Draft saved for {$company}");
+    }
+
+    private function mail(string $markdownPath, ?string $relative, string $company, string $role): ?FiledEmail
+    {
+        if ($relative === null || $relative === '') {
+            return null;
+        }
+
+        $mail = FiledEmail::read(dirname($markdownPath), $relative);
+
+        if (! $mail instanceof FiledEmail) {
+            $this->line('Skipped: '.$company.' '.$role.' file could not be read.');
+
+            return null;
+        }
+
+        return $mail;
+    }
+
+    private function unmatched(DeskException $exception): bool
+    {
+        return str_starts_with($exception->getMessage(), 'No company matched')
+            || str_starts_with($exception->getMessage(), 'No contact matched');
+    }
+
+    /**
+     * @param  list<StoredNote>  $notes
+     */
+    private function inboundId(array $notes, string $companyId, DateTimeImmutable $receipt): ?string
+    {
+        foreach ($notes as $note) {
+            $parsed = ClockNote::parse($note->body);
+
+            if ($parsed instanceof ParsedInbound
+                && $note->companyId === $companyId
+                && $parsed->receipt->format('Y-m-d H:i') === $receipt->format('Y-m-d H:i')) {
+                return $note->id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  list<StoredNote>  $notes
+     */
+    private function alreadyClosed(array $notes, string $inboundId): bool
+    {
+        foreach ($notes as $note) {
+            $parsed = ClockNote::parse($note->body);
+
+            if ($parsed instanceof ParsedSent && $parsed->closes === $inboundId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<StoredNote>  $notes
+     */
+    private function alreadySent(array $notes, string $inboundId, DateTimeImmutable $sentAt): bool
+    {
+        foreach ($notes as $note) {
+            $parsed = ClockNote::parse($note->body);
+
+            if ($parsed instanceof ParsedSent
+                && $parsed->closes === $inboundId
+                && $parsed->sent->format('Y-m-d H:i') === $sentAt->format('Y-m-d H:i')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<StoredNote>  $notes
+     */
+    private function alreadyOpen(array $notes, string $companyId, DateTimeImmutable $receipt): bool
+    {
+        $closed = [];
+
+        foreach ($notes as $note) {
+            $parsed = ClockNote::parse($note->body);
+
+            if ($parsed instanceof ParsedSent) {
+                $closed[$parsed->closes] = true;
+            }
+        }
+
+        foreach ($notes as $note) {
+            $parsed = ClockNote::parse($note->body);
+
+            if (! $parsed instanceof ParsedInbound || isset($closed[$note->id]) || $note->companyId !== $companyId) {
+                continue;
+            }
+
+            if ($parsed->receipt->format('Y-m-d H:i') === $receipt->format('Y-m-d H:i')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

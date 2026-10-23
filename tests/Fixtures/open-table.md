@@ -13,4 +13,4 @@ Waiting on a reply.
 
 | Client | Inbound | Clock start | Reply due | Reply sent | Attachment |
 | --- | --- | --- | --- | --- | --- |
-| Other Bakery / Bea South | 19 Oct 2026 09:00. Already answered. | 19 Oct 2026 09:00 | 20 Oct 2026 09:00 |  | None. bea@other.example |
+| Other Bakery / Bea South | None. Mike wrote first. |  |  | 19 Oct 2026 (Mike confirmed sent today) | None. bea@other.example |

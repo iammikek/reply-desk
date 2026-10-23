@@ -13,5 +13,7 @@ final readonly class OpenTableRow
         public DateTimeImmutable $receipt,
         public ReceiptSource $receiptSource,
         public string $summary,
+        public ?string $clientEmailPath = null,
+        public ?string $replyPath = null,
     ) {}
 }
