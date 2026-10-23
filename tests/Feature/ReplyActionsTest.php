@@ -78,6 +78,41 @@ it('stops when more than one company matches and writes no note', function () {
     expect(DB::table('fake_notes')->count())->toBe(0);
 });
 
+it('keeps the pasted reply and shows that thread on the next open note', function () {
+    $closed = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+        'Which loaf for Friday.',
+    );
+
+    Artisan::call('reply:mark-sent', [
+        'inbound' => $closed,
+        'sent' => '2026-10-20 16:04',
+        'subject' => 'PHP on the new server',
+        'reply' => "Use 8.3 on the new box.\n\nMike",
+    ]);
+
+    $openId = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-21 09:00'),
+        ReceiptSource::MailClient,
+        'The form can come off',
+    );
+
+    $open = app(ListOpenReplies::class)(london('2026-10-21 12:00'));
+
+    expect($open)->toHaveCount(1)
+        ->and($open[0]->id)->toBe($openId)
+        ->and($open[0]->earlier)->toHaveCount(1)
+        ->and($open[0]->earlier[0]->clientEmail)->toBe('Which loaf for Friday.')
+        ->and($open[0]->earlier[0]->replies[0]['subject'])->toBe('PHP on the new server')
+        ->and($open[0]->earlier[0]->replies[0]['body'])->toBe("Use 8.3 on the new box.\n\nMike");
+});
+
 it('prints the open queue as json', function () {
     app(LogInbound::class)(
         'Northwharf Bakery',

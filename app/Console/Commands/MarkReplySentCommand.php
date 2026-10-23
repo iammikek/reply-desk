@@ -7,7 +7,7 @@ use App\Desk\MarkReplySent;
 
 class MarkReplySentCommand extends ReplyDeskCommand
 {
-    protected $signature = 'reply:mark-sent {inbound} {sent} {subject}';
+    protected $signature = 'reply:mark-sent {inbound} {sent} {subject} {reply?}';
 
     protected $description = 'Record that a reply has already been sent';
 
@@ -18,6 +18,7 @@ class MarkReplySentCommand extends ReplyDeskCommand
                 (string) $this->argument('inbound'),
                 $this->moment((string) $this->argument('sent')),
                 (string) $this->argument('subject'),
+                (string) ($this->argument('reply') ?? ''),
             );
 
             return $this->json(['id' => $id]);

@@ -6,14 +6,11 @@ use App\Desk\ListOpenReplies;
 use App\Desk\LogInbound;
 use App\Desk\SaveDraft;
 use App\Desk\SendReply;
-use App\Filament\Pages\OpenQueue;
 use App\Mail\ClientReply;
 use App\Models\Draft;
-use App\Models\User;
-use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Livewire\Livewire;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mailer\SentMessage;
@@ -50,8 +47,11 @@ it('closes the row after the mail server accepts', function () {
             && $mail->replyBody === 'Use 8.3 on the new box.';
     });
 
+    $sent = (string) DB::table('fake_notes')->where('body', 'like', '%Clock: sent%')->value('body');
+
     expect(app(ListOpenReplies::class)(london('2026-10-23 15:30')))->toBeEmpty()
-        ->and(Draft::query()->count())->toBe(0);
+        ->and(Draft::query()->count())->toBe(0)
+        ->and($sent)->toContain('Use 8.3 on the new box.');
 });
 
 it('leaves the row and the draft when the mail server refuses', function () {
@@ -93,79 +93,5 @@ it('leaves the row and the draft when the mail server refuses', function () {
     expect($open)->toHaveCount(1)
         ->and($open[0]->replyDue->format('Y-m-d H:i'))->toBe('2026-10-21 10:00')
         ->and($open[0]->draftSubject)->toBe('PHP on the new server')
-        ->and($open[0]->draftBody)->toBe('Use 8.3 on the new box.');
-});
-
-it('sends the draft from the queue', function () {
-    Mail::fake();
-    $this->actingAs(User::factory()->create());
-
-    $id = app(LogInbound::class)(
-        'Northwharf Bakery',
-        'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
-    );
-
-    app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');
-
-    Livewire::test(OpenQueue::class)
-        ->mountAction(TestAction::make('send')->table($id))
-        ->assertSchemaStateSet([
-            'subject' => 'PHP on the new server',
-            'body' => 'Use 8.3 on the new box.',
-        ])
-        ->callMountedAction()
-        ->assertSee('No open replies');
-
-    Mail::assertSent(ClientReply::class);
-    expect(Draft::query()->count())->toBe(0);
-});
-
-it('leaves the row when the queue send is refused', function () {
-    Mail::extend('refused', function () {
-        return new class implements TransportInterface
-        {
-            public function send(RawMessage $message, ?Envelope $envelope = null): ?SentMessage
-            {
-                throw new TransportException('refused');
-            }
-
-            public function __toString(): string
-            {
-                return 'refused';
-            }
-        };
-    });
-
-    config([
-        'mail.default' => 'refused',
-        'mail.mailers.refused' => ['transport' => 'refused'],
-    ]);
-
-    $this->actingAs(User::factory()->create());
-
-    $id = app(LogInbound::class)(
-        'Northwharf Bakery',
-        'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
-    );
-
-    app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');
-
-    Livewire::test(OpenQueue::class)
-        ->callAction(TestAction::make('send')->table($id), [
-            'subject' => 'Edited subject',
-            'body' => 'Edited body.',
-        ])
-        ->assertNotified('The mail server refused the message.')
-        ->assertSee('Northwharf Bakery');
-
-    $open = app(ListOpenReplies::class)(london('2026-10-23 15:30'));
-
-    expect($open)->toHaveCount(1)
         ->and($open[0]->draftBody)->toBe('Use 8.3 on the new box.');
 });

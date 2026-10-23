@@ -2,7 +2,9 @@
 
 namespace App\Filament\Schemas;
 
+use App\Clock\ClockNote;
 use Filament\Infolists\Components\TextEntry;
+use Illuminate\Support\HtmlString;
 
 final class ReplyInfolist
 {
@@ -12,7 +14,7 @@ final class ReplyInfolist
      */
     public static function forRecord(array $record): array
     {
-        return [
+        $entries = [
             self::entry('client', 'Client', $record),
             self::entry('contact_email', 'Contact email', $record),
             self::entry('receipt_source', 'Receipt source', $record),
@@ -21,8 +23,104 @@ final class ReplyInfolist
             self::entry('reply_due', 'Reply due', $record),
             self::entry('id', 'Note', $record),
             self::entry('summary', 'Summary', $record),
-            self::entry('body', 'Note body', $record)->columnSpanFull(),
         ];
+
+        $mail = ClockNote::correspondence((string) ($record['body'] ?? ''));
+
+        if ($mail['client'] !== '') {
+            $entries[] = self::mail('client_email_text', 'Client email', $mail['client']);
+        }
+
+        if ($mail['reply'] !== '') {
+            $entries[] = self::mail('reply_text', 'Reply', $mail['reply']);
+        }
+
+        $earlier = self::earlierText($record);
+
+        if ($earlier !== '') {
+            $entries[] = self::mail('earlier', 'Earlier on this client', $earlier);
+        }
+
+        $entries[] = self::entry('body', 'Note body', $record)->columnSpanFull();
+
+        return $entries;
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     * @return array<int, TextEntry>
+     */
+    public static function earlier(array $record): array
+    {
+        $earlier = self::earlierText($record);
+
+        if ($earlier === '') {
+            return [];
+        }
+
+        return [self::mail('earlier', 'Earlier on this client', $earlier)];
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     */
+    private static function earlierText(array $record): string
+    {
+        $threads = $record['earlier'] ?? [];
+
+        if (! is_array($threads) || $threads === []) {
+            return '';
+        }
+
+        $blocks = [];
+
+        foreach ($threads as $thread) {
+            if (! is_array($thread)) {
+                continue;
+            }
+
+            $lines = [
+                (string) ($thread['receipt'] ?? ''),
+                (string) ($thread['summary'] ?? ''),
+            ];
+            $client = trim((string) ($thread['client'] ?? ''));
+
+            if ($client !== '') {
+                $lines[] = '';
+                $lines[] = 'Client email';
+                $lines[] = $client;
+            }
+
+            foreach ($thread['replies'] ?? [] as $reply) {
+                if (! is_array($reply)) {
+                    continue;
+                }
+
+                $lines[] = '';
+                $lines[] = 'Reply '.(string) ($reply['sent'] ?? '');
+                $lines[] = 'Subject: '.(string) ($reply['subject'] ?? '');
+                $body = trim((string) ($reply['body'] ?? ''));
+
+                if ($body !== '') {
+                    $lines[] = '';
+                    $lines[] = $body;
+                }
+            }
+
+            $blocks[] = implode("\n", $lines);
+        }
+
+        return implode("\n\n", $blocks);
+    }
+
+    private static function mail(string $name, string $label, string $text): TextEntry
+    {
+        return TextEntry::make($name)
+            ->label($label)
+            ->state($text)
+            ->html()
+            ->formatStateUsing(fn (string $state): HtmlString => new HtmlString(nl2br(e($state))))
+            ->columnSpanFull();
     }
 
     /**

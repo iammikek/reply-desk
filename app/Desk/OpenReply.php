@@ -23,6 +23,8 @@ final readonly class OpenReply
         public string $body,
         public ?string $draftSubject = null,
         public ?string $draftBody = null,
+        /** @var list<EarlierThread> */
+        public array $earlier = [],
     ) {}
 
     public function overdueAt(DateTimeImmutable $now): bool
@@ -31,7 +33,7 @@ final readonly class OpenReply
     }
 
     /**
-     * @return array<string, bool|string>
+     * @return array<string, mixed>
      */
     public function toArray(DateTimeImmutable $now): array
     {
@@ -49,6 +51,16 @@ final readonly class OpenReply
             'draft_subject' => $this->draftSubject ?? '',
             'draft_body' => $this->draftBody ?? '',
             'has_draft' => $this->draftSubject !== null,
+            'earlier' => array_map(fn (EarlierThread $thread): array => [
+                'receipt' => $this->format($thread->receipt),
+                'summary' => $thread->summary,
+                'client' => $thread->clientEmail,
+                'replies' => array_map(fn (array $reply): array => [
+                    'sent' => $this->format($reply['sent']),
+                    'subject' => $reply['subject'],
+                    'body' => $reply['body'],
+                ], $thread->replies),
+            ], $this->earlier),
         ];
     }
 

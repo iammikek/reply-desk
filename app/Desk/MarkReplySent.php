@@ -12,7 +12,7 @@ final class MarkReplySent
 {
     public function __construct(private NoteStore $notes) {}
 
-    public function __invoke(string $inboundId, DateTimeImmutable $sent, string $subject): string
+    public function __invoke(string $inboundId, DateTimeImmutable $sent, string $subject, string $reply = ''): string
     {
         $inbound = null;
 
@@ -33,7 +33,7 @@ final class MarkReplySent
         }
 
         $id = $this->notes->writeNote(
-            ClockNote::sent($inboundId, $sent, $subject),
+            ClockNote::sent($inboundId, $sent, $subject, $reply),
             $inbound->companyId,
             $inbound->contactId,
         );

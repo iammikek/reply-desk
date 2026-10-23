@@ -49,6 +49,7 @@ final class SendReply
             $inboundId,
             DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE)),
             $subject,
+            $body,
         );
     }
 

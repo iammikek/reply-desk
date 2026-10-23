@@ -11,7 +11,6 @@ use App\Desk\LondonTime;
 use App\Desk\MarkReplySent;
 use App\Desk\OpenReply;
 use App\Desk\SaveDraft;
-use App\Desk\SendReply;
 use App\Filament\Pages\OpenQueue;
 use App\Filament\Schemas\DraftForm;
 use App\Filament\Schemas\MarkSentForm;
@@ -35,11 +34,13 @@ final class OpenRepliesTable
                 TextColumn::make('client')
                     ->label('Client')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->grow(false),
                 TextColumn::make('summary')
                     ->label('Summary')
                     ->searchable()
-                    ->wrap(),
+                    ->wrap()
+                    ->grow(),
                 TextColumn::make('inbound')
                     ->label('Inbound')
                     ->sortable(),
@@ -66,6 +67,7 @@ final class OpenRepliesTable
                     ->trueLabel('Overdue')
                     ->falseLabel('Not overdue'),
             ])
+            ->modifyUngroupedRecordActionsUsing(fn (Action $action): Action => $action->button())
             ->recordActions([
                 Action::make('view')
                     ->label('Note')
@@ -80,7 +82,10 @@ final class OpenRepliesTable
                         'subject' => $record['draft_subject'],
                         'body' => $record['draft_body'],
                     ])
-                    ->schema(DraftForm::components())
+                    ->schema(fn (array $record): array => [
+                        ...ReplyInfolist::earlier($record),
+                        ...DraftForm::components(),
+                    ])
                     ->action(function (array $record, array $data, OpenQueue $livewire): void {
                         try {
                             app(SaveDraft::class)(
@@ -107,29 +112,6 @@ final class OpenRepliesTable
                         $livewire->flushCachedTableRecords();
                         Notification::make()->title('Draft discarded')->success()->send();
                     }),
-                Action::make('send')
-                    ->label('Send')
-                    ->fillForm(fn (array $record): array => [
-                        'subject' => $record['draft_subject'],
-                        'body' => $record['draft_body'],
-                    ])
-                    ->schema(DraftForm::components())
-                    ->action(function (array $record, array $data, OpenQueue $livewire): void {
-                        try {
-                            app(SendReply::class)(
-                                (string) $record['id'],
-                                (string) $data['subject'],
-                                (string) $data['body'],
-                            );
-                        } catch (DeskException $exception) {
-                            Notification::make()->title($exception->getMessage())->danger()->send();
-
-                            throw new Halt;
-                        }
-
-                        $livewire->flushCachedTableRecords();
-                        Notification::make()->title('Reply sent. The clock has stopped.')->success()->send();
-                    }),
                 Action::make('markSent')
                     ->label('Mark sent')
                     ->schema(MarkSentForm::components())
@@ -139,6 +121,7 @@ final class OpenRepliesTable
                                 (string) $record['id'],
                                 LondonTime::parse($data['sent']),
                                 (string) $data['subject'],
+                                (string) $data['reply'],
                             );
                         } catch (DeskException $exception) {
                             Notification::make()->title($exception->getMessage())->danger()->send();
@@ -159,7 +142,7 @@ final class OpenRepliesTable
 
     /**
      * @param  array<string, mixed>|null  $filters
-     * @return list<array<string, bool|string>>
+     * @return list<array<string, mixed>>
      */
     private static function records(?string $search, ?array $filters, ?string $sortColumn, ?string $sortDirection): array
     {
@@ -197,7 +180,7 @@ final class OpenRepliesTable
     }
 
     /**
-     * @return array<string, bool|string>
+     * @return array<string, mixed>
      */
     private static function record(OpenReply $reply, DateTimeImmutable $now): array
     {

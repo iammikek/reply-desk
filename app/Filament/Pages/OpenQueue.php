@@ -15,6 +15,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\EmbeddedTable;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -35,6 +36,8 @@ class OpenQueue extends Page implements HasTable
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedInbox;
 
     protected static ?int $navigationSort = -1;
+
+    protected Width|string|null $maxContentWidth = Width::Full;
 
     public function table(Table $table): Table
     {
@@ -73,6 +76,7 @@ class OpenQueue extends Page implements HasTable
         return [
             Action::make('logInbound')
                 ->label('Log inbound')
+                ->button()
                 ->schema(LogInboundForm::components())
                 ->action(function (array $data): void {
                     try {

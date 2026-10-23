@@ -140,9 +140,10 @@ server.registerTool(
             inbound: z.string().describe('Inbound note id.'),
             sent: z.string().describe('When the reply was sent, Y-m-d H:i Europe/London.'),
             subject: z.string().describe('Subject of the sent reply, one line.'),
+            reply: z.string().describe('The reply that was sent, pasted from Mail.'),
         },
     },
-    async ({ inbound, sent, subject }) => run(['reply:mark-sent', inbound, sent, subject]),
+    async ({ inbound, sent, subject, reply }) => run(['reply:mark-sent', inbound, sent, subject, reply]),
 );
 
 const transport = new StdioServerTransport();
