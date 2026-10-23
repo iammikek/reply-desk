@@ -93,15 +93,3 @@ it('prints the open queue as json', function () {
     expect($output)->toContain('Northwharf Bakery / Ada North')
         ->and($output)->toContain('2026-10-21 10:00');
 });
-
-function replyDeskParty(string $kind, string $id, string $name, string $email = ''): void
-{
-    DB::table('fake_parties')->insert([
-        'kind' => $kind,
-        'id' => $id,
-        'name' => $name,
-        'email' => $email,
-        'created_at' => now(),
-        'updated_at' => now(),
-    ]);
-}

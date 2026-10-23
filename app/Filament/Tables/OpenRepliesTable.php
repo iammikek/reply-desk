@@ -1,0 +1,145 @@
+<?php
+
+namespace App\Filament\Tables;
+
+use App\Clock\ReceiptSource;
+use App\Clock\ReplyClock;
+use App\Desk\DeskException;
+use App\Desk\ListOpenReplies;
+use App\Desk\LondonTime;
+use App\Desk\MarkReplySent;
+use App\Desk\OpenReply;
+use App\Filament\Pages\OpenQueue;
+use App\Filament\Schemas\MarkSentForm;
+use App\Filament\Schemas\ReplyInfolist;
+use DateTimeImmutable;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
+use Filament\Support\ArrayRecord;
+use Filament\Support\Exceptions\Halt;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Table;
+
+final class OpenRepliesTable
+{
+    public static function configure(Table $table): Table
+    {
+        return $table
+            ->records(fn (?string $search, ?array $filters, ?string $sortColumn, ?string $sortDirection): array => self::records($search, $filters, $sortColumn, $sortDirection))
+            ->columns([
+                TextColumn::make('client')
+                    ->label('Client')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('summary')
+                    ->label('Summary')
+                    ->searchable()
+                    ->wrap(),
+                TextColumn::make('inbound')
+                    ->label('Inbound')
+                    ->sortable(),
+                TextColumn::make('clock_start')
+                    ->label('Clock start')
+                    ->sortable(),
+                TextColumn::make('reply_due')
+                    ->label('Reply due')
+                    ->sortable()
+                    ->badge()
+                    ->color(fn (array $record): string => $record['overdue'] ? 'danger' : 'gray'),
+                TextColumn::make('id')
+                    ->label('Note')
+                    ->toggleable(),
+            ])
+            ->filters([
+                TernaryFilter::make('overdue')
+                    ->label('Overdue')
+                    ->trueLabel('Overdue')
+                    ->falseLabel('Not overdue'),
+            ])
+            ->recordActions([
+                Action::make('view')
+                    ->label('Note')
+                    ->slideOver()
+                    ->modalHeading('Clock note')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Close')
+                    ->schema(fn (array $record): array => ReplyInfolist::forRecord($record)),
+                Action::make('markSent')
+                    ->label('Mark sent')
+                    ->schema(MarkSentForm::components())
+                    ->action(function (array $record, array $data, OpenQueue $livewire): void {
+                        try {
+                            app(MarkReplySent::class)(
+                                (string) $record['id'],
+                                LondonTime::parse($data['sent']),
+                                (string) $data['subject'],
+                            );
+                        } catch (DeskException $exception) {
+                            Notification::make()->title($exception->getMessage())->danger()->send();
+
+                            throw new Halt;
+                        }
+
+                        $livewire->flushCachedTableRecords();
+                        Notification::make()->title('Reply marked sent')->success()->send();
+                    }),
+            ])
+            ->defaultSort('reply_due')
+            ->emptyStateHeading('No open replies')
+            ->emptyStateDescription('Log an inbound when a client email arrives.')
+            ->modelLabel('reply')
+            ->pluralModelLabel('replies');
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $filters
+     * @return list<array<string, bool|string>>
+     */
+    private static function records(?string $search, ?array $filters, ?string $sortColumn, ?string $sortDirection): array
+    {
+        $now = DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE));
+        $records = array_map(
+            fn (OpenReply $reply): array => self::record($reply, $now),
+            app(ListOpenReplies::class)($now),
+        );
+
+        $overdue = $filters['overdue']['value'] ?? null;
+
+        if ($overdue === true || $overdue === 1 || $overdue === '1') {
+            $records = array_values(array_filter($records, fn (array $record): bool => $record['overdue'] === true));
+        } elseif ($overdue === false || $overdue === 0 || $overdue === '0') {
+            $records = array_values(array_filter($records, fn (array $record): bool => $record['overdue'] === false));
+        }
+
+        if (filled($search)) {
+            $needle = mb_strtolower($search);
+            $records = array_values(array_filter(
+                $records,
+                fn (array $record): bool => str_contains(mb_strtolower($record['client'].' '.$record['summary']), $needle),
+            ));
+        }
+
+        if (filled($sortColumn)) {
+            usort($records, function (array $left, array $right) use ($sortColumn, $sortDirection): int {
+                $compared = ($left[$sortColumn] ?? '') <=> ($right[$sortColumn] ?? '');
+
+                return $sortDirection === 'desc' ? -$compared : $compared;
+            });
+        }
+
+        return $records;
+    }
+
+    /**
+     * @return array<string, bool|string>
+     */
+    private static function record(OpenReply $reply, DateTimeImmutable $now): array
+    {
+        $row = $reply->toArray($now);
+        $row['receipt_source'] = $reply->receiptSource === ReceiptSource::MailClient ? 'Mail client' : 'Logged';
+        $row[ArrayRecord::getKeyName()] = $reply->id;
+
+        return $row;
+    }
+}
