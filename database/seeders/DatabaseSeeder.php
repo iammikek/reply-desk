@@ -17,10 +17,13 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Reply desk',
-            'email' => 'desk@example.com',
-        ]);
+        User::query()->updateOrCreate(
+            ['email' => 'mike@automica.io'],
+            [
+                'name' => 'Mike Karthauser',
+                'password' => 'password',
+            ],
+        );
 
         $this->call(DemoSeeder::class);
     }
