@@ -49,6 +49,26 @@ Sign in as `mike@automica.io` with password `password`. The panel shows Mike Kar
 
 `php artisan db:seed` refuses to run when `REPLY_DESK_STORE` is `hubspot`, and it refuses portal `145255358`.
 
+## Persistent database
+
+Login, sessions, drafts, and the company-list cache are Laravel tables. Clock notes stay in HubSpot.
+
+The showable copy uses SQLite. The running desk uses Supabase Postgres in an EU region. Copy the direct connection from the Supabase dashboard into `.env`:
+
+```
+DB_CONNECTION=pgsql
+DB_HOST=db.YOUR_PROJECT_REF.supabase.co
+DB_PORT=5432
+DB_DATABASE=postgres
+DB_USERNAME=postgres
+DB_PASSWORD=
+DB_SSLMODE=require
+```
+
+Use port 5432. The transaction pooler on port 6543 breaks Laravel migrations. The direct host is IPv6-only, so from this Mac use the session pooler and set `DB_USERNAME` to `postgres.YOUR_PROJECT_REF`.
+
+Then run `php artisan migrate`. Do not commit `.env`.
+
 Leave these in `.env` for the showable copy:
 
 ```
