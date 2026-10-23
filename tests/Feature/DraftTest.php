@@ -105,3 +105,24 @@ it('shows a saved draft on the queue', function () {
 
     expect(app(ListOpenReplies::class)(london('2026-10-23 12:00')))->toHaveCount(1);
 });
+
+it('discards a draft from the queue and leaves the row open', function () {
+    $this->actingAs(User::factory()->create());
+
+    $id = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+    );
+
+    app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');
+
+    Livewire::test(OpenQueue::class)
+        ->callAction(TestAction::make('discardDraft')->table($id))
+        ->assertSee('Northwharf Bakery');
+
+    expect(Draft::query()->count())->toBe(0)
+        ->and(app(ListOpenReplies::class)(london('2026-10-23 12:00')))->toHaveCount(1);
+});
