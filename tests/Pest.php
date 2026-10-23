@@ -1,9 +1,12 @@
 <?php
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-pest()->extend(TestCase::class)->in('Feature');
+pest()->extend(TestCase::class)
+    ->beforeEach(fn () => Cache::flush())
+    ->in('Feature');
 
 function london(string $time): DateTimeImmutable
 {

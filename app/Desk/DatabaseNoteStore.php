@@ -43,6 +43,18 @@ final class DatabaseNoteStore implements NoteStore
         return $id;
     }
 
+    public function replaceNote(string $id, string $body): void
+    {
+        $updated = DB::table('fake_notes')->where('id', $id)->update([
+            'body' => $body,
+            'updated_at' => now(),
+        ]);
+
+        if ($updated === 0) {
+            throw new DeskException("No note {$id}.");
+        }
+    }
+
     public function notes(): array
     {
         return DB::table('fake_notes')

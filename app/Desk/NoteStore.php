@@ -12,6 +12,8 @@ interface NoteStore
 
     public function writeNote(string $body, string $companyId, string $contactId): string;
 
+    public function replaceNote(string $id, string $body): void;
+
     /**
      * @return list<StoredNote>
      */
