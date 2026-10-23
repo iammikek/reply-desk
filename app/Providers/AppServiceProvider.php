@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Desk\DatabaseNoteStore;
+use App\Desk\HubSpotNoteStore;
+use App\Desk\NoteStore;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +14,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(NoteStore::class, function ($app): NoteStore {
+            if (config('reply-desk.store') === 'hubspot') {
+                return $app->make(HubSpotNoteStore::class);
+            }
+
+            return $app->make(DatabaseNoteStore::class);
+        });
     }
 
     /**

@@ -32,5 +32,8 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="REPLY_DESK_STORE" value="memory"/>
+        <env name="HUBSPOT_ACCESS_TOKEN" value=""/>
+        <env name="HUBSPOT_PORTAL_ID" value=""/>
     </php>
 </phpunit>
