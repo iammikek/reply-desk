@@ -23,7 +23,7 @@ final class ClockNote
         ]);
     }
 
-    public static function sent(string $closes, DateTimeImmutable $sent, string $subject): string
+    public static function sent(string $closes, DateTimeImmutable $sent, string $subject, string $reply = ''): string
     {
         if (preg_match('/^\d+$/', $closes) !== 1) {
             throw new InvalidArgumentException('A sent note must name the inbound note id.');
@@ -31,23 +31,87 @@ final class ClockNote
 
         $subject = self::oneLine($subject, 'Subject');
 
-        return implode("\n", [
+        $body = implode("\n", [
             'Clock: sent',
             'Closes: '.$closes,
             'Sent: '.$sent->setTimezone(self::zone())->format('Y-m-d H:i').' Europe/London',
             'Subject: '.$subject,
         ]);
+
+        return self::withMail($body, reply: $reply);
     }
 
     public static function parse(string $body): ParsedInbound|ParsedSent|null
     {
-        $lines = preg_split("/\r\n|\n|\r/", trim($body)) ?: [];
+        $lines = self::header($body);
 
         return match ($lines[0] ?? '') {
             'Clock: inbound' => self::parseInbound($lines),
             'Clock: sent' => self::parseSent($lines),
             default => null,
         };
+    }
+
+    /**
+     * Keep any mail already on the note. Fill a section only when it is empty.
+     */
+    public static function withMail(string $body, string $clientEmail = '', string $reply = ''): string
+    {
+        $existing = self::correspondence($body);
+        $clientEmail = $existing['client'] !== '' ? $existing['client'] : trim($clientEmail);
+        $reply = $existing['reply'] !== '' ? $existing['reply'] : trim($reply);
+        $header = implode("\n", self::header($body));
+
+        if ($clientEmail !== '') {
+            $header .= "\n\nClient email:\n".$clientEmail;
+        }
+
+        if ($reply !== '') {
+            $header .= "\n\nReply:\n".$reply;
+        }
+
+        return $header;
+    }
+
+    /**
+     * @return array{client: string, reply: string}
+     */
+    public static function correspondence(string $body): array
+    {
+        return [
+            'client' => self::section($body, 'Client email'),
+            'reply' => self::section($body, 'Reply'),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function header(string $body): array
+    {
+        $lines = preg_split("/\r\n|\n|\r/", trim($body)) ?: [];
+        $header = [];
+
+        foreach ($lines as $line) {
+            if (trim($line) === '') {
+                break;
+            }
+
+            $header[] = $line;
+        }
+
+        return $header;
+    }
+
+    private static function section(string $body, string $heading): string
+    {
+        $pattern = '/^'.preg_quote($heading, '/').':\n(.*?)(?=\n(?:Client email|Reply):\n|\z)/ms';
+
+        if (preg_match($pattern, $body, $matches) !== 1) {
+            return '';
+        }
+
+        return trim($matches[1]);
     }
 
     /**

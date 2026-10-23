@@ -59,6 +59,20 @@ it('writes an inbound note that parses back', function () {
         TXT);
 });
 
+it('keeps the clock header when the client email is filed on the note', function () {
+    $body = ClockNote::withMail(
+        ClockNote::inbound(london('2026-10-22 10:42'), ReceiptSource::Logged, 'Which PHP to use'),
+        'Which loaf for Friday.',
+        'Use the tin loaf.',
+    );
+    $parsed = ClockNote::parse($body);
+
+    expect($parsed)->toBeInstanceOf(ParsedInbound::class)
+        ->and($parsed->summary)->toBe('Which PHP to use')
+        ->and(ClockNote::correspondence($body)['client'])->toBe('Which loaf for Friday.')
+        ->and(ClockNote::correspondence($body)['reply'])->toBe('Use the tin loaf.');
+});
+
 it('writes a sent note that parses back', function () {
     $sent = new DateTimeImmutable('2026-10-22 16:04', new DateTimeZone('Europe/London'));
     $body = ClockNote::sent('123456789', $sent, 'PHP on the new server');

@@ -16,13 +16,15 @@ final class LogInbound
         DateTimeImmutable $receipt,
         ReceiptSource $receiptSource,
         string $summary,
+        string $clientEmail = '',
+        string $reply = '',
     ): string {
         $this->notes->assertPortal();
         $companyParty = $this->notes->findCompany($company);
         $contact = $this->notes->findContact($email);
 
         return $this->notes->writeNote(
-            ClockNote::inbound($receipt, $receiptSource, $summary),
+            ClockNote::withMail(ClockNote::inbound($receipt, $receiptSource, $summary), $clientEmail, $reply),
             $companyParty->id,
             $contact->id,
         );
