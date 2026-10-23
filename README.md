@@ -98,13 +98,27 @@ php artisan reply:mark-sent {inbound} {sent} {subject} {reply}
 
 ## Cursor
 
-Start the stdio server from this repo:
+The panel on port 8000 does not expose the MCP. Cursor starts the stdio process itself. A copy already running from `npm run mcp` in a terminal cannot be attached.
 
-```bash
-npm run mcp
+Add `reply-desk` inside `mcpServers` in `~/.cursor/mcp.json`. The entry has to sit inside that object. Pasting it after the closing brace leaves the file invalid and Cursor will not load the server.
+
+```json
+"reply-desk": {
+  "command": "node",
+  "args": ["mcp-server/index.mjs"],
+  "cwd": "/absolute/path/to/reply-desk",
+  "env": {
+    "PATH": "/path/to/php/bin:/usr/bin:/bin",
+    "PHP_BINARY": "/path/to/php"
+  }
+}
 ```
 
-Cursor runs `node mcp-server/index.mjs`. The tools are `list_companies`, `list_open_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. `list_companies` is the cached company and contact list. `log_inbound` records a client email against one of those contacts. There is no send tool. The process shells to the Artisan commands. It does not talk to HubSpot itself.
+`PHP_BINARY` is the Herd PHP on this Mac, so the server can run `php artisan`. The process reads the HubSpot token from this project's `.env`. The token does not go in `mcp.json`.
+
+Open the Agents sidebar, the one that lists chats. **Customize** is under that list. It is not in the file explorer. Open **Customize**, then **MCPs**, and turn **reply-desk** on. If that sidebar is hidden, press **Cmd+Shift+J** and open MCP from Cursor Settings. When the tools appear, start a new Agent chat.
+
+Ask in plain language, for example "list the open replies". Cursor calls the tool and asks for approval. The tools are `list_companies`, `list_open_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. `list_companies` is the cached company and contact list. `log_inbound` records a client email against one of those contacts. There is no send tool. The process shells to the Artisan commands. It does not talk to HubSpot itself.
 
 ## Tests
 
