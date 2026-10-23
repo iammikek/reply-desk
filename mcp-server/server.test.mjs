@@ -69,6 +69,7 @@ test('lists the desk tools and returns the same open row', async () => {
 
         assert.deepEqual(names, [
             'discard_draft',
+            'list_closed_replies',
             'list_companies',
             'list_open_replies',
             'log_inbound',

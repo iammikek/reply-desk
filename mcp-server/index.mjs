@@ -90,6 +90,16 @@ server.registerTool(
 );
 
 server.registerTool(
+    'list_closed_replies',
+    {
+        description:
+            'List closed replies, newest sent time first. Each row is an inbound that has a sent note, including companies with nothing open. The client email and each pasted reply are included.',
+        inputSchema: {},
+    },
+    async () => run(['reply:list-closed']),
+);
+
+server.registerTool(
     'list_companies',
     {
         description:

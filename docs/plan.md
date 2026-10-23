@@ -38,7 +38,7 @@ Due time is calculated when the page or a tool runs. It is not stored.
 
 A filter shows rows whose reply is overdue. Marking a reply sent fills the sent time and the row leaves the queue.
 
-Closed threads for the same company appear on an open row as "Earlier on this client": the receipt, the summary, the client email, and each reply in sent order. A company with nothing open has no page for that history.
+Closed threads for the same company also appear on an open row as "Earlier on this client": the receipt, the summary, the client email, and each reply in sent order. The History page lists closed threads, newest sent time first, ten at a time, including a company that has nothing open. Opening a thread shows a timeline: the client email, then each reply in sent order.
 
 ```mermaid
 flowchart LR
@@ -133,6 +133,7 @@ The Artisan command and the MCP tool take the company name and the contact email
 | Action | Does |
 | --- | --- |
 | `list_open_replies` | Reads clock notes. Returns inbound rows with no sent note, including clock start and reply due calculated at call time. Includes the saved draft when one exists. The draft does not change the due time. Includes earlier closed threads for the same company. |
+| `list_closed_replies` | Returns inbound rows that have a sent note, newest sent time first. Includes the client email and each pasted reply. A company with nothing open is included. |
 | `list_companies` | Lists companies and the contacts on each company. The list is cached for one hour. |
 | `log_inbound` | Writes one inbound clock note. Arguments: company, contact email, receipt time, receipt source, a one-line summary, and the client email text. |
 | `save_draft` | Creates or replaces the draft for an open inbound id. Arguments: subject, body. Refuses if that inbound is already closed. Writes no HubSpot note. |
@@ -155,6 +156,7 @@ In Cursor, **Customize** is in the Agents sidebar, under the chat list. Open **C
 | --- | --- |
 | `list_companies` | `reply:directory` |
 | `list_open_replies` | `reply:list-open` |
+| `list_closed_replies` | `reply:list-closed` |
 | `log_inbound` | `reply:log-inbound` |
 | `save_draft` | `reply:save-draft` |
 | `discard_draft` | `reply:discard-draft` |

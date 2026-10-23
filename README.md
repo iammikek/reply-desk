@@ -24,11 +24,14 @@ Due time is calculated when the page or a command runs. It is not stored. Monday
 The site is the Filament panel. Sign-in is at `/login`.
 
 - `app/Filament/Pages/OpenQueue.php` is the queue
+- `app/Filament/Pages/History.php` is the closed threads
 - `app/Filament/Tables/OpenRepliesTable.php` is the table, the overdue filter, and the row actions
 - `app/Filament/Widgets/OpenQueueOverview.php` counts open and overdue rows
 - `app/Providers/Filament/AdminPanelProvider.php` registers the panel
 
 Log inbound, save a draft, discard a draft, and mark sent are actions on that page. The reply itself goes out from Mail. Mark sent records that it went.
+
+History lists closed threads, newest sent time first, ten at a time. A company with nothing open is on that page. Thread opens a timeline: the client email first, then each reply in the order it was sent.
 
 ## Run the showable copy
 
@@ -87,6 +90,7 @@ The same actions the panel uses:
 
 ```bash
 php artisan reply:list-open
+php artisan reply:list-closed
 php artisan reply:directory
 php artisan reply:log-inbound {company} {email} {receipt} {source} {summary} {client?}
 php artisan reply:save-draft {inbound} {subject} {body}
@@ -118,7 +122,7 @@ Add `reply-desk` inside `mcpServers` in `~/.cursor/mcp.json`. The entry has to s
 
 Open the Agents sidebar, the one that lists chats. **Customize** is under that list. It is not in the file explorer. Open **Customize**, then **MCPs**, and turn **reply-desk** on. If that sidebar is hidden, press **Cmd+Shift+J** and open MCP from Cursor Settings. When the tools appear, start a new Agent chat.
 
-Ask in plain language, for example "list the open replies". Cursor calls the tool and asks for approval. The tools are `list_companies`, `list_open_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. `list_companies` is the cached company and contact list. `log_inbound` records a client email against one of those contacts. There is no send tool. The process shells to the Artisan commands. It does not talk to HubSpot itself.
+Ask in plain language, for example "list the open replies". Cursor calls the tool and asks for approval. The tools are `list_companies`, `list_open_replies`, `list_closed_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. `list_companies` is the cached company and contact list. `log_inbound` records a client email against one of those contacts. There is no send tool. The process shells to the Artisan commands. It does not talk to HubSpot itself.
 
 ## Tests
 
