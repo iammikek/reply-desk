@@ -18,7 +18,7 @@
                 <li>The reply is due 24 hours after the clock starts. Monday to Friday, 08:00 to 20:00, Europe/London. Evening and weekend mail starts at 08:00 on the next working day.</li>
                 <li>Due time is calculated when the page is opened. It is not stored, so it cannot go stale.</li>
                 <li>A draft can sit on the row while the reply is written. The draft does not stop the clock, and it is not a reply.</li>
-                <li>Marking sent records that the reply went. The desk does not send the email.</li>
+                <li>Send delivers the reply. A file on the note is stored in HubSpot. Mark sent records a reply that already went from Mail.</li>
                 <li>Closed threads stay on History, newest first, with the client email and then each reply.</li>
             </ul>
         </section>
@@ -33,7 +33,7 @@
                 <dt>Draft</dt>
                 <dd>One draft per open row. Save replaces it. Discard removes it and leaves the row open.</dd>
                 <dt>Mark sent</dt>
-                <dd>Records the sent time, the subject, and the reply pasted from Mail. The row leaves the queue.</dd>
+                <dd>Records the sent time, the subject, and the reply pasted from Mail. A file on that note is stored in HubSpot. The row leaves the queue.</dd>
                 <dt>History</dt>
                 <dd>Closed threads, ten at a time. A company with nothing open is still there. Thread opens the timeline.</dd>
                 <dt>The same actions from Cursor</dt>

@@ -3,6 +3,7 @@
 namespace App\Desk;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 final class DatabaseNoteStore implements NoteStore
 {
@@ -21,12 +22,16 @@ final class DatabaseNoteStore implements NoteStore
         return $this->findParty('contact', 'email', strtolower(trim($email)), 'contact');
     }
 
-    public function writeNote(string $body, string $companyId, string $contactId): string
+    public function writeNote(string $body, string $companyId, string $contactId, ?NoteFile $file = null): string
     {
         $company = $this->party('company', $companyId);
         $contact = $this->party('contact', $contactId);
         $highest = DB::table('fake_notes')->pluck('id')->map(fn (mixed $existing): int => (int) $existing)->max();
         $id = (string) (($highest ?? 0) + 1);
+
+        if ($file !== null) {
+            $this->keepFile($id, $file);
+        }
 
         DB::table('fake_notes')->insert([
             'id' => $id,
@@ -36,6 +41,7 @@ final class DatabaseNoteStore implements NoteStore
             'contact_id' => $contact->id,
             'contact_name' => $contact->name,
             'contact_email' => $contact->email,
+            'attachment_name' => $file?->name,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -140,5 +146,18 @@ final class DatabaseNoteStore implements NoteStore
         }
 
         return new Party((string) $row->id, $row->name, (string) $row->email);
+    }
+
+    private function keepFile(string $id, NoteFile $file): void
+    {
+        if (! is_file($file->path)) {
+            throw new DeskException('That attachment could not be read.');
+        }
+
+        $stored = Storage::disk('local')->put('note-files/'.$id.'/'.$file->name, fopen($file->path, 'r'));
+
+        if ($stored === false) {
+            throw new DeskException('That attachment could not be stored.');
+        }
     }
 }

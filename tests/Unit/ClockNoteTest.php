@@ -59,6 +59,20 @@ it('writes an inbound note that parses back', function () {
         TXT);
 });
 
+it('writes an inbound subject and body as separate parts', function () {
+    $body = ClockNote::withMail(
+        ClockNote::inbound(london('2026-10-22 10:42'), ReceiptSource::MailClient, '', 'The form can come off'),
+        "The form can come off the front.\nCan you look today?",
+    );
+    $parsed = ClockNote::parse($body);
+
+    expect($parsed)->toBeInstanceOf(ParsedInbound::class)
+        ->and($parsed->summary)->toBe('The form can come off')
+        ->and(ClockNote::correspondence($body)['client'])->toBe("The form can come off the front.\nCan you look today?")
+        ->and($body)->toContain('Subject: The form can come off')
+        ->and($body)->not->toContain('Summary:');
+});
+
 it('keeps the clock header when the client email is filed on the note', function () {
     $body = ClockNote::withMail(
         ClockNote::inbound(london('2026-10-22 10:42'), ReceiptSource::Logged, 'Which PHP to use'),

@@ -7,6 +7,7 @@ use App\Desk\DeskException;
 use App\Desk\HubSpotNoteStore;
 use App\Desk\ListOpenReplies;
 use App\Desk\LogInbound;
+use App\Desk\NoteFile;
 use App\Desk\StoredNote;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -102,6 +103,86 @@ it('writes an inbound note when the portal matches one company and one contact',
         && str_contains($request->url(), '/note/55/associations/default/company/10'));
     Http::assertSent(fn (Request $request): bool => $request->method() === 'PUT'
         && str_contains($request->url(), '/note/55/associations/default/contact/20'));
+});
+
+it('uploads an attachment and stores its id on the note', function () {
+    $path = storage_path('framework/testing/audit.txt');
+
+    if (! is_dir(dirname($path))) {
+        mkdir(dirname($path), 0777, true);
+    }
+
+    file_put_contents($path, 'audit');
+
+    Http::fake(function (Request $request) {
+        $url = $request->url();
+        $urlPath = parse_url($url, PHP_URL_PATH) ?: '';
+
+        if (str_contains($url, 'account-info')) {
+            return Http::response(['portalId' => 145255358]);
+        }
+
+        if (str_ends_with($url, '/companies/search')) {
+            return Http::response(['results' => [[
+                'id' => '10',
+                'properties' => ['name' => 'Northwharf Bakery'],
+            ]]]);
+        }
+
+        if (str_ends_with($url, '/contacts/search')) {
+            return Http::response(['results' => [[
+                'id' => '20',
+                'properties' => ['email' => 'ada@northwharf.example', 'firstname' => 'Ada', 'lastname' => 'North'],
+            ]]]);
+        }
+
+        if (str_ends_with($urlPath, '/files/v3/files')) {
+            return Http::response(['id' => 'file-9'], 201);
+        }
+
+        if ($request->method() === 'POST' && str_ends_with($urlPath, '/notes')) {
+            return Http::response(['id' => '55'], 201);
+        }
+
+        if ($request->method() === 'PUT' && str_contains($url, '/associations/default/')) {
+            return Http::response('', 204);
+        }
+
+        if (str_ends_with($urlPath, '/companies/batch/read')) {
+            return Http::response(['results' => [[
+                'id' => '10',
+                'properties' => ['name' => 'Northwharf Bakery'],
+            ]]]);
+        }
+
+        if (str_ends_with($urlPath, '/contacts/batch/read')) {
+            return Http::response(['results' => [[
+                'id' => '20',
+                'properties' => ['email' => 'ada@northwharf.example', 'firstname' => 'Ada', 'lastname' => 'North'],
+            ]]]);
+        }
+
+        return Http::response('unexpected '.$url, 500);
+    });
+
+    $id = (new LogInbound(app(HubSpotNoteStore::class)))(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+        file: new NoteFile($path, 'audit.txt'),
+    );
+
+    expect($id)->toBe('55');
+
+    Http::assertSent(function (Request $request): bool {
+        $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
+
+        return $request->method() === 'POST'
+            && str_ends_with($path, '/notes')
+            && ($request->data()['properties']['hs_attachment_ids'] ?? null) === 'file-9';
+    });
 });
 
 it('uses the one company whose name contains every word', function () {

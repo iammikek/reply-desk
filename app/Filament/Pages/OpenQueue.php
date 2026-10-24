@@ -6,6 +6,7 @@ use App\Clock\ReceiptSource;
 use App\Desk\DeskException;
 use App\Desk\LogInbound;
 use App\Desk\LondonTime;
+use App\Desk\NoteFile;
 use App\Filament\Schemas\LogInboundForm;
 use App\Filament\Tables\OpenRepliesTable;
 use App\Filament\Widgets\OpenQueueOverview;
@@ -13,6 +14,7 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Panel;
 use Filament\Schemas\Components\EmbeddedTable;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
@@ -36,6 +38,13 @@ class OpenQueue extends Page implements HasTable
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedInbox;
 
     protected static ?int $navigationSort = -1;
+
+    protected static string $routePath = '/';
+
+    public static function getRoutePath(Panel $panel): string
+    {
+        return static::$routePath;
+    }
 
     protected Width|string|null $maxContentWidth = Width::Full;
 
@@ -85,7 +94,10 @@ class OpenQueue extends Page implements HasTable
                             (string) $data['contact_id'],
                             LondonTime::parse($data['receipt']),
                             ReceiptSource::from((string) $data['receipt_source']),
-                            (string) $data['summary'],
+                            '',
+                            (string) $data['body'],
+                            NoteFile::fromForm($data['attachment'] ?? null, $data['attachment_name'] ?? null),
+                            (string) $data['subject'],
                         );
                     } catch (DeskException $exception) {
                         Notification::make()->title($exception->getMessage())->danger()->send();

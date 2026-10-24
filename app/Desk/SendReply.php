@@ -18,7 +18,7 @@ final class SendReply
         private MarkReplySent $markReplySent,
     ) {}
 
-    public function __invoke(string $inboundId, string $subject, string $body): string
+    public function __invoke(string $inboundId, string $subject, string $body, ?NoteFile $file = null): string
     {
         $subject = trim($subject);
         $body = trim($body);
@@ -40,7 +40,7 @@ final class SendReply
         }
 
         try {
-            Mail::to($inbound->contactEmail)->send(new ClientReply($subject, $body));
+            Mail::to($inbound->contactEmail)->send(new ClientReply($subject, $body, $file));
         } catch (Throwable) {
             throw new DeskException('The mail server refused the message.');
         }
@@ -50,6 +50,7 @@ final class SendReply
             DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE)),
             $subject,
             $body,
+            $file,
         );
     }
 

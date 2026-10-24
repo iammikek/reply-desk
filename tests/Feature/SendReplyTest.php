@@ -4,6 +4,7 @@ use App\Clock\ReceiptSource;
 use App\Desk\DeskException;
 use App\Desk\ListOpenReplies;
 use App\Desk\LogInbound;
+use App\Desk\NoteFile;
 use App\Desk\SaveDraft;
 use App\Desk\SendReply;
 use App\Mail\ClientReply;
@@ -11,6 +12,7 @@ use App\Models\Draft;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mailer\SentMessage;
@@ -52,6 +54,37 @@ it('closes the row after the mail server accepts', function () {
     expect(app(ListOpenReplies::class)(london('2026-10-23 15:30')))->toBeEmpty()
         ->and(Draft::query()->count())->toBe(0)
         ->and($sent)->toContain('Use 8.3 on the new box.');
+});
+
+it('sends the attachment with the reply and stores it on the note', function () {
+    Mail::fake();
+
+    $path = storage_path('framework/testing/audit.txt');
+
+    if (! is_dir(dirname($path))) {
+        mkdir(dirname($path), 0777, true);
+    }
+
+    file_put_contents($path, 'audit');
+
+    $id = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+    );
+
+    $sentId = app(SendReply::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.', new NoteFile($path, 'audit.txt'));
+
+    Mail::assertSent(ClientReply::class, function (ClientReply $mail): bool {
+        $attachments = $mail->attachments();
+
+        return count($attachments) === 1 && $attachments[0]->as === 'audit.txt';
+    });
+
+    expect(DB::table('fake_notes')->where('id', $sentId)->value('attachment_name'))->toBe('audit.txt')
+        ->and(Storage::disk('local')->exists('note-files/'.$sentId.'/audit.txt'))->toBeTrue();
 });
 
 it('leaves the row and the draft when the mail server refuses', function () {

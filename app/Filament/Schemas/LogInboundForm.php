@@ -6,7 +6,10 @@ use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
 use App\Desk\NoteStore;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -14,7 +17,7 @@ use Filament\Schemas\Components\Utilities\Set;
 final class LogInboundForm
 {
     /**
-     * @return array<int, DateTimePicker|Select|TextInput>
+     * @return array<int, DateTimePicker|FileUpload|Radio|Select|Textarea|TextInput>
      */
     public static function components(): array
     {
@@ -37,17 +40,23 @@ final class LogInboundForm
                 ->timezone(ReplyClock::ZONE)
                 ->default(now(ReplyClock::ZONE))
                 ->required(),
-            Select::make('receipt_source')
+            Radio::make('receipt_source')
                 ->label('Receipt source')
                 ->options([
                     ReceiptSource::MailClient->value => 'Mail client',
                     ReceiptSource::Logged->value => 'Logged',
                 ])
+                ->inline()
                 ->required(),
-            TextInput::make('summary')
-                ->label('Summary')
+            TextInput::make('subject')
+                ->label('Subject')
                 ->required()
                 ->maxLength(255),
+            Textarea::make('body')
+                ->label('Body')
+                ->required()
+                ->rows(8),
+            AttachmentField::make(),
         ];
     }
 

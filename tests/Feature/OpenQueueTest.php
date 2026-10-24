@@ -6,10 +6,12 @@ use App\Desk\MarkReplySent;
 use App\Filament\Pages\OpenQueue;
 use App\Filament\Schemas\ReplyInfolist;
 use App\Filament\Widgets\OpenQueueOverview;
+use App\Mail\ClientReply;
 use App\Models\User;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -164,6 +166,9 @@ it('offers only the contacts on the chosen company', function () {
         ->mountAction('logInbound')
         ->assertFormFieldExists('company_id')
         ->assertFormFieldExists('contact_id')
+        ->assertFormFieldExists('receipt_source')
+        ->assertMountedActionModalSee('Mail client')
+        ->assertMountedActionModalSee('Logged')
         ->assertMountedActionModalSee('Northwharf Bakery')
         ->assertMountedActionModalSee('Harbour Cafe')
         ->setActionData(['company_id' => '10'])
@@ -178,11 +183,18 @@ it('logs an inbound from the queue', function () {
             'contact_id' => '20',
             'receipt' => '2026-10-23 11:00:00',
             'receipt_source' => 'mail client',
-            'summary' => 'The form can come off',
+            'subject' => 'The form can come off',
+            'body' => "The form can come off the front.\nCan you look today?",
         ])
         ->assertNotified('Inbound logged')
         ->assertSee('Northwharf Bakery / Ada North')
         ->assertSee('The form can come off');
+
+    $note = (string) DB::table('fake_notes')->value('body');
+
+    expect($note)->toContain('Subject: The form can come off')
+        ->and($note)->toContain("Client email:\nThe form can come off the front.\nCan you look today?")
+        ->and($note)->not->toContain('Summary:');
 });
 
 it('shows the earlier thread on the note and the draft', function () {
@@ -243,7 +255,9 @@ it('requires the pasted reply before marking sent', function () {
     expect(DB::table('fake_notes')->where('body', 'like', '%Clock: sent%')->count())->toBe(0);
 });
 
-it('does not offer to send mail from the queue', function () {
+it('sends the reply from the queue', function () {
+    Mail::fake();
+
     app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -253,6 +267,14 @@ it('does not offer to send mail from the queue', function () {
     );
 
     Livewire::test(OpenQueue::class)
-        ->assertActionExists(TestAction::make('markSent')->table('1'))
-        ->assertActionDoesNotExist(TestAction::make('send')->table('1'));
+        ->assertActionExists(TestAction::make('send')->table('1'))
+        ->callAction(TestAction::make('send')->table('1'), [
+            'subject' => 'PHP on the new server',
+            'body' => 'Use 8.3 on the new box.',
+        ])
+        ->assertCanNotSeeTableRecords(['1'])
+        ->assertSee('No open replies');
+
+    Mail::assertSent(ClientReply::class, fn (ClientReply $mail): bool => $mail->hasTo('ada@northwharf.example')
+        && $mail->subjectLine === 'PHP on the new server');
 });

@@ -22,7 +22,7 @@ final class ReplyInfolist
             self::entry('clock_start', 'Clock start', $record),
             self::entry('reply_due', 'Reply due', $record),
             self::entry('id', 'Note', $record),
-            self::entry('summary', 'Summary', $record),
+            self::entry('summary', preg_match('/^Subject: /m', (string) ($record['body'] ?? '')) === 1 ? 'Subject' : 'Summary', $record),
         ];
 
         $mail = ClockNote::correspondence((string) ($record['body'] ?? ''));

@@ -35,7 +35,7 @@ History lists closed threads, newest sent time first, ten at a time. A company w
 
 ## Run the showable copy
 
-The memory store needs no HubSpot token and no real names. The desk does not send mail.
+The memory store needs no HubSpot token and no real names. Send delivers the reply through the configured mailbox. The showable copy can log that mail.
 
 ```bash
 composer install

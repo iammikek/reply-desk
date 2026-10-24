@@ -4,7 +4,7 @@
     <ul>
         <li>See who is waiting, and when the reply is due.</li>
         <li>A draft stays on the desk. It does not stop the clock.</li>
-        <li>The reply goes out from Mail. Marking it sent records that it went.</li>
+        <li>Send the reply from here, or mark it sent after it goes from Mail. A file on the note is stored in HubSpot.</li>
         <li>Closed threads stay on History.</li>
     </ul>
     <p class="reply-desk-explainer-more"><a href="{{ route('filament.reply-desk.pages.case-study') }}">Read the case study</a></p>

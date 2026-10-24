@@ -12,7 +12,7 @@ final class MarkReplySent
 {
     public function __construct(private NoteStore $notes) {}
 
-    public function __invoke(string $inboundId, DateTimeImmutable $sent, string $subject, string $reply = ''): string
+    public function __invoke(string $inboundId, DateTimeImmutable $sent, string $subject, string $reply = '', ?NoteFile $file = null): string
     {
         $inbound = null;
 
@@ -36,6 +36,7 @@ final class MarkReplySent
             ClockNote::sent($inboundId, $sent, $subject, $reply),
             $inbound->companyId,
             $inbound->contactId,
+            $file,
         );
 
         Draft::query()->where('inbound_note_id', $inboundId)->delete();

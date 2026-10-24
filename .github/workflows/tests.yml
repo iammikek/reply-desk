@@ -40,5 +40,8 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      - name: Check formatting
+        run: vendor/bin/pint --test
+
       - name: Run tests
         run: composer test

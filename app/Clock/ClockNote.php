@@ -11,16 +11,24 @@ final class ClockNote
     public static function inbound(
         DateTimeImmutable $receipt,
         ReceiptSource $receiptSource,
-        string $summary,
+        string $summary = '',
+        string $subject = '',
     ): string {
-        $summary = self::oneLine($summary, 'Summary');
-
-        return implode("\n", [
+        $lines = [
             'Clock: inbound',
             'Receipt: '.$receipt->setTimezone(self::zone())->format('Y-m-d H:i').' Europe/London',
             'Receipt source: '.$receiptSource->value,
-            'Summary: '.$summary,
-        ]);
+        ];
+
+        if (trim($subject) !== '') {
+            $lines[] = 'Subject: '.self::oneLine($subject, 'Subject');
+        }
+
+        if (trim($summary) !== '') {
+            $lines[] = 'Summary: '.self::oneLine($summary, 'Summary');
+        }
+
+        return implode("\n", $lines);
     }
 
     public static function sent(string $closes, DateTimeImmutable $sent, string $subject, string $reply = ''): string
@@ -119,7 +127,7 @@ final class ClockNote
      */
     private static function parseInbound(array $lines): ?ParsedInbound
     {
-        if (count($lines) < 3 || count($lines) > 4) {
+        if (count($lines) < 3 || count($lines) > 5) {
             return null;
         }
 
@@ -131,16 +139,25 @@ final class ClockNote
         }
 
         $summary = '';
+        $subject = '';
 
-        if (count($lines) === 4) {
-            if (preg_match('/^Summary: (.+)$/', $lines[3], $matches) !== 1) {
-                return null;
+        foreach (array_slice($lines, 3) as $line) {
+            if (preg_match('/^Summary: (.+)$/', $line, $matches) === 1) {
+                $summary = $matches[1];
+
+                continue;
             }
 
-            $summary = $matches[1];
+            if (preg_match('/^Subject: (.+)$/', $line, $matches) === 1) {
+                $subject = $matches[1];
+
+                continue;
+            }
+
+            return null;
         }
 
-        return new ParsedInbound($receipt, $source, $summary);
+        return new ParsedInbound($receipt, $source, $summary !== '' ? $summary : $subject);
     }
 
     /**

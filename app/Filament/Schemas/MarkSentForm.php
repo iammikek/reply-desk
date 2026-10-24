@@ -4,13 +4,14 @@ namespace App\Filament\Schemas;
 
 use App\Clock\ReplyClock;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 
 final class MarkSentForm
 {
     /**
-     * @return array<int, DateTimePicker|Textarea|TextInput>
+     * @return array<int, DateTimePicker|FileUpload|Textarea|TextInput>
      */
     public static function components(): array
     {
@@ -29,6 +30,7 @@ final class MarkSentForm
                 ->label('Reply')
                 ->required()
                 ->rows(12),
+            AttachmentField::make(),
         ];
     }
 }

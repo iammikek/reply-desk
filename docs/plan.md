@@ -4,7 +4,7 @@ The open queue for practice client email. Filament is the screen. Cursor uses th
 
 **Language:** British English in the app, the MCP text, and these docs. No emoji. No em dashes.
 
-**Practice rules:** Automica's own HubSpot portal only, `145255358`. A note is the progress line. The desk invents no CRM properties and no email addresses. A draft is not a reply. Administrator replies in Mail, on the Mac or the iPad. Mark sent records that the reply went. Cursor cannot send. FreeAgent and Jira stay the systems they already are. This desk does not read them.
+**Practice rules:** Automica's own HubSpot portal only, `145255358`. A note is the progress line. The desk invents no CRM properties and no email addresses. A draft is not a reply. Administrator can send the reply from the desk, or send it from Mail and mark it sent. A file on a note is uploaded to HubSpot and stored on that note. Cursor cannot send. FreeAgent and Jira stay the systems they already are. This desk does not read them.
 
 ---
 
@@ -135,14 +135,14 @@ The Artisan command and the MCP tool take the company name and the contact email
 | `list_open_replies` | Reads clock notes. Returns inbound rows with no sent note, including clock start and reply due calculated at call time. Includes the saved draft when one exists. The draft does not change the due time. Includes earlier closed threads for the same company. |
 | `list_closed_replies` | Returns inbound rows that have a sent note, newest sent time first. Includes the client email and each pasted reply. A company with nothing open is included. |
 | `list_companies` | Lists companies and the contacts on each company. The list is cached for one hour. |
-| `log_inbound` | Writes one inbound clock note. Arguments: company, contact email, receipt time, receipt source, a one-line summary, and the client email text. |
+| `log_inbound` | Writes one inbound clock note. The panel takes a subject and a body. The command takes a one-line summary and the client email text. |
 | `save_draft` | Creates or replaces the draft for an open inbound id. Arguments: subject, body. Refuses if that inbound is already closed. Writes no HubSpot note. |
 | `discard_draft` | Deletes the draft for an inbound id. Writes no HubSpot note. |
 | `mark_reply_sent` | Writes one sent clock note for an open inbound id. Arguments: sent time, subject, and the reply text pasted from Mail. Refuses if that inbound is already closed. Deletes any draft for that id. |
 
 `save_draft` and `discard_draft` write no clock note. The only note that closes a row is the sent note from `mark_reply_sent`. One draft per open inbound. The draft stores the inbound note id, the subject, the body, and the time it was saved. It points at a HubSpot note id and is not itself a HubSpot note. A draft does not stop the clock.
 
-The panel actions are Log inbound, view, save draft, discard draft, and mark sent. There is no Send button.
+The panel actions are Log inbound, view, save draft, discard draft, send, and mark sent. Send delivers the reply through the configured mailbox and then writes the sent note. Mark sent records a reply that already went from Mail. A file chosen on either action is uploaded to HubSpot and stored on the note.
 
 ## 9. MCP
 
@@ -185,7 +185,6 @@ A separate setup, with stand-in companies and `REPLY_DESK_STORE=memory`. No toke
 - DEV issues and sprints
 - A client's HubSpot portal
 - Supabase Auth, storage, or realtime
-- Sending mail from the panel or from Cursor
 - Job search
 
 A later page may read an open invoice or a DEV parent for the same company. That page is not this desk, and it does not become a second CRM.
@@ -207,8 +206,8 @@ Action tests use the memory note store and the draft table:
 - A contact who is not on the chosen company is refused.
 - A portal id that does not match the env value stops before any write.
 
-Panel tests drive the Filament page through Livewire. The open row renders, the overdue filter hides a row that is not due, the note slide-over opens, and log inbound, save, discard, and mark sent behave as the action tests describe. Log inbound offers only the contacts on the chosen company. Mark sent requires the pasted reply.
+Panel tests drive the Filament page through Livewire. The open row renders, the overdue filter hides a row that is not due, the note slide-over opens, and log inbound, save, discard, send, and mark sent behave as the action tests describe. Log inbound offers only the contacts on the chosen company. Send and mark sent can carry one file. Mark sent requires the pasted reply.
 
 The MCP test starts the stdio server, checks the tool list, and logs an inbound from the directory. The backfill test uses a saved copy of the communications file. It does not pass `--write`.
 
-GitHub Actions runs `composer test` on every push and pull request, with PHP 8.4 and Node 22.
+GitHub Actions runs `vendor/bin/pint --test` and then `composer test` on every push and pull request, with PHP 8.4 and Node 22. A commit formats staged PHP files with Pint before they are recorded.

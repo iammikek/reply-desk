@@ -51,13 +51,20 @@
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
         ],
+        "hooks": [
+            "@php -r \"if (is_dir('.git/hooks')) { copy('.githooks/pre-commit', '.git/hooks/pre-commit'); chmod('.git/hooks/pre-commit', 0755); }\""
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi",
             "@php artisan filament:upgrade"
         ],
+        "post-install-cmd": [
+            "@hooks"
+        ],
         "post-update-cmd": [
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
+            "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
+            "@hooks"
         ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""

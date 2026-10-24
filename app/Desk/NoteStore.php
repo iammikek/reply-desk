@@ -10,7 +10,7 @@ interface NoteStore
 
     public function findContact(string $email): Party;
 
-    public function writeNote(string $body, string $companyId, string $contactId): string;
+    public function writeNote(string $body, string $companyId, string $contactId, ?NoteFile $file = null): string;
 
     public function replaceNote(string $id, string $body): void;
 

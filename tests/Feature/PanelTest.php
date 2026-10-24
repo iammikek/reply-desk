@@ -10,7 +10,7 @@ it('shows the reply desk login', function () {
         ->assertSuccessful()
         ->assertSee('The open queue for practice client email.')
         ->assertSee('A draft stays on the desk. It does not stop the clock.')
-        ->assertSee('The reply goes out from Mail.')
+        ->assertSee('Send the reply from here, or mark it sent after it goes from Mail. A file on the note is stored in HubSpot.')
         ->assertSee('Closed threads stay on History.')
         ->assertSee('Read the case study')
         ->assertSee('/case-study', false)
@@ -22,7 +22,7 @@ it('shows the case study without signing in', function () {
         ->assertSuccessful()
         ->assertSee('Why this desk exists')
         ->assertSee('Due time is calculated when the page is opened')
-        ->assertSee('The desk does not send the email')
+        ->assertSee('Send delivers the reply. A file on the note is stored in HubSpot.')
         ->assertSee('Open queue')
         ->assertSee('The same actions from Cursor')
         ->assertDontSee('Dashboard')
@@ -38,6 +38,8 @@ it('shows the seeded user after sign-in', function () {
     $this->actingAs(User::query()->where('email', 'admin@example.com')->first())
         ->get('/')
         ->assertSuccessful()
+        ->assertSee('Open queue')
         ->assertSee('Administrator')
+        ->assertDontSee('Dashboard')
         ->assertDontSee('Case study');
 });

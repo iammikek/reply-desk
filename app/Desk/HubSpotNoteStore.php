@@ -150,15 +150,21 @@ final class HubSpotNoteStore implements NoteStore
         );
     }
 
-    public function writeNote(string $body, string $companyId, string $contactId): string
+    public function writeNote(string $body, string $companyId, string $contactId, ?NoteFile $file = null): string
     {
         $this->assertPortal();
 
+        $properties = [
+            'hs_note_body' => $body,
+            'hs_timestamp' => (string) now()->getTimestampMs(),
+        ];
+
+        if ($file !== null) {
+            $properties['hs_attachment_ids'] = $this->upload($file);
+        }
+
         $note = $this->send('POST', '/crm/objects/2026-03/notes', [
-            'properties' => [
-                'hs_note_body' => $body,
-                'hs_timestamp' => (string) now()->getTimestampMs(),
-            ],
+            'properties' => $properties,
         ]);
 
         $id = (string) ($note['id'] ?? '');
@@ -1022,6 +1028,42 @@ final class HubSpotNoteStore implements NoteStore
         }
 
         throw new DeskException('HubSpot is rate limited.');
+    }
+
+    private function upload(NoteFile $file): string
+    {
+        if (! is_file($file->path)) {
+            throw new DeskException('That attachment could not be read.');
+        }
+
+        $handle = fopen($file->path, 'r');
+
+        if ($handle === false) {
+            throw new DeskException('That attachment could not be read.');
+        }
+
+        $response = Http::withToken($this->token())
+            ->acceptJson()
+            ->withHeaders(['User-Agent' => 'reply-desk'])
+            ->connectTimeout(5)
+            ->timeout(30)
+            ->attach('file', $handle, $file->name)
+            ->post($this->base().'/files/v3/files', [
+                'folderPath' => '/reply-desk',
+                'options' => json_encode(['access' => 'PRIVATE']),
+            ]);
+
+        if (! $response->successful()) {
+            throw new DeskException($this->failure($response));
+        }
+
+        $id = (string) ($response->json('id') ?? '');
+
+        if ($id === '') {
+            throw new DeskException('HubSpot did not return a file id.');
+        }
+
+        return $id;
     }
 
     private function pause(Response $response): void
