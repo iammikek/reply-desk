@@ -4,7 +4,7 @@ The open queue for practice client email. Filament is the screen. Cursor uses th
 
 **Language:** British English in the app, the MCP text, and these docs. No emoji. No em dashes.
 
-**Practice rules:** Automica's own HubSpot portal only, `145255358`. A note is the progress line. The desk invents no CRM properties and no email addresses. A draft is not a reply. Mike replies in Mail, on the Mac or the iPad. Mark sent records that the reply went. Cursor cannot send. FreeAgent and Jira stay the systems they already are. This desk does not read them.
+**Practice rules:** Automica's own HubSpot portal only, `145255358`. A note is the progress line. The desk invents no CRM properties and no email addresses. A draft is not a reply. Administrator replies in Mail, on the Mac or the iPad. Mark sent records that the reply went. Cursor cannot send. FreeAgent and Jira stay the systems they already are. This desk does not read them.
 
 ---
 
@@ -18,10 +18,10 @@ That file is now the archive. New receipts and sent replies go through the actio
 
 | User | What they do |
 | --- | --- |
-| Mike | Opens the queue, sees who is waiting and when the reply is due, logs an inbound, saves a draft, and marks a reply sent after sending it from Mail. |
+| Administrator | Opens the queue, sees who is waiting and when the reply is due, logs an inbound, saves a draft, and marks a reply sent after sending it from Mail. |
 | Cursor | Lists companies, logs an inbound, saves a draft, discards a draft, and marks a reply sent, through the same actions as the panel. |
 
-One user. The panel is not a client login. Sign in as `mike@automica.io`.
+One user. The panel is not a client login. Sign in as `admin@example.com`.
 
 ## 3. The queue
 

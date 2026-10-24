@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Desk\DeskException;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,16 +17,22 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        if (config('reply-desk.store') !== 'memory' || (string) config('reply-desk.portal_id') === '145255358') {
+            throw new DeskException('The demo seed only runs on the memory store, and never against portal 145255358.');
+        }
+
+        User::query()->where('email', 'mike@automica.io')->delete();
 
         User::query()->updateOrCreate(
-            ['email' => 'mike@automica.io'],
+            ['email' => 'admin@example.com'],
             [
-                'name' => 'Mike Karthauser',
-                'password' => 'password',
+                'name' => 'Administrator',
+                'password' => 'seed-PShhT4DYcUyMfzO5',
             ],
         );
 
-        $this->call(DemoSeeder::class);
+        if (DB::table('fake_notes')->count() === 0) {
+            $this->call(DemoSeeder::class);
+        }
     }
 }

@@ -10,6 +10,8 @@ use DateTimeZone;
 
 final class OpenTable
 {
+    private const string OUTREACH_SUMMARY = 'Outreach started';
+
     /**
      * @return list<OpenTableRow>
      */
@@ -302,7 +304,7 @@ final class OpenTable
             : ReceiptSource::MailClient;
 
         if ($wroteFirst) {
-            $summary = 'Mike wrote first';
+            $summary = self::OUTREACH_SUMMARY;
         } else {
             $summary = preg_replace('/^\d{1,2} [A-Za-z]{3} \d{4}(?: \d{2}:\d{2})?/', '', trim($inbound)) ?? '';
             $summary = preg_replace('/^\s*\([^)]*\)\.?\s*/', '', $summary) ?? '';
@@ -394,7 +396,7 @@ final class OpenTable
             return $this->oneLine($sentence);
         }
 
-        if ($summary !== '' && $summary !== 'Open reply' && $summary !== 'Mike wrote first') {
+        if ($summary !== '' && $summary !== 'Open reply' && $summary !== self::OUTREACH_SUMMARY) {
             return $this->oneLine($summary);
         }
 

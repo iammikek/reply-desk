@@ -48,7 +48,7 @@ npm install
 php artisan serve
 ```
 
-Sign in as `mike@automica.io` with password `password`. The panel shows Mike Karthauser. The seed also loads two stand-in companies, one overdue row and one open row, and a draft on the overdue row.
+Sign in as `admin@example.com` with password `seed-PShhT4DYcUyMfzO5`. The panel shows Administrator. The seed also loads two stand-in companies, one overdue row and one open row, and a draft on the overdue row.
 
 `php artisan db:seed` refuses to run when `REPLY_DESK_STORE` is `hubspot`, and it refuses portal `145255358`.
 
