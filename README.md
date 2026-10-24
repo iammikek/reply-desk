@@ -21,7 +21,7 @@ Due time is calculated when the page or a command runs. It is not stored. Monday
 
 ## Where the panel lives
 
-The site is the Filament panel. Sign-in is at `/login`.
+The site is the Filament panel. Sign-in is at `/login`. A case study at `/case-study` explains why the desk is useful, and lists the features. It is open without a sign-in.
 
 - `app/Filament/Pages/OpenQueue.php` is the queue
 - `app/Filament/Pages/History.php` is the closed threads

@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "iammikek/reply-desk",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "The open queue for practice client email.",
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
