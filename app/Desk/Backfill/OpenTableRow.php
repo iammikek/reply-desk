@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Backfill;
 
 use App\Clock\ReceiptSource;
 use DateTimeImmutable;
 
-final readonly class SentTableRow
+final readonly class OpenTableRow
 {
     public function __construct(
         public string $company,
@@ -13,8 +13,6 @@ final readonly class SentTableRow
         public DateTimeImmutable $receipt,
         public ReceiptSource $receiptSource,
         public string $summary,
-        public DateTimeImmutable $sentAt,
-        public string $subject,
         public ?string $clientEmailPath = null,
         public ?string $replyPath = null,
     ) {}

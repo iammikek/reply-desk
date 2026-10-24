@@ -1,7 +1,7 @@
 <?php
 
 use App\Desk\DeskException;
-use App\Desk\ListOpenReplies;
+use App\Desk\Queue\ListOpenReplies;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Queue;
 
 use App\Clock\ClockNote;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
+use App\Desk\Notes\NoteStore;
 
 final class ListClosedThreads
 {
@@ -54,7 +55,10 @@ final class ListClosedThreads
                     'sent' => $reply[1]->sent,
                     'subject' => $reply[1]->subject,
                     'body' => ClockNote::correspondence($reply[0]->body)['reply'],
+                    'attachment' => $reply[0]->attachmentName,
+                    'note_id' => $reply[0]->id,
                 ], $replies),
+                $note->attachmentName,
             );
         }
 

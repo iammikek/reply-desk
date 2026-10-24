@@ -1,10 +1,14 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Actions;
 
 use App\Clock\ClockNote;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
+use App\Desk\DeskException;
+use App\Desk\Notes\NoteFile;
+use App\Desk\Notes\NoteStore;
+use App\Desk\Notes\StoredNote;
 use App\Models\Draft;
 use DateTimeImmutable;
 

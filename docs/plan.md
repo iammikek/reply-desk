@@ -18,7 +18,7 @@ That file is now the archive. New receipts and sent replies go through the actio
 
 | User | What they do |
 | --- | --- |
-| Administrator | Opens the queue, sees who is waiting and when the reply is due, logs an inbound, saves a draft, and marks a reply sent after sending it from Mail. |
+| Administrator | Opens the queue, sees who is waiting and when the reply is due, logs an inbound, saves a draft, sends a reply, or marks a reply sent after it went from Mail. |
 | Cursor | Lists companies, logs an inbound, saves a draft, discards a draft, and marks a reply sent, through the same actions as the panel. |
 
 One user. The panel is not a client login. Sign in as `admin@example.com`.
@@ -211,3 +211,17 @@ Panel tests drive the Filament page through Livewire. The open row renders, the 
 The MCP test starts the stdio server, checks the tool list, and logs an inbound from the directory. The backfill test uses a saved copy of the communications file. It does not pass `--write`.
 
 GitHub Actions runs `vendor/bin/pint --test` and then `composer test` on every push and pull request, with PHP 8.4 and Node 22. A commit formats staged PHP files with Pint before they are recorded.
+
+## 14. Still to do
+
+Sending from the desk, a file on a new note, Pint in CI and before commit, and opening on the queue are already built. A second Filament sample is not part of this desk.
+
+**Pasted formatting.** The body of a logged email and of a sent reply keeps the paste: blank lines, indentation, and runs of spaces. The subject stays one line. The timeline shows that text as pasted. Trimming a section must not flatten the inside of the message.
+
+**A file on History.** A closed thread shows the file stored on the inbound note and on each sent note, beside that event. The name opens the file. The memory store serves the local copy. HubSpot serves the file already stored on the note. A test sees both names on the thread and reads the file back.
+
+**The portal id stays out of the repo.** `145255358` comes out of this plan, the README, the seed refusal text, and the backfill command. The seed still runs only on the memory store. Backfill `--write` still runs only when the store is HubSpot and a portal id is set. Tests use a stand-in id, not the live one.
+
+**Follow-up sent.** A first outbound, with no client email, stays Outreach started. A later outbound on that company is Follow-up sent. The parser currently labels every `None` row Outreach started. Notes already stored as Outreach started that were follow-ups are retitled: the V8 16:00 note `532462679236` and the Boughton 10:59 note `532027260095`. Leave `532027421929`, `532331306202`, and `532338286816` as Outreach started. Do not retitle `531907011818`. "Mike confirmed sent" stays. It records how the time was known.
+
+**History subjects.** Where a subject narrates the reply and the filed reply is on record, the subject becomes that reply, not the paraphrase. Examples already on History: "Mike said he assumes Nick can verify this at Mailchimp", "Mike has the link and is setting up locally", and "Mike asked for a zip". Do not invent a subject or a time.

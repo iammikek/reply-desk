@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Queue;
 
 use App\Clock\ClockNote;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
 use App\Clock\ReplyClock;
+use App\Desk\Notes\NoteStore;
 use App\Models\Draft;
 use DateTimeImmutable;
 

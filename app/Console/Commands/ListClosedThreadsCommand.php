@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Desk\ClosedThread;
 use App\Desk\DeskException;
-use App\Desk\ListClosedThreads;
+use App\Desk\Queue\ClosedThread;
+use App\Desk\Queue\ListClosedThreads;
 
 class ListClosedThreadsCommand extends ReplyDeskCommand
 {

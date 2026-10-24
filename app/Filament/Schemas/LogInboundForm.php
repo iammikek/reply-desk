@@ -4,7 +4,7 @@ namespace App\Filament\Schemas;
 
 use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
-use App\Desk\NoteStore;
+use App\Desk\Notes\NoteStore;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;

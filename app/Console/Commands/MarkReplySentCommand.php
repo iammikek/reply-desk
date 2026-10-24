@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Desk\Actions\MarkReplySent;
 use App\Desk\DeskException;
-use App\Desk\MarkReplySent;
 
 class MarkReplySentCommand extends ReplyDeskCommand
 {

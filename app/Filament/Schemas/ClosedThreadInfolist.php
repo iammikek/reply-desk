@@ -26,7 +26,7 @@ final class ClosedThreadInfolist
 
     /**
      * @param  array<string, mixed>  $record
-     * @return list<array{at: string, kind: string, title: string, body: string}>
+     * @return list<array{at: string, kind: string, title: string, body: string, attachment: string, note_id: string}>
      */
     private static function events(array $record): array
     {
@@ -35,6 +35,8 @@ final class ClosedThreadInfolist
             'kind' => 'Client email',
             'title' => (string) ($record['summary'] ?? ''),
             'body' => trim((string) ($record['client_email'] ?? '')),
+            'attachment' => (string) ($record['attachment'] ?? ''),
+            'note_id' => (string) ($record['id'] ?? ''),
         ]];
 
         foreach ($record['replies'] ?? [] as $reply) {
@@ -47,6 +49,8 @@ final class ClosedThreadInfolist
                 'kind' => 'Reply',
                 'title' => (string) ($reply['subject'] ?? ''),
                 'body' => trim((string) ($reply['body'] ?? '')),
+                'attachment' => (string) ($reply['attachment'] ?? ''),
+                'note_id' => (string) ($reply['note_id'] ?? ''),
             ];
         }
 

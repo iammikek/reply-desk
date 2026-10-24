@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
-use App\Desk\DatabaseNoteStore;
-use App\Desk\HubSpotNoteStore;
-use App\Desk\NoteStore;
+use App\Desk\Notes\DatabaseNoteStore;
+use App\Desk\Notes\HubSpotNoteStore;
+use App\Desk\Notes\NoteStore;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider

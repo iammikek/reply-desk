@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Notes;
 
 final readonly class Party
 {

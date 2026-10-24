@@ -3,10 +3,10 @@
 namespace App\Filament\Pages;
 
 use App\Clock\ReceiptSource;
+use App\Desk\Actions\LogInbound;
 use App\Desk\DeskException;
-use App\Desk\LogInbound;
 use App\Desk\LondonTime;
-use App\Desk\NoteFile;
+use App\Desk\Notes\NoteFile;
 use App\Filament\Schemas\LogInboundForm;
 use App\Filament\Tables\OpenRepliesTable;
 use App\Filament\Widgets\OpenQueueOverview;

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Notes;
 
 final readonly class StoredNote
 {
@@ -12,5 +12,7 @@ final readonly class StoredNote
         public string $contactId,
         public string $contactName,
         public string $contactEmail,
+        public ?string $attachmentName = null,
+        public ?string $attachmentId = null,
     ) {}
 }

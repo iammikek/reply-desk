@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Notes;
 
+use App\Desk\DeskException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -30,6 +31,13 @@ final class HubSpotNoteStore implements NoteStore
      * @var list<StoredNote>|null
      */
     private ?array $cachedNotes = null;
+
+    /**
+     * File names looked up while reading notes. One note list should not ask HubSpot twice for the same file.
+     *
+     * @var array<string, string>
+     */
+    private array $fileNames = [];
 
     /**
      * Shared across requests so opening the queue does not spend the ten-second HubSpot limit.
@@ -159,8 +167,11 @@ final class HubSpotNoteStore implements NoteStore
             'hs_timestamp' => (string) now()->getTimestampMs(),
         ];
 
+        $fileId = null;
+
         if ($file !== null) {
-            $properties['hs_attachment_ids'] = $this->upload($file);
+            $fileId = $this->upload($file);
+            $properties['hs_attachment_ids'] = $fileId;
         }
 
         $note = $this->send('POST', '/crm/objects/2026-03/notes', [
@@ -176,7 +187,7 @@ final class HubSpotNoteStore implements NoteStore
         $this->send('PUT', "/crm/objects/2026-03/note/{$id}/associations/default/company/{$companyId}");
         $this->send('PUT', "/crm/objects/2026-03/note/{$id}/associations/default/contact/{$contactId}");
 
-        $stored = $this->labelled($id, $body, $companyId, $contactId);
+        $stored = $this->labelled($id, $body, $companyId, $contactId, $file?->name, $fileId);
         $this->written[$id] = $stored;
         $this->bodies[$id] = $body;
         $this->rememberLocal($stored);
@@ -206,6 +217,8 @@ final class HubSpotNoteStore implements NoteStore
             $current?->contactId ?? '',
             $current?->contactName ?? '',
             $current?->contactEmail ?? '',
+            $current?->attachmentName,
+            $current?->attachmentId,
         );
 
         if (isset($this->written[$id])) {
@@ -215,6 +228,30 @@ final class HubSpotNoteStore implements NoteStore
         $this->rememberLocal($stored);
         Cache::forget($this->cacheKey());
         $this->keepPending($stored);
+    }
+
+    public function attachmentFor(string $noteId): ?NoteAttachment
+    {
+        foreach ($this->notes() as $note) {
+            if ($note->id !== $noteId) {
+                continue;
+            }
+
+            if ($note->attachmentId === null) {
+                return null;
+            }
+
+            $signed = $this->send('GET', '/files/v3/files/'.rawurlencode($note->attachmentId).'/signed-url');
+            $url = (string) ($signed['url'] ?? '');
+
+            if ($url === '') {
+                throw new DeskException('HubSpot did not return a file link.');
+            }
+
+            return new NoteAttachment($note->attachmentName ?? 'Attachment', url: $url);
+        }
+
+        return null;
     }
 
     public function notes(): array
@@ -266,6 +303,8 @@ final class HubSpotNoteStore implements NoteStore
             $searchBodies[$noteId] = (string) ($note['properties']['hs_note_body'] ?? '');
             $contact = $contactRecords[$contactId] ?? ['name' => '', 'email' => ''];
 
+            $attachmentId = $this->firstFileId((string) ($note['properties']['hs_attachment_ids'] ?? ''));
+
             $stored[] = new StoredNote(
                 $noteId,
                 $this->bodies[$noteId] ?? $searchBodies[$noteId],
@@ -274,6 +313,8 @@ final class HubSpotNoteStore implements NoteStore
                 $contactId,
                 $contact['name'],
                 $contact['email'],
+                $attachmentId === null ? null : $this->fileName($attachmentId),
+                $attachmentId,
             );
         }
 
@@ -309,6 +350,8 @@ final class HubSpotNoteStore implements NoteStore
             'contactId' => $note->contactId,
             'contactName' => $note->contactName,
             'contactEmail' => $note->contactEmail,
+            'attachmentName' => $note->attachmentName,
+            'attachmentId' => $note->attachmentId,
         ], $notes), self::NOTE_CACHE_SECONDS);
     }
 
@@ -357,7 +400,24 @@ final class HubSpotNoteStore implements NoteStore
             }
         }
 
-        return new StoredNote($row['id'], $row['body'], $row['companyId'], $row['companyName'], $row['contactId'], $row['contactName'], $row['contactEmail']);
+        $attachmentName = $row['attachmentName'] ?? null;
+        $attachmentId = $row['attachmentId'] ?? null;
+
+        if (($attachmentName !== null && ! is_string($attachmentName)) || ($attachmentId !== null && ! is_string($attachmentId))) {
+            return null;
+        }
+
+        return new StoredNote(
+            $row['id'],
+            $row['body'],
+            $row['companyId'],
+            $row['companyName'],
+            $row['contactId'],
+            $row['contactName'],
+            $row['contactEmail'],
+            $attachmentName !== '' ? $attachmentName : null,
+            $attachmentId !== '' ? $attachmentId : null,
+        );
     }
 
     private function rememberLocal(StoredNote $stored): void
@@ -392,7 +452,7 @@ final class HubSpotNoteStore implements NoteStore
         return $this->pendingNotes()[$id] ?? null;
     }
 
-    private function labelled(string $id, string $body, string $companyId, string $contactId): StoredNote
+    private function labelled(string $id, string $body, string $companyId, string $contactId, ?string $attachmentName = null, ?string $attachmentId = null): StoredNote
     {
         $companyName = '';
         $contactName = '';
@@ -432,7 +492,7 @@ final class HubSpotNoteStore implements NoteStore
             }
         }
 
-        return new StoredNote($id, $body, $companyId, $companyName, $contactId, $contactName, $contactEmail);
+        return new StoredNote($id, $body, $companyId, $companyName, $contactId, $contactName, $contactEmail, $attachmentName, $attachmentId);
     }
 
     private function keepPending(StoredNote $note): void
@@ -506,12 +566,22 @@ final class HubSpotNoteStore implements NoteStore
             }
 
             if (array_key_exists($id, $searchBodies) && $searchBodies[$id] === $waiting->body) {
+                if ($waiting->attachmentId !== null && $byId[$id]->attachmentId === null) {
+                    $byId[$id] = $this->withAttachment($byId[$id], $waiting);
+
+                    continue;
+                }
+
                 $drop[] = $id;
 
                 continue;
             }
 
             if ($byId[$id]->body === $waiting->body) {
+                if ($byId[$id]->attachmentName === null && $waiting->attachmentName !== null) {
+                    $byId[$id] = $this->withAttachment($byId[$id], $waiting);
+                }
+
                 continue;
             }
 
@@ -524,6 +594,8 @@ final class HubSpotNoteStore implements NoteStore
                 $current->contactId !== '' ? $current->contactId : $waiting->contactId,
                 $current->contactName !== '' ? $current->contactName : $waiting->contactName,
                 $current->contactEmail !== '' ? $current->contactEmail : $waiting->contactEmail,
+                $waiting->attachmentName ?? $current->attachmentName,
+                $waiting->attachmentId ?? $current->attachmentId,
             );
         }
 
@@ -590,7 +662,7 @@ final class HubSpotNoteStore implements NoteStore
     }
 
     /**
-     * @return array{id: string, body: string, companyId: string, companyName: string, contactId: string, contactName: string, contactEmail: string, expiresAt: int}
+     * @return array{id: string, body: string, companyId: string, companyName: string, contactId: string, contactName: string, contactEmail: string, attachmentName: ?string, attachmentId: ?string, expiresAt: int}
      */
     private function pendingRow(StoredNote $note): array
     {
@@ -602,6 +674,8 @@ final class HubSpotNoteStore implements NoteStore
             'contactId' => $note->contactId,
             'contactName' => $note->contactName,
             'contactEmail' => $note->contactEmail,
+            'attachmentName' => $note->attachmentName,
+            'attachmentId' => $note->attachmentId,
             'expiresAt' => now()->addSeconds(self::PENDING_SECONDS)->getTimestamp(),
         ];
     }
@@ -785,7 +859,7 @@ final class HubSpotNoteStore implements NoteStore
                         'value' => 'Clock',
                     ]],
                 ]],
-                'properties' => ['hs_note_body'],
+                'properties' => ['hs_note_body', 'hs_attachment_ids'],
                 'limit' => 100,
             ];
 
@@ -804,6 +878,7 @@ final class HubSpotNoteStore implements NoteStore
                         'id' => $id,
                         'properties' => [
                             'hs_note_body' => (string) ($note['properties']['hs_note_body'] ?? ''),
+                            'hs_attachment_ids' => (string) ($note['properties']['hs_attachment_ids'] ?? ''),
                         ],
                     ];
                 }
@@ -824,7 +899,7 @@ final class HubSpotNoteStore implements NoteStore
     /**
      * Search already has the note text. Associations are two batch reads, not one GET per note.
      *
-     * @param  list<array{id: string, properties: array{hs_note_body: string}}>  $notes
+     * @param  list<array{id: string, properties: array{hs_note_body: string, hs_attachment_ids: string}}>  $notes
      * @return list<array<string, mixed>>
      */
     private function withAssociations(array $notes): array
@@ -1028,6 +1103,58 @@ final class HubSpotNoteStore implements NoteStore
         }
 
         throw new DeskException('HubSpot is rate limited.');
+    }
+
+    private function withAttachment(StoredNote $note, StoredNote $attachment): StoredNote
+    {
+        return new StoredNote(
+            $note->id,
+            $note->body,
+            $note->companyId,
+            $note->companyName,
+            $note->contactId,
+            $note->contactName,
+            $note->contactEmail,
+            $attachment->attachmentName,
+            $attachment->attachmentId,
+        );
+    }
+
+    private function firstFileId(string $ids): ?string
+    {
+        $id = trim(explode(';', $ids)[0]);
+
+        if ($id === '' || preg_match('/^[A-Za-z0-9_-]+$/', $id) !== 1) {
+            return null;
+        }
+
+        return $id;
+    }
+
+    private function fileName(string $id): string
+    {
+        if (isset($this->fileNames[$id])) {
+            return $this->fileNames[$id];
+        }
+
+        try {
+            $file = $this->send('GET', '/files/v3/files/'.rawurlencode($id));
+        } catch (DeskException) {
+            return $this->fileNames[$id] = 'Attachment';
+        }
+
+        $name = trim((string) ($file['name'] ?? ''));
+        $extension = trim((string) ($file['extension'] ?? ''), '. ');
+
+        if ($name === '') {
+            return $this->fileNames[$id] = 'Attachment';
+        }
+
+        if ($extension !== '' && ! str_ends_with(strtolower($name), '.'.strtolower($extension))) {
+            $name .= '.'.$extension;
+        }
+
+        return $this->fileNames[$id] = $name;
     }
 
     private function upload(NoteFile $file): string

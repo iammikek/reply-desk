@@ -2,7 +2,7 @@
 
 namespace App\Mail;
 
-use App\Desk\NoteFile;
+use App\Desk\Notes\NoteFile;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Attachment;

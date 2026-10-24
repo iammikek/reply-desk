@@ -4,9 +4,9 @@ namespace Database\Seeders;
 
 use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
+use App\Desk\Actions\LogInbound;
+use App\Desk\Actions\SaveDraft;
 use App\Desk\DeskException;
-use App\Desk\LogInbound;
-use App\Desk\SaveDraft;
 use DateTimeImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;

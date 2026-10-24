@@ -3,12 +3,12 @@
 use App\Clock\ClockNote;
 use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
+use App\Desk\Actions\LogInbound;
 use App\Desk\DeskException;
-use App\Desk\HubSpotNoteStore;
-use App\Desk\ListOpenReplies;
-use App\Desk\LogInbound;
-use App\Desk\NoteFile;
-use App\Desk\StoredNote;
+use App\Desk\Notes\HubSpotNoteStore;
+use App\Desk\Notes\NoteFile;
+use App\Desk\Notes\StoredNote;
+use App\Desk\Queue\ListOpenReplies;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
@@ -183,6 +183,73 @@ it('uploads an attachment and stores its id on the note', function () {
             && str_ends_with($path, '/notes')
             && ($request->data()['properties']['hs_attachment_ids'] ?? null) === 'file-9';
     });
+});
+
+it('reads an attachment name from the file stored on a note', function () {
+    $body = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::MailClient, 'Which PHP to use');
+
+    Http::fake(function (Request $request) use ($body) {
+        $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
+
+        if (str_contains($path, 'account-info')) {
+            return Http::response(['portalId' => 145255358]);
+        }
+
+        if (str_ends_with($path, '/notes/search')) {
+            return Http::response(['results' => [[
+                'id' => '55',
+                'properties' => [
+                    'hs_note_body' => $body,
+                    'hs_attachment_ids' => 'file-9',
+                ],
+            ]]]);
+        }
+
+        if (str_contains($path, '/notes/companies/batch/read')) {
+            return Http::response(['results' => [[
+                'from' => ['id' => '55'],
+                'to' => [['toObjectId' => 10]],
+            ]]]);
+        }
+
+        if (str_contains($path, '/notes/contacts/batch/read')) {
+            return Http::response(['results' => [[
+                'from' => ['id' => '55'],
+                'to' => [['toObjectId' => 20]],
+            ]]]);
+        }
+
+        if (str_ends_with($path, '/companies/batch/read')) {
+            return Http::response(['results' => [[
+                'id' => '10',
+                'properties' => ['name' => 'Northwharf Bakery'],
+            ]]]);
+        }
+
+        if (str_ends_with($path, '/contacts/batch/read')) {
+            return Http::response(['results' => [[
+                'id' => '20',
+                'properties' => ['email' => 'ada@northwharf.example', 'firstname' => 'Ada', 'lastname' => 'North'],
+            ]]]);
+        }
+
+        if ($path === '/files/v3/files/file-9') {
+            return Http::response(['name' => 'audit', 'extension' => 'txt']);
+        }
+
+        if ($path === '/files/v3/files/file-9/signed-url') {
+            return Http::response(['url' => 'https://files.example/audit.txt']);
+        }
+
+        return Http::response('unexpected '.$path, 500);
+    });
+
+    $store = app(HubSpotNoteStore::class);
+    $note = $store->notes()[0];
+
+    expect($note->attachmentName)->toBe('audit.txt')
+        ->and($note->attachmentId)->toBe('file-9')
+        ->and($store->attachmentFor('55')?->url)->toBe('https://files.example/audit.txt');
 });
 
 it('uses the one company whose name contains every word', function () {

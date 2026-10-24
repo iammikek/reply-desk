@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Queue;
 
 use DateTimeImmutable;
 

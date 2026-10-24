@@ -1,9 +1,12 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Actions;
 
 use App\Clock\ClockNote;
 use App\Clock\ReceiptSource;
+use App\Desk\DeskException;
+use App\Desk\Notes\NoteFile;
+use App\Desk\Notes\NoteStore;
 use DateTimeImmutable;
 
 final class LogInbound

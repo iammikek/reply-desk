@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Notes;
 
 use Illuminate\Support\Facades\Storage;
 

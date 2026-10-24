@@ -1,12 +1,12 @@
 <?php
 
 use App\Clock\ReceiptSource;
+use App\Desk\Actions\LogInbound;
+use App\Desk\Actions\SaveDraft;
+use App\Desk\Actions\SendReply;
 use App\Desk\DeskException;
-use App\Desk\ListOpenReplies;
-use App\Desk\LogInbound;
-use App\Desk\NoteFile;
-use App\Desk\SaveDraft;
-use App\Desk\SendReply;
+use App\Desk\Notes\NoteFile;
+use App\Desk\Queue\ListOpenReplies;
 use App\Mail\ClientReply;
 use App\Models\Draft;
 use Illuminate\Foundation\Testing\RefreshDatabase;

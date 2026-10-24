@@ -3,8 +3,8 @@
 namespace App\Filament\Widgets;
 
 use App\Clock\ReplyClock;
-use App\Desk\ListOpenReplies;
-use App\Desk\OpenReply;
+use App\Desk\Queue\ListOpenReplies;
+use App\Desk\Queue\OpenReply;
 use DateTimeImmutable;
 use DateTimeZone;
 use Filament\Widgets\StatsOverviewWidget;

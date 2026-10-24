@@ -1,11 +1,11 @@
 <?php
 
 use App\Clock\ReceiptSource;
-use App\Desk\DiscardDraft;
-use App\Desk\ListOpenReplies;
-use App\Desk\LogInbound;
-use App\Desk\MarkReplySent;
-use App\Desk\SaveDraft;
+use App\Desk\Actions\DiscardDraft;
+use App\Desk\Actions\LogInbound;
+use App\Desk\Actions\MarkReplySent;
+use App\Desk\Actions\SaveDraft;
+use App\Desk\Queue\ListOpenReplies;
 use App\Filament\Pages\OpenQueue;
 use App\Models\Draft;
 use App\Models\User;

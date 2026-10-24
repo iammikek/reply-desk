@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Desk\Actions\LogInbound;
 use App\Desk\DeskException;
-use App\Desk\LogInbound;
 
 class LogInboundCommand extends ReplyDeskCommand
 {

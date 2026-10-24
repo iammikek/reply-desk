@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Queue;
 
 use App\Clock\ReplyClock;
 use DateTimeImmutable;
@@ -9,7 +9,7 @@ use DateTimeZone;
 final readonly class ClosedThread
 {
     /**
-     * @param  list<array{sent: DateTimeImmutable, subject: string, body: string}>  $replies
+     * @param  list<array{sent: DateTimeImmutable, subject: string, body: string, attachment: ?string, note_id: string}>  $replies
      */
     public function __construct(
         public string $id,
@@ -19,6 +19,7 @@ final readonly class ClosedThread
         public string $summary,
         public string $clientEmail,
         public array $replies,
+        public ?string $attachment = null,
     ) {}
 
     /**
@@ -37,10 +38,13 @@ final readonly class ClosedThread
             'sent' => $this->format($latest['sent']),
             'subject' => $latest['subject'],
             'client_email' => $this->clientEmail,
+            'attachment' => $this->attachment ?? '',
             'replies' => array_map(fn (array $reply): array => [
                 'sent' => $this->format($reply['sent']),
                 'subject' => $reply['subject'],
                 'body' => $reply['body'],
+                'attachment' => $reply['attachment'] ?? '',
+                'note_id' => $reply['note_id'],
             ], $this->replies),
         ];
     }

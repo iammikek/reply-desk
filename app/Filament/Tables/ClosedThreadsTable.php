@@ -2,8 +2,8 @@
 
 namespace App\Filament\Tables;
 
-use App\Desk\ClosedThread;
-use App\Desk\ListClosedThreads;
+use App\Desk\Queue\ClosedThread;
+use App\Desk\Queue\ListClosedThreads;
 use App\Filament\Schemas\ClosedThreadInfolist;
 use Filament\Actions\Action;
 use Filament\Support\ArrayRecord;
@@ -75,7 +75,7 @@ final class ClosedThreadsTable
             $needle = mb_strtolower($search);
             $records = array_values(array_filter(
                 $records,
-                fn (array $record): bool => str_contains(mb_strtolower($record['client'].' '.$record['summary'].' '.$record['subject']), $needle),
+                fn (array $record): bool => str_contains(mb_strtolower($record['client'].' '.$record['summary'].' '.$record['subject'].' '.self::attachmentNames($record)), $needle),
             ));
         }
 
@@ -88,6 +88,22 @@ final class ClosedThreadsTable
         }
 
         return $records;
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     */
+    private static function attachmentNames(array $record): string
+    {
+        $names = [(string) ($record['attachment'] ?? '')];
+
+        foreach ($record['replies'] ?? [] as $reply) {
+            if (is_array($reply)) {
+                $names[] = (string) ($reply['attachment'] ?? '');
+            }
+        }
+
+        return implode(' ', $names);
     }
 
     private static function paginate(?string $search, ?string $sortColumn, ?string $sortDirection, int|string|null $page, int|string|null $recordsPerPage): LengthAwarePaginator

@@ -15,6 +15,9 @@
                 @if ($event['body'] !== '')
                     <div class="body">{!! nl2br(e($event['body'])) !!}</div>
                 @endif
+                @if (($event['attachment'] ?? '') !== '' && ($event['note_id'] ?? '') !== '')
+                    <p class="attachment"><a href="{{ route('reply-desk.notes.attachment', ['note' => $event['note_id']]) }}">{{ $event['attachment'] }}</a></p>
+                @endif
             </li>
         @endforeach
     </ol>
@@ -71,5 +74,13 @@
     .thread-timeline .body {
         margin: 0.45rem 0 0;
         white-space: pre-wrap;
+    }
+
+    .thread-timeline .attachment {
+        margin: 0.45rem 0 0;
+    }
+
+    .thread-timeline .attachment a {
+        color: inherit;
     }
 </style>

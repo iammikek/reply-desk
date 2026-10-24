@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Desk\DeskException;
-use App\Desk\NoteStore;
+use App\Desk\Notes\NoteStore;
 
 class DirectoryCommand extends ReplyDeskCommand
 {

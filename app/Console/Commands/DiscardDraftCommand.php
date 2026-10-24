@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Desk\DiscardDraft;
+use App\Desk\Actions\DiscardDraft;
 
 class DiscardDraftCommand extends ReplyDeskCommand
 {

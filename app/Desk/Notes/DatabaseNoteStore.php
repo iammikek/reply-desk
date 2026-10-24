@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Desk;
+namespace App\Desk\Notes;
 
+use App\Desk\DeskException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -61,20 +62,48 @@ final class DatabaseNoteStore implements NoteStore
         }
     }
 
+    public function attachmentFor(string $noteId): ?NoteAttachment
+    {
+        $note = collect($this->notes())->first(fn (StoredNote $stored): bool => $stored->id === $noteId);
+
+        if (! $note instanceof StoredNote || $note->attachmentName === null) {
+            return null;
+        }
+
+        $name = basename($note->attachmentName);
+
+        if ($name === '' || $name === '.' || $name === '..') {
+            return null;
+        }
+
+        $path = 'note-files/'.$note->id.'/'.$name;
+
+        if (! Storage::disk('local')->exists($path)) {
+            return null;
+        }
+
+        return new NoteAttachment($name, $path);
+    }
+
     public function notes(): array
     {
         return DB::table('fake_notes')
             ->orderBy('id')
             ->get()
-            ->map(fn (object $row): StoredNote => new StoredNote(
-                (string) $row->id,
-                $row->body,
-                $row->company_id,
-                $row->company_name,
-                $row->contact_id,
-                $row->contact_name,
-                $row->contact_email,
-            ))
+            ->map(function (object $row): StoredNote {
+                $name = $row->attachment_name ?? null;
+
+                return new StoredNote(
+                    (string) $row->id,
+                    $row->body,
+                    $row->company_id,
+                    $row->company_name,
+                    $row->contact_id,
+                    $row->contact_name,
+                    $row->contact_email,
+                    is_string($name) && $name !== '' ? $name : null,
+                );
+            })
             ->all();
     }
 

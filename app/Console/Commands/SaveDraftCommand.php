@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Desk\Actions\SaveDraft;
 use App\Desk\DeskException;
-use App\Desk\SaveDraft;
 
 class SaveDraftCommand extends ReplyDeskCommand
 {

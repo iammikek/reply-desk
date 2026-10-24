@@ -1,8 +1,8 @@
 <?php
 
 use App\Clock\ReceiptSource;
-use App\Desk\LogInbound;
-use App\Desk\MarkReplySent;
+use App\Desk\Actions\LogInbound;
+use App\Desk\Actions\MarkReplySent;
 use App\Filament\Pages\OpenQueue;
 use App\Filament\Schemas\ReplyInfolist;
 use App\Filament\Widgets\OpenQueueOverview;

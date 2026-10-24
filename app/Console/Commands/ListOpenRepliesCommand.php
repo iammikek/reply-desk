@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Clock\ReplyClock;
 use App\Desk\DeskException;
-use App\Desk\ListOpenReplies;
+use App\Desk\Queue\ListOpenReplies;
 use DateTimeImmutable;
 
 class ListOpenRepliesCommand extends ReplyDeskCommand

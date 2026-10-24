@@ -1,10 +1,10 @@
 <?php
 
 use App\Clock\ReceiptSource;
+use App\Desk\Actions\LogInbound;
+use App\Desk\Actions\MarkReplySent;
 use App\Desk\DeskException;
-use App\Desk\ListOpenReplies;
-use App\Desk\LogInbound;
-use App\Desk\MarkReplySent;
+use App\Desk\Queue\ListOpenReplies;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
