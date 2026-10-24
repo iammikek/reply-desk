@@ -13,7 +13,7 @@
                     <p class="title">{{ $event['title'] }}</p>
                 @endif
                 @if ($event['body'] !== '')
-                    <div class="body">{!! nl2br(e($event['body'])) !!}</div>
+                    <div class="body">{{ $event['body'] }}</div>
                 @endif
                 @if (($event['attachment'] ?? '') !== '' && ($event['note_id'] ?? '') !== '')
                     <p class="attachment"><a href="{{ route('reply-desk.notes.attachment', ['note' => $event['note_id']]) }}">{{ $event['attachment'] }}</a></p>

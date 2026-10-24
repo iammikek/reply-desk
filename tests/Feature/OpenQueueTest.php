@@ -197,6 +197,28 @@ it('logs an inbound from the queue', function () {
         ->and($note)->not->toContain('Summary:');
 });
 
+it('keeps a pasted body on the logged email', function () {
+    $body = "Hello Ada,\n\n    The loaf is  wholemeal.";
+
+    Livewire::test(OpenQueue::class)
+        ->callAction('logInbound', [
+            'company_id' => '10',
+            'contact_id' => '20',
+            'receipt' => '2026-10-23 11:00:00',
+            'receipt_source' => 'mail client',
+            'subject' => 'The loaf',
+            'body' => $body,
+        ])
+        ->assertNotified('Inbound logged');
+
+    expect((string) DB::table('fake_notes')->value('body'))->toContain("Client email:\n".$body);
+
+    Livewire::test(OpenQueue::class)
+        ->mountAction(TestAction::make('view')->table('1'))
+        ->assertMountedActionModalSee($body)
+        ->assertMountedActionModalSee('white-space: pre-wrap');
+});
+
 it('shows the earlier thread on the note and the draft', function () {
     $closed = app(LogInbound::class)(
         'Northwharf Bakery',

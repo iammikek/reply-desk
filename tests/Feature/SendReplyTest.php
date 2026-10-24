@@ -87,6 +87,27 @@ it('sends the attachment with the reply and stores it on the note', function () 
         ->and(Storage::disk('local')->exists('note-files/'.$sentId.'/audit.txt'))->toBeTrue();
 });
 
+it('sends a pasted reply without flattening it', function () {
+    Mail::fake();
+
+    $body = "Thanks.\n\n    I will  bake it.";
+
+    $id = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+    );
+
+    app(SendReply::class)($id, 'The loaf', $body);
+
+    Mail::assertSent(ClientReply::class, fn (ClientReply $mail): bool => $mail->replyBody === $body && $mail->subjectLine === 'The loaf');
+
+    expect((string) DB::table('fake_notes')->where('body', 'like', '%Clock: sent%')->value('body'))
+        ->toContain("Reply:\n".$body);
+});
+
 it('leaves the row and the draft when the mail server refuses', function () {
     Mail::extend('refused', function () {
         return new class implements TransportInterface

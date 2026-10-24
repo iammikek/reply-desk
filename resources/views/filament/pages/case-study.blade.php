@@ -10,7 +10,7 @@
     <div class="reply-desk-case-study-grid">
         <section>
             <p>Practice client email used to be a table in a file. Due time was calculated when someone read it. The next reply still depended on remembering to look.</p>
-            <p>Reply desk is that queue, on a screen. The record is a clock note. The reply still goes out from Mail.</p>
+            <p>Reply desk is that queue, on a screen. The record is a clock note. Send the reply from here, or mark it sent after it goes from Mail.</p>
 
             <h2>Why it is useful</h2>
             <ul>
@@ -18,8 +18,8 @@
                 <li>The reply is due 24 hours after the clock starts. Monday to Friday, 08:00 to 20:00, Europe/London. Evening and weekend mail starts at 08:00 on the next working day.</li>
                 <li>Due time is calculated when the page is opened. It is not stored, so it cannot go stale.</li>
                 <li>A draft can sit on the row while the reply is written. The draft does not stop the clock, and it is not a reply.</li>
-                <li>Send delivers the reply. A file on the note is stored in HubSpot. Mark sent records a reply that already went from Mail.</li>
-                <li>Closed threads stay on History, newest first, with the client email and then each reply.</li>
+                <li>Send delivers the reply and keeps the paste: blank lines, indentation, and runs of spaces. A file on the note is stored in HubSpot. Mark sent records a reply that already went from Mail.</li>
+                <li>Closed threads stay on History, newest first. The timeline shows each message as pasted, and the name of a file opens it.</li>
             </ul>
         </section>
 
@@ -29,15 +29,17 @@
                 <dt>Open queue</dt>
                 <dd>Company, contact, summary, inbound time, clock start, reply due, and a draft when one is saved. Overdue rows can be filtered. Earlier threads for the same company sit on the open row.</dd>
                 <dt>Log inbound</dt>
-                <dd>Company and contact come from the directory already on file. The desk creates neither. A match that is not exactly one stops, and nothing is written.</dd>
+                <dd>Company and contact come from the directory already on file. The desk creates neither. A match that is not exactly one stops. Subject and body are logged separately, and an optional file is stored on the note.</dd>
                 <dt>Draft</dt>
-                <dd>One draft per open row. Save replaces it. Discard removes it and leaves the row open.</dd>
+                <dd>One draft per open row. Save replaces it. Discard removes it and leaves the row open. The body keeps the paste.</dd>
+                <dt>Send</dt>
+                <dd>Delivers the reply from the desk, then writes the sent note. The subject stays one line. A file goes with the message.</dd>
                 <dt>Mark sent</dt>
-                <dd>Records the sent time, the subject, and the reply pasted from Mail. A file on that note is stored in HubSpot. The row leaves the queue.</dd>
+                <dd>Records the sent time, the subject, and the reply pasted from Mail. The row leaves the queue.</dd>
                 <dt>History</dt>
-                <dd>Closed threads, ten at a time. A company with nothing open is still there. Thread opens the timeline.</dd>
+                <dd>Closed threads, ten at a time. A company with nothing open is still there. Thread opens the timeline, and a file name opens the file.</dd>
                 <dt>The same actions from Cursor</dt>
-                <dd>Listing the queue, logging an inbound, saving a draft, and marking sent use the same actions as the panel. Both read the same notes.</dd>
+                <dd>Listing the queue, logging an inbound, saving a draft, and marking sent use the same actions as the panel. Cursor cannot send. Both read the same notes.</dd>
             </dl>
         </section>
     </div>
@@ -50,10 +52,10 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
-        gap: 1.25rem;
+        gap: 0.75rem;
         max-width: 68rem;
         margin: 0 auto;
-        padding: 1.5rem 3rem;
+        padding: 1rem 3rem;
         color: var(--gray-950);
     }
 
@@ -86,7 +88,7 @@
     }
 
     .reply-desk-case-study h2 {
-        margin: 1.25rem 0 0.6rem;
+        margin: 0.7rem 0 0.35rem;
         font-size: 1.05rem;
         font-weight: 600;
     }
@@ -94,8 +96,8 @@
     .reply-desk-case-study p,
     .reply-desk-case-study li,
     .reply-desk-case-study dd {
-        margin: 0.45rem 0 0;
-        line-height: 1.45;
+        margin: 0.22rem 0 0;
+        line-height: 1.38;
     }
 
     .reply-desk-case-study-grid {
@@ -124,7 +126,7 @@
     }
 
     .reply-desk-case-study dt {
-        margin-top: 0.55rem;
+        margin-top: 0.32rem;
         font-weight: 600;
     }
 

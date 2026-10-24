@@ -87,6 +87,44 @@ it('keeps the clock header when the client email is filed on the note', function
         ->and(ClockNote::correspondence($body)['reply'])->toBe('Use the tin loaf.');
 });
 
+it('keeps a pasted client email and reply', function () {
+    $client = "Hello Ada,\r\n\r\n    The loaf is  wholemeal.";
+    $reply = "Thanks.\n\n    I will  bake it.  ";
+    $body = ClockNote::withMail(
+        ClockNote::inbound(london('2026-10-22 10:42'), ReceiptSource::MailClient, '', 'The loaf'),
+        $client,
+        $reply,
+    );
+
+    expect(ClockNote::correspondence($body)['client'])->toBe("Hello Ada,\n\n    The loaf is  wholemeal.")
+        ->and(ClockNote::correspondence($body)['reply'])->toBe($reply)
+        ->and(ClockNote::parse($body)?->summary)->toBe('The loaf');
+});
+
+it('keeps a pasted reply on a sent note', function () {
+    $reply = "Thanks.\n\n    I will  bake it.";
+    $body = ClockNote::sent('123456789', london('2026-10-22 16:04'), 'The loaf', $reply);
+
+    expect(ClockNote::correspondence($body)['reply'])->toBe($reply)
+        ->and(ClockNote::parse($body)?->subject)->toBe('The loaf');
+});
+
+it('omits a blank pasted section', function () {
+    $body = ClockNote::withMail(
+        ClockNote::inbound(london('2026-10-22 10:42'), ReceiptSource::MailClient, 'The loaf'),
+        "   \n",
+        'Thanks.',
+    );
+
+    expect(ClockNote::correspondence($body)['client'])->toBe('')
+        ->and($body)->not->toContain('Client email:')
+        ->and(ClockNote::correspondence($body)['reply'])->toBe('Thanks.');
+});
+
+it('rejects a subject that runs over more than one line', function () {
+    ClockNote::inbound(london('2026-10-22 10:42'), ReceiptSource::MailClient, '', "The loaf\nToday");
+})->throws(InvalidArgumentException::class, 'Subject must be one line.');
+
 it('writes a sent note that parses back', function () {
     $sent = new DateTimeImmutable('2026-10-22 16:04', new DateTimeZone('Europe/London'));
     $body = ClockNote::sent('123456789', $sent, 'PHP on the new server');

@@ -16,9 +16,9 @@ final class SaveDraft
     public function __invoke(string $inboundId, string $subject, string $body): void
     {
         $subject = trim($subject);
-        $body = trim($body);
+        $body = ClockNote::pasted($body);
 
-        if ($subject === '' || $body === '' || str_contains($subject, "\n")) {
+        if ($subject === '' || $body === '' || str_contains($subject, "\n") || str_contains($subject, "\r")) {
             throw new DeskException('A draft needs a subject and a body.');
         }
 

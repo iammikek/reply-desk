@@ -120,7 +120,7 @@ Reply:
 The wholemeal.
 ```
 
-`Client email` is the message that arrived. `Reply` is the message that was sent, pasted from Mail. The mailbox still has the original. The sent note keeps the subject and this pasted body.
+`Client email` is the message that arrived. `Reply` is the message that was sent, pasted from Mail. The mailbox still has the original. The sent note keeps the subject and this pasted body. A subject stays one line. The pasted body keeps its blank lines, indentation, and runs of spaces, and the timeline shows that text as pasted.
 
 ## 7. Companies and contacts
 
@@ -214,11 +214,7 @@ GitHub Actions runs `vendor/bin/pint --test` and then `composer test` on every p
 
 ## 14. Still to do
 
-Sending from the desk, a file on a new note, Pint in CI and before commit, and opening on the queue are already built. A second Filament sample is not part of this desk.
-
-**Pasted formatting.** The body of a logged email and of a sent reply keeps the paste: blank lines, indentation, and runs of spaces. The subject stays one line. The timeline shows that text as pasted. Trimming a section must not flatten the inside of the message.
-
-**A file on History.** A closed thread shows the file stored on the inbound note and on each sent note, beside that event. The name opens the file. The memory store serves the local copy. HubSpot serves the file already stored on the note. A test sees both names on the thread and reads the file back.
+Sending from the desk, a file on a new note, a file on History, pasted formatting, Pint in CI and before commit, and opening on the queue are already built. A second Filament sample is not part of this desk.
 
 **The portal id stays out of the repo.** `145255358` comes out of this plan, the README, the seed refusal text, and the backfill command. The seed still runs only on the memory store. Backfill `--write` still runs only when the store is HubSpot and a portal id is set. Tests use a stand-in id, not the live one.
 

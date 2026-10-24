@@ -4,7 +4,6 @@ namespace App\Filament\Schemas;
 
 use App\Clock\ClockNote;
 use Filament\Infolists\Components\TextEntry;
-use Illuminate\Support\HtmlString;
 
 final class ReplyInfolist
 {
@@ -41,7 +40,9 @@ final class ReplyInfolist
             $entries[] = self::mail('earlier', 'Earlier on this client', $earlier);
         }
 
-        $entries[] = self::entry('body', 'Note body', $record)->columnSpanFull();
+        $entries[] = self::entry('body', 'Note body', $record)
+            ->extraAttributes(['style' => 'white-space: pre-wrap'])
+            ->columnSpanFull();
 
         return $entries;
     }
@@ -83,9 +84,9 @@ final class ReplyInfolist
                 (string) ($thread['receipt'] ?? ''),
                 (string) ($thread['summary'] ?? ''),
             ];
-            $client = trim((string) ($thread['client'] ?? ''));
+            $client = (string) ($thread['client'] ?? '');
 
-            if ($client !== '') {
+            if (trim($client) !== '') {
                 $lines[] = '';
                 $lines[] = 'Client email';
                 $lines[] = $client;
@@ -99,9 +100,9 @@ final class ReplyInfolist
                 $lines[] = '';
                 $lines[] = 'Reply '.(string) ($reply['sent'] ?? '');
                 $lines[] = 'Subject: '.(string) ($reply['subject'] ?? '');
-                $body = trim((string) ($reply['body'] ?? ''));
+                $body = (string) ($reply['body'] ?? '');
 
-                if ($body !== '') {
+                if (trim($body) !== '') {
                     $lines[] = '';
                     $lines[] = $body;
                 }
@@ -118,8 +119,7 @@ final class ReplyInfolist
         return TextEntry::make($name)
             ->label($label)
             ->state($text)
-            ->html()
-            ->formatStateUsing(fn (string $state): HtmlString => new HtmlString(nl2br(e($state))))
+            ->extraAttributes(['style' => 'white-space: pre-wrap'])
             ->columnSpanFull();
     }
 

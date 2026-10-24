@@ -85,6 +85,22 @@ it('returns the same draft from the command', function () {
         ->and($output)->toContain('2026-10-21 10:00');
 });
 
+it('keeps a pasted draft', function () {
+    $id = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+    );
+
+    $body = "Thanks.\n\n    I will  bake it.";
+
+    app(SaveDraft::class)($id, 'The loaf', $body);
+
+    expect(app(ListOpenReplies::class)(london('2026-10-23 12:00'))[0]->draftBody)->toBe($body);
+});
+
 it('shows a saved draft on the queue', function () {
     $this->actingAs(User::factory()->create());
 

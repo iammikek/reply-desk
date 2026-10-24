@@ -34,7 +34,7 @@ final class ClosedThreadInfolist
             'at' => (string) ($record['inbound'] ?? ''),
             'kind' => 'Client email',
             'title' => (string) ($record['summary'] ?? ''),
-            'body' => trim((string) ($record['client_email'] ?? '')),
+            'body' => (string) ($record['client_email'] ?? ''),
             'attachment' => (string) ($record['attachment'] ?? ''),
             'note_id' => (string) ($record['id'] ?? ''),
         ]];
@@ -48,7 +48,7 @@ final class ClosedThreadInfolist
                 'at' => (string) ($reply['sent'] ?? ''),
                 'kind' => 'Reply',
                 'title' => (string) ($reply['subject'] ?? ''),
-                'body' => trim((string) ($reply['body'] ?? '')),
+                'body' => (string) ($reply['body'] ?? ''),
                 'attachment' => (string) ($reply['attachment'] ?? ''),
                 'note_id' => (string) ($reply['note_id'] ?? ''),
             ];

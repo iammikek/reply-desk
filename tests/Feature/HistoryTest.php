@@ -140,6 +140,62 @@ it('shows the newest closed threads on the first page', function () {
         ->assertDontSee('The newest loaf');
 });
 
+it('shows a pasted client email and reply on the thread', function () {
+    $client = "Hello Ada,\n\n    The loaf is  wholemeal.";
+    $reply = "Thanks.\n\n    I will  bake it.";
+
+    $closed = app(LogInbound::class)->record(
+        '10',
+        '20',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        '',
+        $client,
+        subject: 'The loaf',
+    );
+
+    app(MarkReplySent::class)($closed, london('2026-10-20 16:04'), 'The loaf', $reply);
+
+    $thread = app(ListClosedThreads::class)()[0];
+
+    expect($thread->clientEmail)->toBe($client)
+        ->and($thread->replies[0]['body'])->toBe($reply);
+
+    $html = view('filament.thread-timeline', [
+        'client' => $thread->client,
+        'email' => $thread->contactEmail,
+        'events' => [
+            [
+                'at' => '2026-10-20 10:00',
+                'kind' => 'Client email',
+                'title' => 'The loaf',
+                'body' => $thread->clientEmail,
+                'attachment' => '',
+                'note_id' => '',
+            ],
+            [
+                'at' => '2026-10-20 16:04',
+                'kind' => 'Reply',
+                'title' => 'The loaf',
+                'body' => $thread->replies[0]['body'],
+                'attachment' => '',
+                'note_id' => '',
+            ],
+        ],
+    ])->render();
+
+    expect($html)->toContain($client)
+        ->and($html)->toContain($reply)
+        ->and($html)->toContain('white-space: pre-wrap')
+        ->and($html)->not->toContain('<br');
+
+    Livewire::test(History::class)
+        ->mountAction(TestAction::make('view')->table($closed))
+        ->assertMountedActionModalSee($client)
+        ->assertMountedActionModalSee($reply)
+        ->assertMountedActionModalSee('white-space: pre-wrap');
+});
+
 it('shows an attachment on the inbound note and the reply', function () {
     $brief = storage_path('framework/testing/brief.txt');
     $answer = storage_path('framework/testing/answer.txt');

@@ -66,8 +66,8 @@ final class ClockNote
     public static function withMail(string $body, string $clientEmail = '', string $reply = ''): string
     {
         $existing = self::correspondence($body);
-        $clientEmail = $existing['client'] !== '' ? $existing['client'] : trim($clientEmail);
-        $reply = $existing['reply'] !== '' ? $existing['reply'] : trim($reply);
+        $clientEmail = $existing['client'] !== '' ? $existing['client'] : self::pasted($clientEmail);
+        $reply = $existing['reply'] !== '' ? $existing['reply'] : self::pasted($reply);
         $header = implode("\n", self::header($body));
 
         if ($clientEmail !== '') {
@@ -111,15 +111,32 @@ final class ClockNote
         return $header;
     }
 
+    /**
+     * A blank message is empty. Anything else keeps its blank lines, indentation, and runs of spaces.
+     */
+    public static function pasted(string $value): string
+    {
+        $value = str_replace(["\r\n", "\r"], "\n", $value);
+
+        return trim($value) === '' ? '' : $value;
+    }
+
     private static function section(string $body, string $heading): string
     {
-        $pattern = '/^'.preg_quote($heading, '/').':\n(.*?)(?=\n(?:Client email|Reply):\n|\z)/ms';
+        $body = str_replace(["\r\n", "\r"], "\n", $body);
+        $pattern = '/^'.preg_quote($heading, '/').':\n(.*?)(?=\n(Client email|Reply):\n|\z)/ms';
 
         if (preg_match($pattern, $body, $matches) !== 1) {
             return '';
         }
 
-        return trim($matches[1]);
+        $section = $matches[1];
+
+        if (($matches[2] ?? '') !== '' && str_ends_with($section, "\n")) {
+            $section = substr($section, 0, -1);
+        }
+
+        return $section;
     }
 
     /**
