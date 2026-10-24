@@ -71,6 +71,20 @@ it('writes an inbound note when the portal matches one company and one contact',
             return Http::response('', 204);
         }
 
+        if (str_ends_with(parse_url($url, PHP_URL_PATH) ?: '', '/companies/batch/read')) {
+            return Http::response(['results' => [[
+                'id' => '10',
+                'properties' => ['name' => 'Northwharf Bakery'],
+            ]]]);
+        }
+
+        if (str_ends_with(parse_url($url, PHP_URL_PATH) ?: '', '/contacts/batch/read')) {
+            return Http::response(['results' => [[
+                'id' => '20',
+                'properties' => ['email' => 'ada@northwharf.example', 'firstname' => 'Ada', 'lastname' => 'North'],
+            ]]]);
+        }
+
         return Http::response('unexpected '.$url, 500);
     });
 
@@ -124,6 +138,20 @@ it('uses the one company whose name contains every word', function () {
 
         if ($request->method() === 'PUT') {
             return Http::response('', 204);
+        }
+
+        if (str_ends_with(parse_url($url, PHP_URL_PATH) ?: '', '/companies/batch/read')) {
+            return Http::response(['results' => [[
+                'id' => '10',
+                'properties' => ['name' => 'V8 Hosting Limited'],
+            ]]]);
+        }
+
+        if (str_ends_with(parse_url($url, PHP_URL_PATH) ?: '', '/contacts/batch/read')) {
+            return Http::response(['results' => [[
+                'id' => '20',
+                'properties' => ['email' => 'lawrence@v8hosting.uk', 'firstname' => 'Lawrence', 'lastname' => 'Farr'],
+            ]]]);
         }
 
         return Http::response('unexpected '.$url, 500);
@@ -310,8 +338,12 @@ it('serves the queue from cache for the next minute', function () {
         '20',
     );
 
-    expect(app(HubSpotNoteStore::class)->notes())->toHaveCount(1)
-        ->and($searches())->toBe(2);
+    $afterWrite = app(HubSpotNoteStore::class)->notes();
+
+    expect($afterWrite)->toHaveCount(2)
+        ->and(collect($afterWrite)->pluck('id')->all())->toContain('56')
+        ->and($searches())->toBe(2)
+        ->and(collect(Cache::get('reply-desk.pending.145255358'))->pluck('id')->all())->toContain('56');
 });
 
 it('retries once the ten second limit has cleared', function () {
@@ -542,6 +574,162 @@ it('redacts the access token from a HubSpot error', function () {
         expect($exception->getMessage())->not->toContain('pat-test-token');
     }
 });
+
+it('keeps a written note on the next read until search returns it', function () {
+    $inbound = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::Logged, 'Which PHP to use');
+    $sent = ClockNote::sent('55', london('2026-10-20 11:00'), 'Re: Which PHP to use', 'Use 8.3.');
+    $results = [[
+        'id' => '55',
+        'properties' => ['hs_note_body' => $inbound],
+    ]];
+
+    Cache::put('reply-desk.directory.145255358', [[
+        'id' => '10',
+        'name' => 'Northwharf Bakery',
+        'contacts' => [[
+            'id' => '20',
+            'name' => 'Ada North',
+            'email' => 'ada@northwharf.example',
+        ]],
+    ]], 3600);
+
+    Http::fake(function (Request $request) use (&$results) {
+        return fakeHubSpotNoteHttp($request, $results, '56');
+    });
+
+    app(HubSpotNoteStore::class)->writeNote($sent, '10', '20');
+
+    $missed = app(HubSpotNoteStore::class)->notes();
+    $written = collect($missed)->firstWhere('id', '56');
+
+    expect($missed)->toHaveCount(2)
+        ->and($written)->toBeInstanceOf(StoredNote::class);
+
+    expect($written->companyName)->toBe('Northwharf Bakery')
+        ->and($written->contactName)->toBe('Ada North')
+        ->and($written->body)->toBe($sent)
+        ->and(collect(Cache::get('reply-desk.pending.145255358'))->pluck('id')->all())->toBe(['56']);
+
+    expect(app(HubSpotNoteStore::class)->notes())->toHaveCount(2)
+        ->and(collect(Cache::get('reply-desk.pending.145255358'))->pluck('id')->all())->toBe(['56']);
+
+    Cache::forget('reply-desk.notes.145255358');
+    $results[] = [
+        'id' => '56',
+        'properties' => ['hs_note_body' => $sent],
+    ];
+
+    $caughtUp = app(HubSpotNoteStore::class)->notes();
+
+    expect(collect($caughtUp)->pluck('id')->all())->toContain('56')
+        ->and(Cache::get('reply-desk.pending.145255358'))->toBeNull();
+});
+
+it('keeps a replaced body until search returns that body', function () {
+    $original = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::Logged, 'Which PHP to use');
+    $replaced = ClockNote::withMail($original, 'Which loaf for Friday.');
+    $results = [[
+        'id' => '55',
+        'properties' => ['hs_note_body' => $original],
+    ]];
+
+    Http::fake(function (Request $request) use (&$results) {
+        return fakeHubSpotNoteHttp($request, $results, '55');
+    });
+
+    expect(app(HubSpotNoteStore::class)->notes()[0]->body)->toBe($original);
+
+    app(HubSpotNoteStore::class)->replaceNote('55', $replaced);
+
+    $notes = app(HubSpotNoteStore::class)->notes();
+
+    expect($notes)->toHaveCount(1)
+        ->and($notes[0]->body)->toBe($replaced)
+        ->and($notes[0]->companyName)->toBe('Northwharf Bakery')
+        ->and(collect(Cache::get('reply-desk.pending.145255358'))->pluck('id')->all())->toBe(['55']);
+
+    Cache::forget('reply-desk.notes.145255358');
+    $results = [[
+        'id' => '55',
+        'properties' => ['hs_note_body' => $replaced],
+    ]];
+
+    expect(app(HubSpotNoteStore::class)->notes()[0]->body)->toBe($replaced)
+        ->and(Cache::get('reply-desk.pending.145255358'))->toBeNull();
+});
+
+it('drops a pending note after fifteen minutes', function () {
+    $inbound = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::Logged, 'Which PHP to use');
+    $sent = ClockNote::sent('55', london('2026-10-20 11:00'), 'Re: Which PHP to use');
+    $results = [[
+        'id' => '55',
+        'properties' => ['hs_note_body' => $inbound],
+    ]];
+
+    Http::fake(function (Request $request) use (&$results) {
+        return fakeHubSpotNoteHttp($request, $results, '56');
+    });
+
+    app(HubSpotNoteStore::class)->writeNote($sent, '10', '20');
+    $this->travel(16)->minutes();
+    Cache::forget('reply-desk.notes.145255358');
+
+    expect(collect(app(HubSpotNoteStore::class)->notes())->pluck('id')->all())->toBe(['55']);
+});
+
+/**
+ * @param  list<array{id: string, properties: array{hs_note_body: string}}>  $results
+ */
+function fakeHubSpotNoteHttp(Request $request, array $results, string $createdId): mixed
+{
+    $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
+
+    if (str_contains($path, 'account-info')) {
+        return Http::response(['portalId' => 145255358]);
+    }
+
+    if (str_ends_with($path, '/notes/search')) {
+        return Http::response(['results' => $results]);
+    }
+
+    if (str_contains($path, '/notes/companies/batch/read')) {
+        return Http::response(['results' => array_map(fn (array $note): array => [
+            'from' => ['id' => $note['id']],
+            'to' => [['toObjectId' => 10]],
+        ], $results)]);
+    }
+
+    if (str_contains($path, '/notes/contacts/batch/read')) {
+        return Http::response(['results' => array_map(fn (array $note): array => [
+            'from' => ['id' => $note['id']],
+            'to' => [['toObjectId' => 20]],
+        ], $results)]);
+    }
+
+    if (str_ends_with($path, '/companies/batch/read')) {
+        return Http::response(['results' => [[
+            'id' => '10',
+            'properties' => ['name' => 'Northwharf Bakery'],
+        ]]]);
+    }
+
+    if (str_ends_with($path, '/contacts/batch/read')) {
+        return Http::response(['results' => [[
+            'id' => '20',
+            'properties' => ['email' => 'ada@northwharf.example', 'firstname' => 'Ada', 'lastname' => 'North'],
+        ]]]);
+    }
+
+    if ($request->method() === 'POST' && str_ends_with($path, '/notes')) {
+        return Http::response(['id' => $createdId], 201);
+    }
+
+    if ($request->method() === 'PUT' || $request->method() === 'PATCH') {
+        return Http::response('', 204);
+    }
+
+    return Http::response('unexpected '.$path, 500);
+}
 
 /**
  * @param  list<array{id: string, properties: array{hs_note_body: string}}>  $results

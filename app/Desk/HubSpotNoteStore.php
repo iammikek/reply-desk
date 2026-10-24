@@ -37,6 +37,11 @@ final class HubSpotNoteStore implements NoteStore
     private const NOTE_CACHE_SECONDS = 60;
 
     /**
+     * HubSpot search can miss a note after it is written. Keep it here until a fresh search returns the same body.
+     */
+    private const PENDING_SECONDS = 900;
+
+    /**
      * Companies and their contacts change rarely. The log form and the MCP read this list.
      */
     private const DIRECTORY_CACHE_SECONDS = 3600;
@@ -165,15 +170,12 @@ final class HubSpotNoteStore implements NoteStore
         $this->send('PUT', "/crm/objects/2026-03/note/{$id}/associations/default/company/{$companyId}");
         $this->send('PUT', "/crm/objects/2026-03/note/{$id}/associations/default/contact/{$contactId}");
 
-        $stored = new StoredNote($id, $body, $companyId, '', $contactId, '', '');
+        $stored = $this->labelled($id, $body, $companyId, $contactId);
         $this->written[$id] = $stored;
         $this->bodies[$id] = $body;
-
-        if ($this->cachedNotes !== null) {
-            $this->cachedNotes[] = $stored;
-        }
-
+        $this->rememberLocal($stored);
         Cache::forget($this->cacheKey());
+        $this->keepPending($stored);
 
         return $id;
     }
@@ -189,13 +191,24 @@ final class HubSpotNoteStore implements NoteStore
         ]);
 
         $this->bodies[$id] = $body;
+        $current = $this->known($id);
+        $stored = new StoredNote(
+            $id,
+            $body,
+            $current?->companyId ?? '',
+            $current?->companyName ?? '',
+            $current?->contactId ?? '',
+            $current?->contactName ?? '',
+            $current?->contactEmail ?? '',
+        );
 
         if (isset($this->written[$id])) {
-            $note = $this->written[$id];
-            $this->written[$id] = new StoredNote($note->id, $body, $note->companyId, $note->companyName, $note->contactId, $note->contactName, $note->contactEmail);
+            $this->written[$id] = $stored;
         }
 
-        $this->replaceCachedBody($id, $body);
+        $this->rememberLocal($stored);
+        Cache::forget($this->cacheKey());
+        $this->keepPending($stored);
     }
 
     public function notes(): array
@@ -207,9 +220,9 @@ final class HubSpotNoteStore implements NoteStore
         $cached = $this->cachedList();
 
         if ($cached !== null) {
-            $this->cachedNotes = $cached;
+            $this->cachedNotes = $this->withPending($cached, []);
 
-            return $cached;
+            return $this->cachedNotes;
         }
 
         $this->assertPortal();
@@ -233,20 +246,23 @@ final class HubSpotNoteStore implements NoteStore
         $companyNames = $this->names('companies', array_values($companies), 'name');
         $contactRecords = $this->contacts(array_values($contacts));
         $stored = [];
+        $searchBodies = [];
 
         foreach ($raw as $note) {
             $companyId = $this->onlyId($note['associations']['companies']['results'] ?? []);
             $contactId = $this->onlyId($note['associations']['contacts']['results'] ?? []);
+            $noteId = (string) ($note['id'] ?? '');
 
-            if ($companyId === null || $contactId === null) {
+            if ($companyId === null || $contactId === null || $noteId === '') {
                 continue;
             }
 
+            $searchBodies[$noteId] = (string) ($note['properties']['hs_note_body'] ?? '');
             $contact = $contactRecords[$contactId] ?? ['name' => '', 'email' => ''];
 
             $stored[] = new StoredNote(
-                (string) $note['id'],
-                $this->bodies[(string) $note['id']] ?? (string) ($note['properties']['hs_note_body'] ?? ''),
+                $noteId,
+                $this->bodies[$noteId] ?? $searchBodies[$noteId],
                 $companyId,
                 $companyNames[$companyId] ?? '',
                 $contactId,
@@ -267,6 +283,7 @@ final class HubSpotNoteStore implements NoteStore
             }
         }
 
+        $stored = $this->withPending($stored, $searchBodies);
         $this->remember($stored);
 
         return $stored;
@@ -337,23 +354,274 @@ final class HubSpotNoteStore implements NoteStore
         return new StoredNote($row['id'], $row['body'], $row['companyId'], $row['companyName'], $row['contactId'], $row['contactName'], $row['contactEmail']);
     }
 
-    private function replaceCachedBody(string $id, string $body): void
+    private function rememberLocal(StoredNote $stored): void
     {
-        $notes = $this->cachedNotes ?? $this->cachedList();
-
-        if ($notes === null) {
+        if ($this->cachedNotes === null) {
             return;
         }
 
-        foreach ($notes as $index => $note) {
-            if ($note->id !== $id) {
+        foreach ($this->cachedNotes as $index => $note) {
+            if ($note->id === $stored->id) {
+                $this->cachedNotes[$index] = $stored;
+
+                return;
+            }
+        }
+
+        $this->cachedNotes[] = $stored;
+    }
+
+    private function known(string $id): ?StoredNote
+    {
+        if (isset($this->written[$id])) {
+            return $this->written[$id];
+        }
+
+        foreach ($this->cachedNotes ?? $this->cachedList() ?? [] as $note) {
+            if ($note->id === $id) {
+                return $note;
+            }
+        }
+
+        return $this->pendingNotes()[$id] ?? null;
+    }
+
+    private function labelled(string $id, string $body, string $companyId, string $contactId): StoredNote
+    {
+        $companyName = '';
+        $contactName = '';
+        $contactEmail = '';
+
+        foreach ($this->directoryFromCache(Cache::get($this->directoryCacheKey())) ?? [] as $company) {
+            if ($company['id'] !== $companyId) {
                 continue;
             }
 
-            $notes[$index] = new StoredNote($note->id, $body, $note->companyId, $note->companyName, $note->contactId, $note->contactName, $note->contactEmail);
+            $companyName = $company['name'];
+
+            foreach ($company['contacts'] as $contact) {
+                if ($contact['id'] !== $contactId) {
+                    continue;
+                }
+
+                $contactName = $contact['name'];
+                $contactEmail = $contact['email'];
+
+                break 2;
+            }
+
+            break;
         }
 
-        $this->remember($notes);
+        if ($companyName === '') {
+            $companyName = $this->names('companies', [$companyId], 'name')[$companyId] ?? '';
+        }
+
+        if ($contactEmail === '') {
+            $person = $this->contacts([$contactId])[$contactId] ?? null;
+
+            if ($person !== null) {
+                $contactName = $person['name'];
+                $contactEmail = $person['email'];
+            }
+        }
+
+        return new StoredNote($id, $body, $companyId, $companyName, $contactId, $contactName, $contactEmail);
+    }
+
+    private function keepPending(StoredNote $note): void
+    {
+        Cache::lock($this->pendingLockKey(), 5)->block(5, function () use ($note): void {
+            $pending = $this->pendingRows();
+            $existing = $pending[$note->id] ?? null;
+            $row = $this->pendingRow($note);
+
+            if (is_array($existing)) {
+                foreach (['companyId', 'companyName', 'contactId', 'contactName', 'contactEmail'] as $key) {
+                    if ($row[$key] === '' && is_string($existing[$key] ?? null) && $existing[$key] !== '') {
+                        $row[$key] = $existing[$key];
+                    }
+                }
+            }
+
+            $pending[$note->id] = $row;
+            $this->storePending($pending);
+        });
+    }
+
+    /**
+     * @param  list<string>  $ids
+     */
+    private function dropPending(array $ids): void
+    {
+        if ($ids === []) {
+            return;
+        }
+
+        Cache::lock($this->pendingLockKey(), 5)->block(5, function () use ($ids): void {
+            $pending = $this->pendingRows();
+
+            foreach ($ids as $id) {
+                unset($pending[$id]);
+            }
+
+            $this->storePending($pending);
+        });
+    }
+
+    /**
+     * A one-minute snapshot can already contain a pending note. Only a fresh search may remove it.
+     *
+     * @param  list<StoredNote>  $notes
+     * @param  array<string, string>  $searchBodies
+     * @return list<StoredNote>
+     */
+    private function withPending(array $notes, array $searchBodies): array
+    {
+        $pending = $this->pendingNotes();
+
+        if ($pending === []) {
+            return $notes;
+        }
+
+        $byId = [];
+
+        foreach ($notes as $note) {
+            $byId[$note->id] = $note;
+        }
+
+        $drop = [];
+
+        foreach ($pending as $id => $waiting) {
+            if (! isset($byId[$id])) {
+                $byId[$id] = $waiting;
+
+                continue;
+            }
+
+            if (array_key_exists($id, $searchBodies) && $searchBodies[$id] === $waiting->body) {
+                $drop[] = $id;
+
+                continue;
+            }
+
+            if ($byId[$id]->body === $waiting->body) {
+                continue;
+            }
+
+            $current = $byId[$id];
+            $byId[$id] = new StoredNote(
+                $current->id,
+                $waiting->body,
+                $current->companyId !== '' ? $current->companyId : $waiting->companyId,
+                $current->companyName !== '' ? $current->companyName : $waiting->companyName,
+                $current->contactId !== '' ? $current->contactId : $waiting->contactId,
+                $current->contactName !== '' ? $current->contactName : $waiting->contactName,
+                $current->contactEmail !== '' ? $current->contactEmail : $waiting->contactEmail,
+            );
+        }
+
+        $this->dropPending($drop);
+
+        return array_values($byId);
+    }
+
+    /**
+     * @return array<string, StoredNote>
+     */
+    private function pendingNotes(): array
+    {
+        $notes = [];
+
+        foreach ($this->pendingRows() as $id => $row) {
+            $note = $this->noteFromRow($row);
+
+            if ($note !== null) {
+                $notes[$id] = $note;
+            }
+        }
+
+        return $notes;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function pendingRows(): array
+    {
+        $cached = Cache::get($this->pendingKey());
+
+        if (! is_array($cached)) {
+            if ($cached !== null) {
+                Cache::forget($this->pendingKey());
+            }
+
+            return [];
+        }
+
+        $now = now()->getTimestamp();
+        $rows = [];
+
+        foreach ($cached as $row) {
+            if (! is_array($row) || $this->noteFromRow($row) === null) {
+                continue;
+            }
+
+            $expires = $row['expiresAt'] ?? null;
+
+            if (! is_int($expires) && ! (is_string($expires) && ctype_digit($expires))) {
+                continue;
+            }
+
+            if ((int) $expires <= $now) {
+                continue;
+            }
+
+            $rows[$row['id']] = $row;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return array{id: string, body: string, companyId: string, companyName: string, contactId: string, contactName: string, contactEmail: string, expiresAt: int}
+     */
+    private function pendingRow(StoredNote $note): array
+    {
+        return [
+            'id' => $note->id,
+            'body' => $note->body,
+            'companyId' => $note->companyId,
+            'companyName' => $note->companyName,
+            'contactId' => $note->contactId,
+            'contactName' => $note->contactName,
+            'contactEmail' => $note->contactEmail,
+            'expiresAt' => now()->addSeconds(self::PENDING_SECONDS)->getTimestamp(),
+        ];
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $pending
+     */
+    private function storePending(array $pending): void
+    {
+        if ($pending === []) {
+            Cache::forget($this->pendingKey());
+
+            return;
+        }
+
+        Cache::put($this->pendingKey(), array_values($pending), self::PENDING_SECONDS);
+    }
+
+    private function pendingKey(): string
+    {
+        return 'reply-desk.pending.'.((string) config('reply-desk.portal_id'));
+    }
+
+    private function pendingLockKey(): string
+    {
+        return $this->pendingKey().'.lock';
     }
 
     private function cacheKey(): string

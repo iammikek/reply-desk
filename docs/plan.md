@@ -68,7 +68,7 @@ Login, sessions, drafts, and the cache are Laravel tables. On the running desk t
 
 The showable copy uses SQLite and the memory note store. It has no token and no real names.
 
-The queue of clock notes is cached for one minute. The company and contact list is cached for one hour. Both caches store plain field arrays. A write clears the note cache so the next read comes from HubSpot. HubSpot search is read in pages, and company and contact links are read in batches, so one queue load stays inside the ten-second call limit.
+The queue of clock notes is cached for one minute. The company and contact list is cached for one hour. Both caches store plain field arrays. A write clears the note cache. A note written or replaced here is also kept in a pending list for fifteen minutes, and every read includes it until a fresh HubSpot search returns the same id and the same body. HubSpot search is read in pages, and company and contact links are read in batches, so one queue load stays inside the ten-second call limit.
 
 ## 5. Clock
 
