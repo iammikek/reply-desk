@@ -61,6 +61,54 @@ final class ClockNote
     }
 
     /**
+     * Record the email subject and the message. The summary line stays.
+     * A new message replaces the section already on the note.
+     */
+    public static function applyMail(string $body, string $clientEmail = '', string $reply = '', string $subject = ''): string
+    {
+        $lines = self::header($body);
+        $kind = $lines[0] ?? '';
+
+        if ($subject !== '' && $kind === 'Clock: inbound') {
+            $written = false;
+
+            foreach ($lines as $index => $line) {
+                if (str_starts_with($line, 'Subject:')) {
+                    $lines[$index] = 'Subject: '.self::oneLine($subject, 'Subject');
+                    $written = true;
+                }
+            }
+
+            if (! $written) {
+                $lines[] = 'Subject: '.self::oneLine($subject, 'Subject');
+            }
+        }
+
+        if ($subject !== '' && $kind === 'Clock: sent') {
+            foreach ($lines as $index => $line) {
+                if (str_starts_with($line, 'Subject:')) {
+                    $lines[$index] = 'Subject: '.self::oneLine($subject, 'Subject');
+                }
+            }
+        }
+
+        $existing = self::correspondence($body);
+        $clientEmail = $clientEmail !== '' ? self::pasted($clientEmail) : $existing['client'];
+        $reply = $reply !== '' ? self::pasted($reply) : $existing['reply'];
+        $header = implode("\n", $lines);
+
+        if ($clientEmail !== '') {
+            $header .= "\n\nClient email:\n".$clientEmail;
+        }
+
+        if ($reply !== '') {
+            $header .= "\n\nReply:\n".$reply;
+        }
+
+        return $header;
+    }
+
+    /**
      * Keep any mail already on the note. Fill a section only when it is empty.
      */
     public static function withMail(string $body, string $clientEmail = '', string $reply = ''): string

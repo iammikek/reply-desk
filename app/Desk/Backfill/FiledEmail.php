@@ -9,15 +9,6 @@ final readonly class FiledEmail
         public string $body,
     ) {}
 
-    public function text(): string
-    {
-        if ($this->subject === '') {
-            return $this->body;
-        }
-
-        return "Subject: {$this->subject}\n\n{$this->body}";
-    }
-
     public static function read(string $baseDirectory, string $relativePath): ?self
     {
         $relativePath = trim($relativePath);

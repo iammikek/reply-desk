@@ -28,25 +28,20 @@ final class OpenTable
         $header = array_map(fn (string $cell): string => strtolower($cell), array_shift($table));
         $columns = array_flip($header);
 
-        foreach (['client', 'inbound', 'reply sent', 'attachment'] as $name) {
-            if (! array_key_exists($name, $columns)) {
-                throw new DeskException("The Open table needs a {$name} column.");
-            }
-        }
+        $this->requireColumns($columns, 'Open');
 
         $rows = [];
 
         foreach ($table as $cells) {
-            $sent = $cells[$columns['reply sent']] ?? '';
-
-            if (trim($sent) !== '') {
+            if ($this->sentAtCell($columns, $cells) !== '') {
                 continue;
             }
 
             $rows[] = $this->row(
                 $cells[$columns['client']] ?? '',
                 $cells[$columns['inbound']] ?? '',
-                $cells[$columns['attachment']] ?? '',
+                $this->cell($columns, $cells, 'clock start'),
+                $this->mailCells($columns, $cells),
             );
         }
 
@@ -73,17 +68,13 @@ final class OpenTable
         $header = array_map(fn (string $cell): string => strtolower($cell), array_shift($table));
         $columns = array_flip($header);
 
-        foreach (['client', 'inbound', 'reply sent', 'attachment'] as $name) {
-            if (! array_key_exists($name, $columns)) {
-                throw new DeskException("The Sent table needs a {$name} column.");
-            }
-        }
+        $this->requireColumns($columns, 'Sent');
 
         $rows = [];
         $skipped = [];
 
         foreach ($table as $cells) {
-            $sent = trim($cells[$columns['reply sent']] ?? '');
+            $sent = $this->sentAtCell($columns, $cells);
 
             if ($sent === '') {
                 continue;
@@ -93,8 +84,9 @@ final class OpenTable
                 $rows[] = $this->sentRow(
                     $cells[$columns['client']] ?? '',
                     $cells[$columns['inbound']] ?? '',
+                    $this->cell($columns, $cells, 'clock start'),
                     $sent,
-                    $cells[$columns['attachment']] ?? '',
+                    $this->mailCells($columns, $cells),
                 );
             } catch (DeskException $exception) {
                 $skipped[] = $exception->getMessage();
@@ -107,15 +99,30 @@ final class OpenTable
     /**
      * @return list<string>
      */
-    public function preview(string $markdown): array
+    public function preview(string $markdown, string $baseDirectory = ''): array
     {
         $lines = [];
 
         foreach ($this->rows($markdown) as $row) {
+            $client = $this->filed($baseDirectory, $row->clientEmailPath);
+            $reply = $this->filed($baseDirectory, $row->replyPath);
             $lines[] = $row->company;
             $lines[] = $row->email;
-            $lines[] = ClockNote::inbound($row->receipt, $row->receiptSource, $row->summary);
+            $lines[] = ClockNote::inbound($row->receipt, $row->receiptSource, $row->summary, $client?->subject ?? '');
             array_push($lines, ...$this->mailLines($row));
+
+            if ($client instanceof FiledEmail) {
+                $lines[] = $client->body;
+            }
+
+            if ($reply instanceof FiledEmail) {
+                if ($reply->subject !== '') {
+                    $lines[] = 'Subject: '.$reply->subject;
+                }
+
+                $lines[] = $reply->body;
+            }
+
             $lines[] = '';
         }
 
@@ -127,16 +134,21 @@ final class OpenTable
             $key = $row->company.'|'.$row->receipt->setTimezone(new DateTimeZone(ReplyClock::ZONE))->format('Y-m-d H:i');
 
             if (! isset($seen[$key])) {
+                $client = $this->filed($baseDirectory, $row->clientEmailPath);
                 $lines[] = $row->company;
                 $lines[] = $row->email;
-                $lines[] = ClockNote::inbound($row->receipt, $row->receiptSource, $row->summary);
+                $lines[] = ClockNote::inbound($row->receipt, $row->receiptSource, $row->summary, $client?->subject ?? '');
 
-                if ($row->clientEmailPath !== null) {
+                if ($client instanceof FiledEmail) {
+                    $lines[] = "Client email:\n".$client->body;
+                } elseif ($row->clientEmailPath !== null) {
                     $lines[] = 'Client email: '.basename($row->clientEmailPath);
                 }
 
                 $seen[$key] = true;
             }
+
+            $reply = $this->filed($baseDirectory, $row->replyPath);
 
             if ($row->replyPath !== null) {
                 $lines[] = 'Reply: '.basename($row->replyPath);
@@ -146,8 +158,13 @@ final class OpenTable
                 'Clock: sent',
                 'Closes: the inbound above',
                 'Sent: '.$row->sentAt->setTimezone(new DateTimeZone(ReplyClock::ZONE))->format('Y-m-d H:i').' Europe/London',
-                'Subject: '.$row->subject,
+                'Subject: '.($reply instanceof FiledEmail && $reply->subject !== '' ? $reply->subject : $row->subject),
             ]);
+
+            if ($reply instanceof FiledEmail) {
+                $lines[] = $reply->body;
+            }
+
             $lines[] = '';
         }
 
@@ -231,7 +248,135 @@ final class OpenTable
         return $rows;
     }
 
-    private function row(string $client, string $inbound, string $attachment): OpenTableRow
+    /**
+     * @param  array<string, int>  $columns
+     */
+    private function requireColumns(array $columns, string $which): void
+    {
+        foreach (['client', 'inbound'] as $name) {
+            if (! array_key_exists($name, $columns)) {
+                throw new DeskException("The {$which} table needs a {$name} column.");
+            }
+        }
+
+        if (! array_key_exists('replied on', $columns) && ! array_key_exists('reply sent', $columns)) {
+            throw new DeskException("The {$which} table needs a replied on column.");
+        }
+
+        $split = (array_key_exists('inbound email', $columns) || array_key_exists('client email', $columns))
+            && (array_key_exists('reply to', $columns) || array_key_exists('reply', $columns));
+
+        if (! $split && ! array_key_exists('attachment', $columns)) {
+            throw new DeskException("The {$which} table needs an inbound email column and a reply to column.");
+        }
+    }
+
+    /**
+     * @param  array<string, int>  $columns
+     * @param  list<string>  $cells
+     */
+    private function cell(array $columns, array $cells, string $name): string
+    {
+        if (! array_key_exists($name, $columns)) {
+            return '';
+        }
+
+        return $cells[$columns[$name]] ?? '';
+    }
+
+    /**
+     * @param  array<string, int>  $columns
+     * @param  list<string>  $cells
+     */
+    private function sentAtCell(array $columns, array $cells): string
+    {
+        if (array_key_exists('replied on', $columns)) {
+            return trim($this->cell($columns, $cells, 'replied on'));
+        }
+
+        return trim($this->cell($columns, $cells, 'reply sent'));
+    }
+
+    /**
+     * @param  array<string, int>  $columns
+     * @param  list<string>  $cells
+     * @return array{client: ?string, reply: ?string, text: string, address: string, notes: string}
+     */
+    private function mailCells(array $columns, array $cells): array
+    {
+        $clientEmail = $this->cell($columns, $cells, 'inbound email');
+
+        if ($clientEmail === '') {
+            $clientEmail = $this->cell($columns, $cells, 'client email');
+        }
+        $replyTo = $this->cell($columns, $cells, 'reply to');
+        $replyEmail = $this->cell($columns, $cells, 'reply email');
+        $replySummary = $this->cell($columns, $cells, 'reply summary');
+        $replySent = array_key_exists('replied on', $columns)
+            ? $this->cell($columns, $cells, 'replied on')
+            : $this->cell($columns, $cells, 'reply sent');
+        $reply = $this->cell($columns, $cells, 'reply');
+        $attachment = $this->cell($columns, $cells, 'attachment');
+        $client = $this->cell($columns, $cells, 'client');
+        $text = trim($client.' '.$clientEmail.' '.$replySent.' '.$replyEmail.' '.$replySummary.' '.$replyTo.' '.$reply.' '.$attachment);
+        $legacy = trim($reply.' '.$attachment);
+
+        if (array_key_exists('reply summary', $columns)) {
+            $notes = $replySummary;
+        } elseif ($legacy !== '') {
+            $notes = $legacy;
+        } else {
+            $notes = $this->replyNotes($replySent);
+        }
+
+        return [
+            'client' => $this->firstLink($clientEmail) ?? $this->filedPaths($attachment)['client'],
+            'reply' => $this->firstLink($replyEmail) ?? $this->firstLink($replySent) ?? $this->firstLink($reply) ?? $this->filedPaths($attachment)['reply'],
+            'text' => $text,
+            'address' => $this->address($replyTo, $text),
+            'notes' => $notes,
+        ];
+    }
+
+    private function replyNotes(string $replySent): string
+    {
+        $notes = preg_replace('/^\d{1,2} [A-Za-z]{3} \d{4}(?: \d{1,2}:\d{2})?/', '', trim($replySent)) ?? '';
+        $notes = preg_replace('/^\s*\([^)]*\)\.?\s*/', '', $notes) ?? '';
+
+        return trim($notes);
+    }
+
+    private function address(string $replyTo, string $text): string
+    {
+        $source = trim($replyTo);
+        $useFirst = $source !== '';
+
+        if (! $useFirst) {
+            $source = $text;
+        }
+
+        if (preg_match_all('/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i', $source, $matches) < 1) {
+            return '';
+        }
+
+        $email = $useFirst ? $matches[0][0] : $matches[0][array_key_last($matches[0])];
+
+        return strtolower($email);
+    }
+
+    private function firstLink(string $cell): ?string
+    {
+        if (preg_match('/\[[^\]]+\]\(([^)\s]+)\)/', $cell, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array{client: ?string, reply: ?string, text: string, address: string, notes: string}  $mail
+     */
+    private function row(string $client, string $inbound, string $clock, array $mail): OpenTableRow
     {
         $parts = explode(' / ', $client, 2);
         $company = trim($parts[0]);
@@ -240,19 +385,19 @@ final class OpenTable
             throw new DeskException('An open row has no company.');
         }
 
-        if (preg_match_all('/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i', $attachment, $matches) < 1) {
+        $email = $mail['address'];
+
+        if ($email === '') {
             throw new DeskException("{$company} has no email address.");
         }
 
-        $email = strtolower($matches[0][array_key_last($matches[0])]);
-
-        $receipt = $this->moment($inbound);
+        $receipt = $this->moment($inbound) ?? $this->moment($clock);
 
         if (! $receipt instanceof DateTimeImmutable) {
             throw new DeskException("{$company} has no receipt time.");
         }
 
-        $source = str_contains($inbound, 'mail-client time not on the paste')
+        $source = $this->logged($inbound.' '.$clock)
             ? ReceiptSource::Logged
             : ReceiptSource::MailClient;
 
@@ -264,12 +409,13 @@ final class OpenTable
             $summary = 'Open reply';
         }
 
-        $paths = $this->filedPaths($attachment);
-
-        return new OpenTableRow($company, $email, $receipt, $source, $summary, $paths['client'], $paths['reply']);
+        return new OpenTableRow($company, $email, $receipt, $source, $summary, $mail['client'], $mail['reply']);
     }
 
-    private function sentRow(string $client, string $inbound, string $sent, string $attachment): SentTableRow
+    /**
+     * @param  array{client: ?string, reply: ?string, text: string, address: string, notes: string}  $mail
+     */
+    private function sentRow(string $client, string $inbound, string $clock, string $sent, array $mail): SentTableRow
     {
         $parts = explode(' / ', $client, 2);
         $company = trim($parts[0]);
@@ -278,11 +424,11 @@ final class OpenTable
             throw new DeskException('A sent row has no company.');
         }
 
-        if (preg_match_all('/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i', $attachment, $matches) < 1) {
+        $email = $mail['address'];
+
+        if ($email === '') {
             throw new DeskException("{$company} has no email address.");
         }
-
-        $email = strtolower($matches[0][array_key_last($matches[0])]);
         $sentAt = $this->moment($sent);
 
         if (! $sentAt instanceof DateTimeImmutable) {
@@ -290,7 +436,7 @@ final class OpenTable
         }
 
         $wroteFirst = str_starts_with(strtolower(trim($inbound)), 'none');
-        $receipt = $this->moment($inbound);
+        $receipt = $this->moment($inbound) ?? $this->moment($clock);
 
         if (! $receipt instanceof DateTimeImmutable) {
             if (! $wroteFirst) {
@@ -300,7 +446,7 @@ final class OpenTable
             $receipt = $sentAt;
         }
 
-        $source = str_contains($inbound, 'mail-client time not on the paste') || $wroteFirst
+        $source = $this->logged($inbound.' '.$clock) || $wroteFirst
             ? ReceiptSource::Logged
             : ReceiptSource::MailClient;
 
@@ -316,9 +462,13 @@ final class OpenTable
             }
         }
 
-        $paths = $this->filedPaths($attachment);
+        return new SentTableRow($company, $email, $receipt, $source, $summary, $sentAt, $this->subject($mail['notes'], $summary), $mail['client'], $mail['reply']);
+    }
 
-        return new SentTableRow($company, $email, $receipt, $source, $summary, $sentAt, $this->subject($attachment, $summary), $paths['client'], $paths['reply']);
+    private function logged(string $text): bool
+    {
+        return str_contains($text, 'mail-client time not on the paste')
+            || str_contains($text, 'brought into this log');
     }
 
     /**
@@ -347,15 +497,27 @@ final class OpenTable
     {
         $label = strtolower(trim($label));
 
-        if (in_array($label, ['client email', 'his email', 'her email', 'his note', 'her note', 'yes'], true)) {
+        if (in_array($label, ['inbound email', 'client email', 'his email', 'her email', 'his note', 'her note', 'yes'], true)) {
             return 'client';
         }
 
-        if (in_array($label, ['reply', 'sent reply', 'cover', '£80 audit', 'php support note'], true)) {
+        if (in_array($label, ['reply email', 'reply', 'sent reply', 'cover', '£80 audit', 'php support note'], true)) {
             return 'reply';
         }
 
         return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function filed(string $baseDirectory, ?string $relative): ?FiledEmail
+    {
+        if ($baseDirectory === '' || $relative === null || $relative === '') {
+            return null;
+        }
+
+        return FiledEmail::read($baseDirectory, $relative);
     }
 
     /**

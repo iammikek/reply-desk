@@ -22,12 +22,13 @@ final class LogInbound
         string $clientEmail = '',
         string $reply = '',
         ?NoteFile $file = null,
+        string $subject = '',
     ): string {
         $this->notes->assertPortal();
         $companyParty = $this->notes->findCompany($company);
         $contact = $this->notes->findContact($email);
 
-        return $this->write($companyParty->id, $contact->id, $receipt, $receiptSource, $summary, $clientEmail, $reply, $file);
+        return $this->write($companyParty->id, $contact->id, $receipt, $receiptSource, $summary, $clientEmail, $reply, $file, $subject);
     }
 
     public function record(

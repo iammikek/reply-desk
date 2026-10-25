@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Clock\ClockNote;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
+use App\Clock\ReceiptSource;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
 use App\Desk\Actions\SaveDraft;
@@ -36,7 +37,7 @@ class BackfillOpenCommand extends ReplyDeskCommand
             $rows = $openTable->rows($markdown);
 
             if (! $this->option('write')) {
-                foreach ($openTable->preview($markdown) as $line) {
+                foreach ($openTable->preview($markdown, dirname($path)) as $line) {
                     $this->line($line);
                 }
 
@@ -74,16 +75,18 @@ class BackfillOpenCommand extends ReplyDeskCommand
                     continue;
                 }
 
+                $note = $this->inboundNote($row->receipt, $row->receiptSource, $row->summary, $client, $reply);
                 $id = $logInbound(
                     $row->company,
                     $row->email,
                     $row->receipt,
                     $row->receiptSource,
                     $row->summary,
-                    $client?->text() ?? '',
-                    $reply?->text() ?? '',
+                    $client?->body ?? '',
+                    $reply?->body ?? '',
+                    subject: $client?->subject ?? '',
                 );
-                $existing[] = new StoredNote($id, ClockNote::withMail(ClockNote::inbound($row->receipt, $row->receiptSource, $row->summary), $client?->text() ?? '', $reply?->text() ?? ''), $company->id, $company->name, '', '', $row->email);
+                $existing[] = new StoredNote($id, $note, $company->id, $company->name, '', '', $row->email);
                 $this->line("Wrote {$id} for {$row->company}");
                 $this->saveDraft($id, $reply, $saveDraft, $company->name);
             }
@@ -114,23 +117,34 @@ class BackfillOpenCommand extends ReplyDeskCommand
             $client = $this->mail($markdownPath, $row->clientEmailPath, $row->company, 'client email');
             $reply = $this->mail($markdownPath, $row->replyPath, $row->company, 'reply');
             $subject = $reply instanceof FiledEmail && $reply->subject !== '' ? $reply->subject : $row->subject;
+            $replyBody = $reply?->body ?? '';
             $inboundId = $this->inboundId($existing, $company->id, $row->receipt);
 
             if ($inboundId === null) {
-                $inboundId = $logInbound($row->company, $row->email, $row->receipt, $row->receiptSource, $row->summary, $client?->text() ?? '');
-                $existing[] = new StoredNote($inboundId, ClockNote::withMail(ClockNote::inbound($row->receipt, $row->receiptSource, $row->summary), $client?->text() ?? ''), $company->id, $company->name, '', '', $row->email);
+                $note = $this->inboundNote($row->receipt, $row->receiptSource, $row->summary, $client, null);
+                $inboundId = $logInbound(
+                    $row->company,
+                    $row->email,
+                    $row->receipt,
+                    $row->receiptSource,
+                    $row->summary,
+                    $client?->body ?? '',
+                    subject: $client?->subject ?? '',
+                );
+                $existing[] = new StoredNote($inboundId, $note, $company->id, $company->name, '', '', $row->email);
                 $this->line("Wrote {$inboundId} for {$company->name}");
             } else {
                 $this->fileOnto($existing, $company->id, $row->receipt, $client, null, $notes);
             }
 
             if ($this->alreadySent($existing, $inboundId, $row->sentAt)) {
+                $this->refreshSent($existing, $inboundId, $row->sentAt, $reply instanceof FiledEmail ? $reply->subject : '', $replyBody, $notes);
                 $this->line("Already sent for {$company->name}");
 
                 return;
             }
 
-            $replyText = $reply?->text() ?? '';
+            $replyText = $replyBody;
 
             if ($this->alreadyClosed($existing, $inboundId)) {
                 $contact = $notes->findContact($row->email);
@@ -172,18 +186,61 @@ class BackfillOpenCommand extends ReplyDeskCommand
                 continue;
             }
 
-            $next = ClockNote::withMail($note->body, $client?->text() ?? '', $reply?->text() ?? '');
+            $next = ClockNote::applyMail($note->body, $client?->body ?? '', $reply?->body ?? '', $client?->subject ?? '');
 
             if ($next === $note->body) {
                 return;
             }
 
             $notes->replaceNote($note->id, $next);
-            $existing[$index] = new StoredNote($note->id, $next, $note->companyId, $note->companyName, $note->contactId, $note->contactName, $note->contactEmail);
+            $existing[$index] = new StoredNote($note->id, $next, $note->companyId, $note->companyName, $note->contactId, $note->contactName, $note->contactEmail, $note->attachmentName, $note->attachmentId);
             $this->line("Filed the email on {$note->id} for {$note->companyName}");
 
             return;
         }
+    }
+
+    /**
+     * @param  list<StoredNote>  $existing
+     */
+    private function refreshSent(array &$existing, string $inboundId, DateTimeImmutable $sentAt, string $subject, string $reply, NoteStore $notes): void
+    {
+        if ($subject === '' && $reply === '') {
+            return;
+        }
+
+        foreach ($existing as $index => $note) {
+            $parsed = ClockNote::parse($note->body);
+
+            if (! $parsed instanceof ParsedSent || $parsed->closes !== $inboundId) {
+                continue;
+            }
+
+            if ($parsed->sent->format('Y-m-d H:i') !== $sentAt->format('Y-m-d H:i')) {
+                continue;
+            }
+
+            $next = ClockNote::applyMail($note->body, reply: $reply, subject: $subject);
+
+            if ($next === $note->body) {
+                return;
+            }
+
+            $notes->replaceNote($note->id, $next);
+            $existing[$index] = new StoredNote($note->id, $next, $note->companyId, $note->companyName, $note->contactId, $note->contactName, $note->contactEmail, $note->attachmentName, $note->attachmentId);
+            $this->line("Filed the reply on {$note->id}");
+
+            return;
+        }
+    }
+
+    private function inboundNote(DateTimeImmutable $receipt, ReceiptSource $source, string $summary, ?FiledEmail $client, ?FiledEmail $reply): string
+    {
+        return ClockNote::withMail(
+            ClockNote::inbound($receipt, $source, $summary, $client?->subject ?? ''),
+            $client?->body ?? '',
+            $reply?->body ?? '',
+        );
     }
 
     private function saveDraft(?string $inboundId, ?FiledEmail $reply, SaveDraft $saveDraft, string $company): void

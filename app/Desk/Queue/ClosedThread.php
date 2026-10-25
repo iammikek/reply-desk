@@ -20,6 +20,8 @@ final readonly class ClosedThread
         public string $clientEmail,
         public array $replies,
         public ?string $attachment = null,
+        public string $companyId = '',
+        public string $contactId = '',
     ) {}
 
     /**
@@ -31,6 +33,8 @@ final readonly class ClosedThread
 
         return [
             'id' => $this->id,
+            'company_id' => $this->companyId,
+            'contact_id' => $this->contactId,
             'client' => $this->client,
             'contact_email' => $this->contactEmail,
             'summary' => $this->summary,

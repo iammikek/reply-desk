@@ -1,7 +1,9 @@
 <div>
-    <p style="margin: 0; font-weight: 600;">{{ $client }}</p>
-    @if ($email !== '')
-        <p style="margin: 0.15rem 0 0; opacity: 0.7;">{{ $email }}</p>
+    @if ($showClient ?? true)
+        <p style="margin: 0; font-weight: 600;">{{ $client }}</p>
+        @if ($email !== '')
+            <p style="margin: 0.15rem 0 0; opacity: 0.7;">{{ $email }}</p>
+        @endif
     @endif
 
     <ol class="thread-timeline">

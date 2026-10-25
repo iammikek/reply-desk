@@ -56,6 +56,7 @@ it('lists a closed thread when that company has nothing open', function () {
         ->assertSee('Northwharf Bakery / Ada North')
         ->assertSee('Which PHP to use')
         ->assertSee('PHP on the new server')
+        ->assertDontSee('Note')
         ->assertDontSee('Harbour Cafe')
         ->assertDontSee('Still waiting')
         ->mountAction(TestAction::make('view')->table($closed))

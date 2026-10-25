@@ -59,6 +59,8 @@ final class ListClosedThreads
                     'note_id' => $reply[0]->id,
                 ], $replies),
                 $note->attachmentName,
+                $note->companyId,
+                $note->contactId,
             );
         }
 

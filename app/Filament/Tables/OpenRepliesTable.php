@@ -13,6 +13,7 @@ use App\Desk\LondonTime;
 use App\Desk\Notes\NoteFile;
 use App\Desk\Queue\ListOpenReplies;
 use App\Desk\Queue\OpenReply;
+use App\Filament\Pages\Client;
 use App\Filament\Pages\OpenQueue;
 use App\Filament\Schemas\DraftForm;
 use App\Filament\Schemas\MarkSentForm;
@@ -38,7 +39,8 @@ final class OpenRepliesTable
                     ->label('Client')
                     ->searchable()
                     ->sortable()
-                    ->grow(false),
+                    ->grow(false)
+                    ->url(fn (array $record): string => Client::urlFor((string) $record['company_id'], (string) $record['contact_id'])),
                 TextColumn::make('summary')
                     ->label('Summary')
                     ->searchable()

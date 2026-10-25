@@ -39,6 +39,8 @@ final readonly class OpenReply
     {
         return [
             'id' => $this->id,
+            'company_id' => $this->companyId,
+            'contact_id' => $this->contactId,
             'client' => $this->client,
             'summary' => $this->summary,
             'contact_email' => $this->contactEmail,

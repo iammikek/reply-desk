@@ -1,6 +1,6 @@
 # Reply desk
 
-Reply desk is the open queue for practice client email. Filament is the screen. HubSpot clock notes are the record. A draft stays on this machine and does not stop the clock.
+Reply desk is the open queue for practice client email. Filament is the screen. Companies, contacts, and messages come from HubSpot or from the local tables, whichever store is plugged in. A draft stays on this machine and does not stop the clock.
 
 The panel has a single sign-in, for the person working the queue.
 
@@ -52,9 +52,69 @@ Sign in as `admin@example.com` with password `seed-PShhT4DYcUyMfzO5`. The panel 
 
 `php artisan db:seed` refuses to run when `REPLY_DESK_STORE` is `hubspot`, and it refuses portal `145255358`.
 
+## Local record
+
+Companies and Contacts are Filament resources. Each reads the store that is plugged in. HubSpot supplies the rows when `REPLY_DESK_STORE` is `hubspot`. The tables below supply them when it is not. The screen is the same either way. The desk creates no company and no contact. A match that is not exactly one stops.
+
+Clock start and reply due are calculated when the page or a command runs. They are not stored.
+
+```mermaid
+erDiagram
+    companies ||--o{ contacts : has
+    companies ||--o{ emails : has
+    contacts ||--o{ emails : has
+    emails |o--o{ emails : "closed by"
+    emails |o--o| drafts : "draft for"
+    emails ||--o{ attachments : has
+
+    companies {
+        int id PK
+        string name UK
+    }
+    contacts {
+        int id PK
+        int company_id FK
+        string name
+        string email UK
+    }
+    emails {
+        int id PK
+        int company_id FK
+        int contact_id FK
+        string direction
+        string subject
+        string summary
+        string body
+        datetime at
+        string receipt_source
+        int closes_id FK
+    }
+    drafts {
+        int id PK
+        int email_id FK "UK, local inbound"
+        string inbound_note_id UK "HubSpot note"
+        string subject
+        string body
+        datetime created_at "saved"
+        datetime updated_at
+    }
+    attachments {
+        int id PK
+        int email_id FK
+        string name
+        string path
+    }
+```
+
+A company has many contacts and many emails. A contact belongs to one company, and the email is stored in lowercase. An email is one message, inbound or outbound, and it belongs to one company and one contact. `at` is the receipt time or the time the reply was sent. `receipt_source` is `mail_client` or `logged` on an inbound, and empty on an outbound. `closes_id` points at the inbound an outbound closes. It is empty when Mike wrote first. One inbound may have several replies. The same sent minute on that inbound is refused.
+
+A draft is the unsent reply for one open inbound. `email_id` points at the local email. `inbound_note_id` points at the HubSpot note. A row has one of those, not both. Saving a draft does not close the inbound. Marking the reply sent deletes the draft. An attachment is a file on one email.
+
+`fake_parties` and `fake_notes` are replaced by these tables.
+
 ## Persistent database
 
-Login, sessions, drafts, and the company-list cache are Laravel tables. Clock notes stay in HubSpot.
+Login, sessions, and the company-list cache are Laravel tables. The local record above is the companies, contacts, emails, drafts, and attachments. With HubSpot plugged in, companies, contacts, and clock notes stay in HubSpot, and a draft keeps the HubSpot note id.
 
 The showable copy uses SQLite. The running desk uses Supabase Postgres in an EU region. Copy the direct connection from the Supabase dashboard into `.env`:
 

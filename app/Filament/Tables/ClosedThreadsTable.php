@@ -4,6 +4,7 @@ namespace App\Filament\Tables;
 
 use App\Desk\Queue\ClosedThread;
 use App\Desk\Queue\ListClosedThreads;
+use App\Filament\Pages\Client;
 use App\Filament\Schemas\ClosedThreadInfolist;
 use Filament\Actions\Action;
 use Filament\Support\ArrayRecord;
@@ -24,7 +25,8 @@ final class ClosedThreadsTable
                     ->label('Client')
                     ->searchable()
                     ->sortable()
-                    ->grow(false),
+                    ->grow(false)
+                    ->url(fn (array $record): string => Client::urlFor((string) $record['company_id'], (string) $record['contact_id'])),
                 TextColumn::make('summary')
                     ->label('Summary')
                     ->searchable()
@@ -40,9 +42,6 @@ final class ClosedThreadsTable
                     ->label('Subject')
                     ->searchable()
                     ->wrap(),
-                TextColumn::make('id')
-                    ->label('Note')
-                    ->toggleable(),
             ])
             ->modifyUngroupedRecordActionsUsing(fn (Action $action): Action => $action->button())
             ->recordActions([
