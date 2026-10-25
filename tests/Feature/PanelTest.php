@@ -29,6 +29,7 @@ it('shows the case study without signing in', function () {
         ->assertSee('Open queue')
         ->assertSee('Companies and contacts')
         ->assertSee('the screen is the same with HubSpot or with the local tables')
+        ->assertSee('a relation manager for the replies')
         ->assertSee('The same actions from Cursor')
         ->assertDontSee('Dashboard')
         ->assertDontSee('fi-sidebar', false);

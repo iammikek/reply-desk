@@ -4,8 +4,8 @@ use App\Clock\ReceiptSource;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
 use App\Filament\Pages\Client;
-use App\Filament\Pages\History;
-use App\Filament\Pages\OpenQueue;
+use App\Filament\Resources\Inbounds\Pages\ListHistory;
+use App\Filament\Resources\Inbounds\Pages\ListOpenQueue;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -63,11 +63,11 @@ it('opens one timeline for that company and contact', function () {
 
     $url = Client::urlFor('10', '20');
 
-    Livewire::test(History::class)
+    Livewire::test(ListHistory::class)
         ->assertSee($url, false)
         ->assertSee('Northwharf Bakery / Ada North');
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->assertSee($url, false);
 
     $this->get($url)

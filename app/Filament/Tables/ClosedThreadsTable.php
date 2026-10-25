@@ -4,10 +4,8 @@ namespace App\Filament\Tables;
 
 use App\Desk\Queue\ClosedThread;
 use App\Desk\Queue\ListClosedThreads;
-use App\Filament\Pages\Client;
 use App\Filament\Schemas\ClosedThreadInfolist;
 use Filament\Actions\Action;
-use Filament\Support\ArrayRecord;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -21,20 +19,9 @@ final class ClosedThreadsTable
             ->paginated([10, 25, 50])
             ->defaultPaginationPageOption(10)
             ->columns([
-                TextColumn::make('client')
-                    ->label('Client')
-                    ->searchable()
-                    ->sortable()
-                    ->grow(false)
-                    ->url(fn (array $record): string => Client::urlFor((string) $record['company_id'], (string) $record['contact_id'])),
-                TextColumn::make('summary')
-                    ->label('Summary')
-                    ->searchable()
-                    ->wrap()
-                    ->grow(),
-                TextColumn::make('inbound')
-                    ->label('Inbound')
-                    ->sortable(),
+                InboundTable::client(),
+                InboundTable::summary(),
+                InboundTable::inbound(),
                 TextColumn::make('sent')
                     ->label('Sent')
                     ->sortable(),
@@ -43,6 +30,7 @@ final class ClosedThreadsTable
                     ->searchable()
                     ->wrap(),
             ])
+            ->recordUrl(InboundTable::viewUrl())
             ->modifyUngroupedRecordActionsUsing(fn (Action $action): Action => $action->button())
             ->recordActions([
                 Action::make('view')
@@ -70,23 +58,13 @@ final class ClosedThreadsTable
             app(ListClosedThreads::class)(),
         );
 
-        if (filled($search)) {
-            $needle = mb_strtolower($search);
-            $records = array_values(array_filter(
-                $records,
-                fn (array $record): bool => str_contains(mb_strtolower($record['client'].' '.$record['summary'].' '.$record['subject'].' '.self::attachmentNames($record)), $needle),
-            ));
-        }
-
-        if (filled($sortColumn)) {
-            usort($records, function (array $left, array $right) use ($sortColumn, $sortDirection): int {
-                $compared = ($left[$sortColumn] ?? '') <=> ($right[$sortColumn] ?? '');
-
-                return $sortDirection === 'desc' ? -$compared : $compared;
-            });
-        }
-
-        return $records;
+        return InboundTable::arrange(
+            $records,
+            $search,
+            $sortColumn,
+            $sortDirection,
+            fn (array $record): string => $record['client'].' '.$record['summary'].' '.$record['subject'].' '.self::attachmentNames($record),
+        );
     }
 
     /**
@@ -137,9 +115,6 @@ final class ClosedThreadsTable
      */
     private static function record(ClosedThread $thread): array
     {
-        $row = $thread->toArray();
-        $row[ArrayRecord::getKeyName()] = $thread->id;
-
-        return $row;
+        return InboundTable::withKey($thread->toArray(), $thread->id);
     }
 }

@@ -19,25 +19,15 @@ Each open row is an inbound clock note with no matching sent note.
 
 Due time is calculated when the page or a command runs. It is not stored. Monday to Friday, 08:00 to 20:00 Europe/London, the clock starts at receipt and the reply is due 24 hours later. Outside that window, including the weekend, the clock starts at 08:00 on the next working day.
 
-## Where the panel lives
+The desk can send a reply. Mark sent records a reply that already went from Mail. A draft does not stop the clock.
 
-The site is the Filament panel. Sign-in is at `/login`. A case study at `/case-study` explains why the desk is useful, and lists the features. It is open without a sign-in.
+Seed the showable copy with `php artisan db:seed` while `REPLY_DESK_STORE` is `memory`. The command refuses to run when the store is HubSpot. The seed loads two stand-in companies, one overdue row and one open row, and a draft on the overdue row.
 
-- `app/Filament/Resources/Companies/CompanyResource.php` lists companies. The page reads HubSpot or the local `companies` table, whichever store is plugged in. It has `form()`, `table()`, and a contacts relation manager. There is no create and no edit.
-- `app/Filament/Resources/Contacts/ContactResource.php` lists contacts from that same directory
-- `app/Filament/Pages/OpenQueue.php` is the queue
-- `app/Filament/Pages/History.php` is the closed threads
-- `app/Filament/Tables/OpenRepliesTable.php` is the table, the overdue filter, and the row actions
-- `app/Filament/Widgets/OpenQueueOverview.php` counts open and overdue rows
-- `app/Providers/Filament/AdminPanelProvider.php` registers the panel
-
-Log inbound, save a draft, discard a draft, and mark sent are actions on that page. The reply itself goes out from Mail. Mark sent records that it went.
-
-History lists closed threads, newest sent time first, ten at a time. A company with nothing open is on that page. Thread opens a timeline: the client email first, then each reply in the order it was sent.
+Tests are `composer test`, in the Tests section below.
 
 ## Run the showable copy
 
-The memory store needs no HubSpot token and no real names. Send delivers the reply through the configured mailbox. The showable copy can log that mail.
+The memory store needs no HubSpot token and no real names. Send delivers the reply through the configured mailbox.
 
 ```bash
 composer install
@@ -50,9 +40,22 @@ npm install
 php artisan serve
 ```
 
-Sign in as `admin@example.com` with password `seed-PShhT4DYcUyMfzO5`. The panel shows Administrator. The seed also loads two stand-in companies, one overdue row and one open row, and a draft on the overdue row.
+Sign in as `admin@example.com`. The panel shows Administrator.
 
-`php artisan db:seed` refuses to run when `REPLY_DESK_STORE` is `hubspot`, and it refuses portal `145255358`.
+## Where the panel lives
+
+The site is the Filament panel. Sign-in is at `/login`. A case study at `/case-study` explains why the desk is useful, and lists the features. It is open without a sign-in.
+
+- `app/Filament/Resources/Companies/CompanyResource.php` lists companies. The page reads HubSpot or the local `companies` table, whichever store is plugged in. It has `form()`, `table()`, and a contacts relation manager. There is no create and no edit.
+- `app/Filament/Resources/Contacts/ContactResource.php` lists contacts from that same directory
+- `app/Filament/Resources/Inbounds/InboundResource.php` is the open queue and History. It has `form()`, `table()`, and a replies relation manager. The open list is the panel home. There is no create and no edit.
+- `app/Filament/Tables/OpenRepliesTable.php` is the open table, the overdue filter, and the row actions
+- `app/Filament/Widgets/OpenQueueOverview.php` counts open and overdue rows
+- `app/Providers/Filament/AdminPanelProvider.php` registers the panel
+
+Log inbound, save a draft, discard a draft, send, and mark sent are actions on the queue.
+
+History lists closed threads, newest sent time first, ten at a time. A company with nothing open is on that page. Thread opens a timeline: the client email first, then each reply in the order it was sent.
 
 ## Local record
 
@@ -108,7 +111,7 @@ erDiagram
     }
 ```
 
-A company has many contacts and many emails. A contact belongs to one company, and the email is stored in lowercase. An email is one message, inbound or outbound, and it belongs to one company and one contact. `at` is the receipt time or the time the reply was sent. `receipt_source` is `mail_client` or `logged` on an inbound, and empty on an outbound. `closes_id` points at the inbound an outbound closes. It is empty when Mike wrote first. One inbound may have several replies. The same sent minute on that inbound is refused.
+A company has many contacts and many emails. A contact belongs to one company, and the email is stored in lowercase. An email is one message, inbound or outbound, and it belongs to one company and one contact. `at` is the receipt time or the time the reply was sent. `receipt_source` is `mail client` or `logged` on an inbound, and empty on an outbound. `closes_id` points at the inbound an outbound closes. It is empty when Mike wrote first. One inbound may have several replies. The same sent minute on that inbound is refused.
 
 A draft is the unsent reply for one open inbound. `email_id` points at the local email. `inbound_note_id` points at the HubSpot note. A row has one of those, not both. Saving a draft does not close the inbound. Marking the reply sent deletes the draft. An attachment is a file on one email.
 
@@ -144,7 +147,7 @@ REPLY_DESK_STORE=memory
 
 Set `REPLY_DESK_STORE=hubspot`, `HUBSPOT_ACCESS_TOKEN`, and `HUBSPOT_PORTAL_ID`. A write stops unless the token's portal matches `HUBSPOT_PORTAL_ID`. The token stays in `.env` and is never printed.
 
-`php artisan reply:backfill {path}` prints the open rows and the sent rows. A sent row is an inbound note plus the sent note that closes it. A row with no clock time, or no email address, is skipped. A Client email or Reply link is copied onto the note, and an unsent reply becomes the draft, so the queue can be read away from the files. It writes only with `--write`, and only when the store is HubSpot and the portal is `145255358`.
+`php artisan reply:backfill {path}` prints the open rows and the sent rows. A sent row is an inbound note plus the sent note that closes it. A row with no clock time, or no email address, is skipped. A Client email or Reply link is copied onto the note, and an unsent reply becomes the draft, so the queue can be read away from the files. It writes only with `--write`, and only when the store is HubSpot and a portal id is set.
 
 ## Commands
 

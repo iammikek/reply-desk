@@ -3,7 +3,9 @@
 use App\Clock\ReceiptSource;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
-use App\Filament\Pages\OpenQueue;
+use App\Desk\Queue\ListOpenReplies;
+use App\Filament\Resources\Inbounds\InboundResource;
+use App\Filament\Resources\Inbounds\Pages\ListOpenQueue;
 use App\Filament\Schemas\ReplyInfolist;
 use App\Filament\Widgets\OpenQueueOverview;
 use App\Mail\ClientReply;
@@ -33,7 +35,7 @@ it('shows an open reply on the queue', function () {
         'Which PHP to use',
     );
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->assertCanSeeTableRecords(['1'])
         ->assertSee('Northwharf Bakery / Ada North')
         ->assertSeeHtml('fi-btn')
@@ -57,11 +59,14 @@ it('hides a reply that is not overdue', function () {
         'Still in time',
     );
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->assertCanSeeTableRecords(['1', '2'])
         ->filterTable('overdue', true)
         ->assertCanSeeTableRecords(['1'])
         ->assertCanNotSeeTableRecords(['2']);
+
+    expect(collect(app(ListOpenReplies::class)(london('2026-10-23 12:00'), true))->map->id->all())
+        ->toBe(['1']);
 });
 
 it('opens the clock note', function () {
@@ -73,7 +78,7 @@ it('opens the clock note', function () {
         'Which PHP to use',
     );
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->mountAction(TestAction::make('view')->table('1'))
         ->assertSet('mountedActions.0.name', 'view')
         ->assertSet('mountedActions.0.context.recordKey', '1');
@@ -125,7 +130,7 @@ it('marks a reply sent from the queue', function () {
         'Which PHP to use',
     );
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->callAction(TestAction::make('markSent')->table('1'), [
             'sent' => '2026-10-20 16:04:00',
             'subject' => 'PHP on the new server',
@@ -161,7 +166,7 @@ it('shows none due when the queue is empty', function () {
 });
 
 it('offers only the contacts on the chosen company', function () {
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->mountAction('logInbound')
         ->assertFormFieldExists('company_id')
         ->assertFormFieldExists('contact_id')
@@ -176,7 +181,7 @@ it('offers only the contacts on the chosen company', function () {
 });
 
 it('logs an inbound from the queue', function () {
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->callAction('logInbound', [
             'company_id' => '10',
             'contact_id' => '20',
@@ -199,7 +204,7 @@ it('logs an inbound from the queue', function () {
 it('keeps a pasted body on the logged email', function () {
     $body = "Hello Ada,\n\n    The loaf is  wholemeal.";
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->callAction('logInbound', [
             'company_id' => '10',
             'contact_id' => '20',
@@ -212,7 +217,7 @@ it('keeps a pasted body on the logged email', function () {
 
     expect(replyDeskNoteBodies()[0])->toContain("Client email:\n".$body);
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->mountAction(TestAction::make('view')->table('1'))
         ->assertMountedActionModalSee($body)
         ->assertMountedActionModalSee('white-space: pre-wrap');
@@ -238,13 +243,13 @@ it('shows the earlier thread on the note and the draft', function () {
         'The form can come off',
     );
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->mountAction(TestAction::make('view')->table($open))
         ->assertMountedActionModalSee('Earlier on this client')
         ->assertMountedActionModalSee('Which loaf for Friday.')
         ->assertMountedActionModalSee('Use 8.3 on the new box.');
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->mountAction(TestAction::make('saveDraft')->table($open))
         ->assertMountedActionModalSee('Which loaf for Friday.')
         ->assertMountedActionModalSee('Use 8.3 on the new box.')
@@ -261,7 +266,7 @@ it('requires the pasted reply before marking sent', function () {
         'Which PHP to use',
     );
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->mountAction(TestAction::make('markSent')->table('1'))
         ->assertFormFieldExists('sent')
         ->assertFormFieldExists('subject')
@@ -276,6 +281,14 @@ it('requires the pasted reply before marking sent', function () {
     expect(collect(replyDeskNoteBodies())->filter(fn (string $body): bool => str_contains($body, 'Clock: sent')))->toHaveCount(0);
 });
 
+it('keeps a signed-out visitor off an inbound', function () {
+    auth()->logout();
+
+    $this->get('/')->assertRedirect('/login');
+    $this->get('/history')->assertRedirect('/login');
+    $this->get(InboundResource::getUrl('view', ['record' => '1']))->assertRedirect('/login');
+});
+
 it('sends the reply from the queue', function () {
     Mail::fake();
 
@@ -287,7 +300,7 @@ it('sends the reply from the queue', function () {
         'Which PHP to use',
     );
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->assertActionExists(TestAction::make('send')->table('1'))
         ->callAction(TestAction::make('send')->table('1'), [
             'subject' => 'PHP on the new server',

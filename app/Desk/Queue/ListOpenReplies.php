@@ -20,7 +20,7 @@ final class ListOpenReplies
     /**
      * @return list<OpenReply>
      */
-    public function __invoke(?DateTimeImmutable $now = null): array
+    public function __invoke(?DateTimeImmutable $now = null, ?bool $overdue = null): array
     {
         $now ??= DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE));
         $sent = [];
@@ -97,6 +97,13 @@ final class ListOpenReplies
                 $draft?->body,
                 $earlierByCompany[$note->companyId] ?? [],
             );
+        }
+
+        if ($overdue !== null) {
+            $open = array_values(array_filter(
+                $open,
+                fn (OpenReply $reply): bool => $reply->overdueAt($now) === $overdue,
+            ));
         }
 
         return $open;

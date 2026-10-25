@@ -13,8 +13,7 @@ use App\Desk\LondonTime;
 use App\Desk\Notes\NoteFile;
 use App\Desk\Queue\ListOpenReplies;
 use App\Desk\Queue\OpenReply;
-use App\Filament\Pages\Client;
-use App\Filament\Pages\OpenQueue;
+use App\Filament\Resources\Inbounds\Pages\ListOpenQueue;
 use App\Filament\Schemas\DraftForm;
 use App\Filament\Schemas\MarkSentForm;
 use App\Filament\Schemas\ReplyInfolist;
@@ -22,7 +21,6 @@ use App\Filament\Schemas\SendForm;
 use DateTimeImmutable;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
-use Filament\Support\ArrayRecord;
 use Filament\Support\Exceptions\Halt;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
@@ -35,20 +33,9 @@ final class OpenRepliesTable
         return $table
             ->records(fn (?string $search, ?array $filters, ?string $sortColumn, ?string $sortDirection): array => self::records($search, $filters, $sortColumn, $sortDirection))
             ->columns([
-                TextColumn::make('client')
-                    ->label('Client')
-                    ->searchable()
-                    ->sortable()
-                    ->grow(false)
-                    ->url(fn (array $record): string => Client::urlFor((string) $record['company_id'], (string) $record['contact_id'])),
-                TextColumn::make('summary')
-                    ->label('Summary')
-                    ->searchable()
-                    ->wrap()
-                    ->grow(),
-                TextColumn::make('inbound')
-                    ->label('Inbound')
-                    ->sortable(),
+                InboundTable::client(),
+                InboundTable::summary(),
+                InboundTable::inbound(),
                 TextColumn::make('clock_start')
                     ->label('Clock start')
                     ->sortable(),
@@ -72,6 +59,7 @@ final class OpenRepliesTable
                     ->trueLabel('Overdue')
                     ->falseLabel('Not overdue'),
             ])
+            ->recordUrl(InboundTable::viewUrl())
             ->modifyUngroupedRecordActionsUsing(fn (Action $action): Action => $action->button())
             ->recordActions([
                 Action::make('view')
@@ -91,7 +79,7 @@ final class OpenRepliesTable
                         ...ReplyInfolist::earlier($record),
                         ...DraftForm::components(),
                     ])
-                    ->action(function (array $record, array $data, OpenQueue $livewire): void {
+                    ->action(function (array $record, array $data, ListOpenQueue $livewire): void {
                         try {
                             app(SaveDraft::class)(
                                 (string) $record['id'],
@@ -112,7 +100,7 @@ final class OpenRepliesTable
                     ->color('danger')
                     ->requiresConfirmation()
                     ->visible(fn (array $record): bool => $record['has_draft'] === true)
-                    ->action(function (array $record, OpenQueue $livewire): void {
+                    ->action(function (array $record, ListOpenQueue $livewire): void {
                         app(DiscardDraft::class)((string) $record['id']);
                         $livewire->flushCachedTableRecords();
                         Notification::make()->title('Draft discarded')->success()->send();
@@ -124,7 +112,7 @@ final class OpenRepliesTable
                         'body' => $record['draft_body'],
                     ])
                     ->schema(SendForm::components())
-                    ->action(function (array $record, array $data, OpenQueue $livewire): void {
+                    ->action(function (array $record, array $data, ListOpenQueue $livewire): void {
                         try {
                             app(SendReply::class)(
                                 (string) $record['id'],
@@ -144,7 +132,7 @@ final class OpenRepliesTable
                 Action::make('markSent')
                     ->label('Mark sent')
                     ->schema(MarkSentForm::components())
-                    ->action(function (array $record, array $data, OpenQueue $livewire): void {
+                    ->action(function (array $record, array $data, ListOpenQueue $livewire): void {
                         try {
                             app(MarkReplySent::class)(
                                 (string) $record['id'],
@@ -177,36 +165,24 @@ final class OpenRepliesTable
     private static function records(?string $search, ?array $filters, ?string $sortColumn, ?string $sortDirection): array
     {
         $now = DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE));
+        $overdue = $filters['overdue']['value'] ?? null;
+        $onlyOverdue = match (true) {
+            $overdue === true, $overdue === 1, $overdue === '1' => true,
+            $overdue === false, $overdue === 0, $overdue === '0' => false,
+            default => null,
+        };
         $records = array_map(
             fn (OpenReply $reply): array => self::record($reply, $now),
-            app(ListOpenReplies::class)($now),
+            app(ListOpenReplies::class)($now, $onlyOverdue),
         );
 
-        $overdue = $filters['overdue']['value'] ?? null;
-
-        if ($overdue === true || $overdue === 1 || $overdue === '1') {
-            $records = array_values(array_filter($records, fn (array $record): bool => $record['overdue'] === true));
-        } elseif ($overdue === false || $overdue === 0 || $overdue === '0') {
-            $records = array_values(array_filter($records, fn (array $record): bool => $record['overdue'] === false));
-        }
-
-        if (filled($search)) {
-            $needle = mb_strtolower($search);
-            $records = array_values(array_filter(
-                $records,
-                fn (array $record): bool => str_contains(mb_strtolower($record['client'].' '.$record['summary']), $needle),
-            ));
-        }
-
-        if (filled($sortColumn)) {
-            usort($records, function (array $left, array $right) use ($sortColumn, $sortDirection): int {
-                $compared = ($left[$sortColumn] ?? '') <=> ($right[$sortColumn] ?? '');
-
-                return $sortDirection === 'desc' ? -$compared : $compared;
-            });
-        }
-
-        return $records;
+        return InboundTable::arrange(
+            $records,
+            $search,
+            $sortColumn,
+            $sortDirection,
+            fn (array $record): string => $record['client'].' '.$record['summary'],
+        );
     }
 
     /**
@@ -216,8 +192,7 @@ final class OpenRepliesTable
     {
         $row = $reply->toArray($now);
         $row['receipt_source'] = $reply->receiptSource === ReceiptSource::MailClient ? 'Mail client' : 'Logged';
-        $row[ArrayRecord::getKeyName()] = $reply->id;
 
-        return $row;
+        return InboundTable::withKey($row, $reply->id);
     }
 }

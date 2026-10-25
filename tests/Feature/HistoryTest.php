@@ -5,7 +5,7 @@ use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
 use App\Desk\Notes\NoteFile;
 use App\Desk\Queue\ListClosedThreads;
-use App\Filament\Pages\History;
+use App\Filament\Resources\Inbounds\Pages\ListHistory;
 use App\Models\User;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,7 +51,7 @@ it('lists a closed thread when that company has nothing open', function () {
         ->and($threads[0]->replies[0]['subject'])->toBe('PHP on the new server')
         ->and($threads[0]->replies[0]['body'])->toBe("Use 8.3 on the new box.\n\nMike");
 
-    Livewire::test(History::class)
+    Livewire::test(ListHistory::class)
         ->assertCanSeeTableRecords([$closed])
         ->assertSee('Northwharf Bakery / Ada North')
         ->assertSee('Which PHP to use')
@@ -124,7 +124,7 @@ it('shows the newest closed threads on the first page', function () {
     app(MarkReplySent::class)($middle, london('2026-10-20 12:00'), 'Middle reply', 'Second.');
     app(MarkReplySent::class)($newest, london('2026-10-22 09:30'), 'Newest reply', 'Third.');
 
-    Livewire::test(History::class)
+    Livewire::test(ListHistory::class)
         ->set('tableRecordsPerPage', 2)
         ->assertCountTableRecords(3)
         ->assertSee('Showing 1 to 2 of 3 results')
@@ -190,7 +190,7 @@ it('shows a pasted client email and reply on the thread', function () {
         ->and($html)->toContain('white-space: pre-wrap')
         ->and($html)->not->toContain('<br');
 
-    Livewire::test(History::class)
+    Livewire::test(ListHistory::class)
         ->mountAction(TestAction::make('view')->table($closed))
         ->assertMountedActionModalSee($client)
         ->assertMountedActionModalSee($reply)
@@ -232,7 +232,7 @@ it('shows an attachment on the inbound note and the reply', function () {
         ->and($thread->replies[0]['attachment'])->toBe('answer.txt')
         ->and($thread->replies[0]['note_id'])->toBe($sent);
 
-    Livewire::test(History::class)
+    Livewire::test(ListHistory::class)
         ->mountAction(TestAction::make('view')->table($closed))
         ->assertMountedActionModalSee('Client email')
         ->assertMountedActionModalSee('Which loaf for Friday.')

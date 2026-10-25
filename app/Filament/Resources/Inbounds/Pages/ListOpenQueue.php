@@ -1,76 +1,29 @@
 <?php
 
-namespace App\Filament\Pages;
+namespace App\Filament\Resources\Inbounds\Pages;
 
 use App\Clock\ReceiptSource;
 use App\Desk\Actions\LogInbound;
 use App\Desk\DeskException;
 use App\Desk\LondonTime;
 use App\Desk\Notes\NoteFile;
+use App\Filament\Resources\Inbounds\InboundResource;
 use App\Filament\Schemas\LogInboundForm;
-use App\Filament\Tables\OpenRepliesTable;
 use App\Filament\Widgets\OpenQueueOverview;
-use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
-use Filament\Pages\Page;
-use Filament\Panel;
-use Filament\Schemas\Components\EmbeddedTable;
-use Filament\Schemas\Schema;
-use Filament\Support\Enums\Width;
 use Filament\Support\Exceptions\Halt;
-use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Concerns\InteractsWithTable;
-use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Model;
 
-class OpenQueue extends Page implements HasTable
+class ListOpenQueue extends ListInboundPage
 {
-    use InteractsWithTable {
-        getTableRecord as resolveOpenRecord;
-    }
-
     protected static ?string $navigationLabel = 'Open queue';
 
     protected static ?string $title = 'Open queue';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedInbox;
-
-    protected static ?int $navigationSort = -1;
-
-    protected static string $routePath = '/';
-
-    public static function getRoutePath(Panel $panel): string
-    {
-        return static::$routePath;
-    }
-
-    protected Width|string|null $maxContentWidth = Width::Full;
-
     public function table(Table $table): Table
     {
-        return OpenRepliesTable::configure($table);
-    }
-
-    public function getTableRecord(?string $key): Model|array|null
-    {
-        $record = $this->resolveOpenRecord($key);
-
-        if ($record !== null || blank($key)) {
-            return $record;
-        }
-
-        return [
-            'id' => $key,
-        ];
-    }
-
-    public function content(Schema $schema): Schema
-    {
-        return $schema->components([
-            EmbeddedTable::make(),
-        ]);
+        return InboundResource::table($table);
     }
 
     protected function getHeaderWidgets(): array

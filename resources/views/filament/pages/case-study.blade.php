@@ -27,7 +27,7 @@
             <h2>Features</h2>
             <dl>
                 <dt>Open queue</dt>
-                <dd>Company, contact, summary, inbound time, clock start, reply due, and a draft when one is saved. Overdue rows can be filtered. Earlier threads for the same company sit on the open row.</dd>
+                <dd>Company, contact, summary, inbound time, clock start, reply due, and a draft when one is saved. Overdue rows can be filtered. Earlier threads for the same company sit on the open row. Open queue and History are one Filament resource, with form(), table(), and a relation manager for the replies.</dd>
                 <dt>Companies and contacts</dt>
                 <dd>Two Filament resources. Each reads the store that is plugged in, so the screen is the same with HubSpot or with the local tables. A company page lists only the contacts on that company. The desk creates neither. A match that is not exactly one stops.</dd>
                 <dt>Log inbound</dt>

@@ -6,7 +6,7 @@ use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
 use App\Desk\Actions\SaveDraft;
 use App\Desk\Queue\ListOpenReplies;
-use App\Filament\Pages\OpenQueue;
+use App\Filament\Resources\Inbounds\Pages\ListOpenQueue;
 use App\Models\Draft;
 use App\Models\User;
 use Filament\Actions\Testing\TestAction;
@@ -112,7 +112,7 @@ it('shows a saved draft on the queue', function () {
         'Which PHP to use',
     );
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->callAction(TestAction::make('saveDraft')->table($id), [
             'subject' => 'PHP on the new server',
             'body' => 'Use 8.3 on the new box.',
@@ -135,7 +135,7 @@ it('discards a draft from the queue and leaves the row open', function () {
 
     app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');
 
-    Livewire::test(OpenQueue::class)
+    Livewire::test(ListOpenQueue::class)
         ->callAction(TestAction::make('discardDraft')->table($id))
         ->assertSee('Northwharf Bakery');
 
