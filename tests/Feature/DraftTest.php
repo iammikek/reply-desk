@@ -113,13 +113,137 @@ it('shows a saved draft on the queue', function () {
     );
 
     Livewire::test(ListOpenQueue::class)
-        ->callAction(TestAction::make('saveDraft')->table($id), [
+        ->mountAction(TestAction::make('reply')->table($id))
+        ->setActionData([
             'subject' => 'PHP on the new server',
             'body' => 'Use 8.3 on the new box.',
         ])
+        ->mountAction('cancel')
+        ->assertMountedActionModalSee('Save this as a draft?')
+        ->callMountedAction()
         ->assertSee('Draft');
 
-    expect(app(ListOpenReplies::class)(london('2026-10-23 12:00')))->toHaveCount(1);
+    $draft = Draft::query()->first();
+
+    expect(app(ListOpenReplies::class)(london('2026-10-23 12:00')))->toHaveCount(1)
+        ->and($draft->subject)->toBe('PHP on the new server')
+        ->and($draft->body)->toBe('Use 8.3 on the new box.');
+});
+
+it('closes an unchanged draft without asking to save it', function () {
+    $this->actingAs(User::factory()->create());
+
+    $id = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+    );
+
+    app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');
+    $savedAt = Draft::query()->first()->updated_at;
+
+    $this->travel(1)->minutes();
+
+    $component = Livewire::test(ListOpenQueue::class)
+        ->mountAction(TestAction::make('reply')->table($id));
+
+    expect($component->instance()->mountedActions[0]['data']['subject'])->toBe('PHP on the new server')
+        ->and($component->instance()->mountedActions[0]['data']['body'])->toBe('Use 8.3 on the new box.');
+
+    $component
+        ->mountAction('cancel')
+        ->assertSet('mountedActions', []);
+
+    $draft = Draft::query()->first();
+
+    expect($draft->subject)->toBe('PHP on the new server')
+        ->and($draft->body)->toBe('Use 8.3 on the new box.')
+        ->and($draft->updated_at->equalTo($savedAt))->toBeTrue();
+});
+
+it('asks to save when a saved draft was edited', function () {
+    $this->actingAs(User::factory()->create());
+
+    $id = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+    );
+
+    app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');
+
+    Livewire::test(ListOpenQueue::class)
+        ->mountAction(TestAction::make('reply')->table($id))
+        ->setActionData([
+            'subject' => 'PHP on the new server',
+            'body' => 'Use 8.4 on the new box.',
+        ])
+        ->mountAction('cancel')
+        ->assertMountedActionModalSee('Save this as a draft?')
+        ->mountAction('cancel')
+        ->assertSet('mountedActions', []);
+
+    expect(Draft::query()->first()->body)->toBe('Use 8.3 on the new box.');
+
+    Livewire::test(ListOpenQueue::class)
+        ->mountAction(TestAction::make('reply')->table($id))
+        ->setActionData([
+            'subject' => 'A different subject',
+            'body' => 'Use 8.3 on the new box.',
+        ])
+        ->mountAction('cancel')
+        ->assertMountedActionModalSee('Save this as a draft?')
+        ->callMountedAction();
+
+    expect(Draft::query()->first()->subject)->toBe('A different subject')
+        ->and(Draft::query()->first()->body)->toBe('Use 8.3 on the new box.');
+});
+
+it('closes reply without a draft when cancel has no message', function () {
+    $this->actingAs(User::factory()->create());
+
+    $id = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+    );
+
+    Livewire::test(ListOpenQueue::class)
+        ->mountAction(TestAction::make('reply')->table($id))
+        ->mountAction('cancel')
+        ->assertSet('mountedActions', []);
+
+    expect(Draft::query()->count())->toBe(0);
+});
+
+it('discards the message when cancel declines the draft', function () {
+    $this->actingAs(User::factory()->create());
+
+    $id = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+    );
+
+    Livewire::test(ListOpenQueue::class)
+        ->mountAction(TestAction::make('reply')->table($id))
+        ->setActionData([
+            'subject' => 'PHP on the new server',
+            'body' => 'Use 8.3 on the new box.',
+        ])
+        ->mountAction('cancel')
+        ->mountAction('cancel')
+        ->assertSet('mountedActions', []);
+
+    expect(Draft::query()->count())->toBe(0);
 });
 
 it('discards a draft from the queue and leaves the row open', function () {

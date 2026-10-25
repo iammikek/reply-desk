@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tables;
 
+use App\Clock\ClockNote;
 use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
 use App\Desk\Actions\DiscardDraft;
@@ -14,10 +15,11 @@ use App\Desk\Notes\NoteFile;
 use App\Desk\Queue\ListOpenReplies;
 use App\Desk\Queue\OpenReply;
 use App\Filament\Resources\Inbounds\Pages\ListOpenQueue;
+use App\Filament\Schemas\AttachmentField;
 use App\Filament\Schemas\DraftForm;
 use App\Filament\Schemas\MarkSentForm;
 use App\Filament\Schemas\ReplyInfolist;
-use App\Filament\Schemas\SendForm;
+use App\Models\Draft;
 use DateTimeImmutable;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -69,32 +71,87 @@ final class OpenRepliesTable
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close')
                     ->schema(fn (array $record): array => ReplyInfolist::forRecord($record)),
-                Action::make('saveDraft')
-                    ->label('Draft')
-                    ->fillForm(fn (array $record): array => [
-                        'subject' => $record['draft_subject'],
-                        'body' => $record['draft_body'],
-                    ])
-                    ->schema(fn (array $record): array => [
-                        ...ReplyInfolist::earlier($record),
-                        ...DraftForm::components(),
-                    ])
-                    ->action(function (array $record, array $data, ListOpenQueue $livewire): void {
-                        try {
-                            app(SaveDraft::class)(
-                                (string) $record['id'],
-                                (string) $data['subject'],
-                                (string) $data['body'],
-                            );
-                        } catch (DeskException $exception) {
-                            Notification::make()->title($exception->getMessage())->danger()->send();
+                tap(
+                    Action::make('reply')
+                        ->label('Reply')
+                        ->fillForm(fn (array $record): array => [
+                            'subject' => $record['draft_subject'],
+                            'body' => $record['draft_body'],
+                        ])
+                        ->extraModalWindowAttributes(['class' => 'reply-compose'])
+                        ->modalContent(fn (array $record) => view('filament.reply-thread', [
+                            'earlier' => ReplyInfolist::earlierText($record),
+                        ]))
+                        ->schema([
+                            ...DraftForm::components(),
+                            AttachmentField::make(),
+                        ])
+                        ->modalSubmitActionLabel('Send')
+                        ->modalCancelActionLabel('Cancel'),
+                    function (Action $reply): void {
+                        $reply->modalCancelAction(function (Action $action) use ($reply): Action {
+                            if ($livewire = $reply->getLivewire()) {
+                                $action->livewire($livewire);
+                            }
 
-                            throw new Halt;
-                        }
+                            return $action
+                                ->close(false)
+                                ->modalHeading(fn (): ?string => self::asksToSaveDraft($action) ? 'Save this as a draft?' : null)
+                                ->modalDescription(fn (): ?string => self::asksToSaveDraft($action) ? 'The reply has not been sent.' : null)
+                                ->modalSubmitActionLabel('Save draft')
+                                ->modalCancelAction(fn (Action $dontSave): Action => $dontSave
+                                    ->label("Don't save")
+                                    ->cancelParentActions()
+                                    ->cancelParentActionsOnClose())
+                                ->cancelParentActions()
+                                ->action(function () use ($action): void {
+                                    $data = self::replyForm($action);
 
-                        $livewire->flushCachedTableRecords();
-                        Notification::make()->title('Draft saved. The reply is still due.')->success()->send();
-                    }),
+                                    if (! self::asksToSaveDraft($action)) {
+                                        return;
+                                    }
+
+                                    $subject = trim((string) ($data['subject'] ?? ''));
+                                    $livewire = $action->getLivewire();
+
+                                    try {
+                                        app(SaveDraft::class)(
+                                            self::replyRecordKey($action),
+                                            $subject !== '' ? $subject : 'Reply',
+                                            (string) ($data['body'] ?? ''),
+                                        );
+                                    } catch (DeskException $exception) {
+                                        Notification::make()->title($exception->getMessage())->danger()->send();
+
+                                        throw new Halt;
+                                    }
+
+                                    if ($livewire instanceof ListOpenQueue) {
+                                        $livewire->flushCachedTableRecords();
+                                    }
+
+                                    Notification::make()->title('Draft saved. The reply is still due.')->success()->send();
+                                });
+                        })
+                            ->action(function (array $record, array $data, ListOpenQueue $livewire): void {
+                                try {
+                                    app(SendReply::class)(
+                                        (string) $record['id'],
+                                        (string) $data['subject'],
+                                        (string) $data['body'],
+                                        NoteFile::fromForm($data['attachment'] ?? null, $data['attachment_name'] ?? null),
+                                    );
+                                } catch (DeskException $exception) {
+                                    Notification::make()->title($exception->getMessage())->danger()->send();
+
+                                    throw new Halt;
+                                }
+
+                                $livewire->flushCachedTableRecords();
+                                Notification::make()->title('Reply sent')->success()->send();
+                            });
+                    },
+                ),
                 Action::make('discardDraft')
                     ->label('Discard draft')
                     ->color('danger')
@@ -104,30 +161,6 @@ final class OpenRepliesTable
                         app(DiscardDraft::class)((string) $record['id']);
                         $livewire->flushCachedTableRecords();
                         Notification::make()->title('Draft discarded')->success()->send();
-                    }),
-                Action::make('send')
-                    ->label('Send')
-                    ->fillForm(fn (array $record): array => [
-                        'subject' => $record['draft_subject'],
-                        'body' => $record['draft_body'],
-                    ])
-                    ->schema(SendForm::components())
-                    ->action(function (array $record, array $data, ListOpenQueue $livewire): void {
-                        try {
-                            app(SendReply::class)(
-                                (string) $record['id'],
-                                (string) $data['subject'],
-                                (string) $data['body'],
-                                NoteFile::fromForm($data['attachment'] ?? null, $data['attachment_name'] ?? null),
-                            );
-                        } catch (DeskException $exception) {
-                            Notification::make()->title($exception->getMessage())->danger()->send();
-
-                            throw new Halt;
-                        }
-
-                        $livewire->flushCachedTableRecords();
-                        Notification::make()->title('Reply sent')->success()->send();
                     }),
                 Action::make('markSent')
                     ->label('Mark sent')
@@ -194,5 +227,51 @@ final class OpenRepliesTable
         $row['receipt_source'] = $reply->receiptSource === ReceiptSource::MailClient ? 'Mail client' : 'Logged';
 
         return InboundTable::withKey($row, $reply->id);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function replyForm(Action $action): array
+    {
+        $index = $action->getNestingIndex();
+        $parent = is_int($index) && $index > 0 ? $index - 1 : 0;
+        $data = $action->getLivewire()->mountedActions[$parent]['data'] ?? [];
+
+        return is_array($data) ? $data : [];
+    }
+
+    private static function replyMessage(Action $action): string
+    {
+        return trim((string) (self::replyForm($action)['body'] ?? ''));
+    }
+
+    private static function asksToSaveDraft(Action $action): bool
+    {
+        return self::replyMessage($action) !== '' && ! self::draftUnchanged($action);
+    }
+
+    private static function draftUnchanged(Action $action): bool
+    {
+        $draft = Draft::query()->where(Draft::forInbound(self::replyRecordKey($action)))->first();
+
+        if (! $draft instanceof Draft) {
+            return false;
+        }
+
+        $data = self::replyForm($action);
+        $subject = trim((string) ($data['subject'] ?? ''));
+        $body = ClockNote::pasted((string) ($data['body'] ?? ''));
+
+        return $subject === $draft->subject && $body === $draft->body;
+    }
+
+    private static function replyRecordKey(Action $action): string
+    {
+        $index = $action->getNestingIndex();
+        $parent = is_int($index) && $index > 0 ? $index - 1 : 0;
+        $context = $action->getLivewire()->mountedActions[$parent]['context'] ?? [];
+
+        return (string) (is_array($context) ? ($context['recordKey'] ?? '') : '');
     }
 }

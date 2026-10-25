@@ -38,7 +38,7 @@ Due time is calculated when the page or a tool runs. It is not stored.
 
 A filter shows rows whose reply is overdue. Marking a reply sent fills the sent time and the row leaves the queue.
 
-Closed threads for the same company also appear on an open row as "Earlier on this client": the receipt, the summary, the client email, and each reply in sent order. The History page lists closed threads, newest sent time first, ten at a time, including a company that has nothing open. Opening a thread shows a timeline: the client email, then each reply in sent order. The client name on History and the open queue opens that client's page: every inbound and reply for that company and contact, in time order, including a row that is still open. Open queue and History are one Filament resource: `form()`, `table()`, and a relation manager for the replies that close the inbound. The open list is the panel home. Due time is calculated when that list loads. A row that is not overdue is not in the loaded set when the overdue filter is on.
+Closed threads for the same company also appear on an open row as "Earlier on this client", oldest receipt first. Each thread shows the receipt, the summary, the client email, and each reply in sent order. The History page lists closed threads, newest sent time first, ten at a time, including a company that has nothing open. Opening a thread shows a timeline: the client email, then each reply in sent order. The client name on History and the open queue opens that client's page: every inbound and reply for that company and contact, in time order, including a row that is still open. Open queue and History are one Filament resource: `form()`, `table()`, and a relation manager for the replies that close the inbound. The open list is the panel home. Due time is calculated when that list loads. A row that is not overdue is not in the loaded set when the overdue filter is on.
 
 ```mermaid
 flowchart LR
@@ -173,7 +173,7 @@ The Artisan command and the MCP tool take the company name and the contact email
 
 `save_draft` and `discard_draft` write no clock note. The only note that closes a row is the sent note from `mark_reply_sent`. One draft per open inbound. The draft stores the subject, the body, and the time it was saved. On the memory store it points at the local email. On HubSpot it points at the inbound note id. It is not itself a note. A draft does not stop the clock.
 
-The panel actions are Log inbound, view, save draft, discard draft, send, and mark sent. Send delivers the reply through the configured mailbox and then writes the sent note. Mark sent records a reply that already went from Mail. A file chosen on either action is uploaded to HubSpot and stored on the note.
+The panel actions are Log inbound, view, reply, discard draft, and mark sent. Reply opens the compose window, with the earlier thread and any saved draft. That thread is oldest first and scrolls. The subject, body, and attachment stay at the bottom of the window. Send delivers the reply through the configured mailbox and then writes the sent note. Cancel with a message that differs from the saved draft asks whether to save a draft, and saving one leaves the row open. Closing an unchanged draft does not ask. Mark sent records a reply that already went from Mail. A file chosen on reply or mark sent is uploaded to HubSpot and stored on the note.
 
 ## 9. MCP
 
@@ -243,10 +243,12 @@ The MCP test starts the stdio server, checks the tool list, and logs an inbound 
 
 GitHub Actions runs `vendor/bin/pint --test` and then `composer test` on every push and pull request, with PHP 8.4 and Node 22. A commit formats staged PHP files with Pint before they are recorded.
 
-## 14. Still to do
+## 14. Stored notes
 
-Two writes to notes already stored. They wait until that write is asked for. Nothing in this work calls the live portal or runs `reply:backfill --write`.
+These replaces were made on the notes already stored. `reply:backfill --write` was not run.
 
-**Follow-up sent.** Retitle only the V8 16:00 note `532462679236` and the Boughton 10:59 note `532027260095` to Follow-up sent. Leave `532027421929`, `532331306202`, and `532338286816` as Outreach started. Do not retitle `531907011818`. This is a replace of the summary line on those two notes.
+The V8 16:00 note `532462679236` and the Boughton 10:59 note `532027260095` are Follow-up sent. `532027421929`, `532331306202`, and `532338286816` stay Outreach started. `531907011818` was not retitled.
 
-**History subjects.** The rows already on History are "Mike said he assumes Nick can verify this at Mailchimp", "Mike has the link and is setting up locally", and "Mike asked for a zip". Where the filed reply has a subject, replace the note subject with that line. Where the filed reply has no subject, leave the note. Do not change the sent time. Do not invent a subject.
+The 15:43 sent note `532483362036` has the subject `Re: Access to technical textiles site`, and the filed reply is on the note. The sent time is still 23 Oct 2026 15:43. The 11:22 note `532028809439` already had that subject. The 15:44 note `532483362028` has no subject on the filed reply, so it still reads "Mike said he assumes Nick can verify this at Mailchimp".
+
+James Bakewell's acceptance is inbound note `532726657229`, received 22 Oct 2026 17:38. It is his reply to the 16:04 offer on sent note `532028309699`. The client email is "Alright, Mike. Go ahead; I'll transfer £325 this evening." No later mail has been sent, so the row stays open.

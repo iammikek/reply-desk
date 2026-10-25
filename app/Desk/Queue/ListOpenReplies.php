@@ -62,7 +62,7 @@ final class ListOpenReplies
         }
 
         foreach ($earlierByCompany as $companyId => $threads) {
-            usort($threads, fn (EarlierThread $left, EarlierThread $right): int => $right->receipt <=> $left->receipt);
+            usort($threads, fn (EarlierThread $left, EarlierThread $right): int => $left->receipt <=> $right->receipt);
             $earlierByCompany[$companyId] = $threads;
         }
 

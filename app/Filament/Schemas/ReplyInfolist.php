@@ -49,23 +49,8 @@ final class ReplyInfolist
 
     /**
      * @param  array<string, mixed>  $record
-     * @return array<int, TextEntry>
      */
-    public static function earlier(array $record): array
-    {
-        $earlier = self::earlierText($record);
-
-        if ($earlier === '') {
-            return [];
-        }
-
-        return [self::mail('earlier', 'Earlier on this client', $earlier)];
-    }
-
-    /**
-     * @param  array<string, mixed>  $record
-     */
-    private static function earlierText(array $record): string
+    public static function earlierText(array $record): string
     {
         $threads = $record['earlier'] ?? [];
 

@@ -32,10 +32,8 @@
                 <dd>Two Filament resources. Each reads the store that is plugged in, so the screen is the same with HubSpot or with the local tables. A company page lists only the contacts on that company. The desk creates neither. A match that is not exactly one stops.</dd>
                 <dt>Log inbound</dt>
                 <dd>Company and contact come from that directory. Subject and body are logged separately, and an optional file is stored on the email.</dd>
-                <dt>Draft</dt>
-                <dd>One draft per open row. Save replaces it. Discard removes it and leaves the row open. The body keeps the paste.</dd>
-                <dt>Send</dt>
-                <dd>Delivers the reply from the desk, then writes the sent note. The subject stays one line. A file goes with the message.</dd>
+                <dt>Reply</dt>
+                <dd>Opens the compose window, with the earlier thread and any saved draft. The thread is oldest first and scrolls. The subject, body, and attachment stay at the bottom. Send delivers the reply from the desk, then writes the sent note. The subject stays one line. A file goes with the message. Cancel with a changed message asks whether to save a draft. An unchanged draft closes without asking. Discard removes a saved draft and leaves the row open. The body keeps the paste.</dd>
                 <dt>Mark sent</dt>
                 <dd>Records the sent time, the subject, and the reply pasted from Mail. The row leaves the queue.</dd>
                 <dt>History</dt>

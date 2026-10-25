@@ -250,11 +250,63 @@ it('shows the earlier thread on the note and the draft', function () {
         ->assertMountedActionModalSee('Use 8.3 on the new box.');
 
     Livewire::test(ListOpenQueue::class)
-        ->mountAction(TestAction::make('saveDraft')->table($open))
+        ->mountAction(TestAction::make('reply')->table($open))
         ->assertMountedActionModalSee('Which loaf for Friday.')
         ->assertMountedActionModalSee('Use 8.3 on the new box.')
+        ->assertMountedActionModalSee('Send')
+        ->assertMountedActionModalSee('Cancel')
+        ->assertMountedActionModalSee('reply-compose', false)
+        ->assertMountedActionModalSee('reply-thread', false)
+        ->assertMountedActionModalSee('overflow-y: auto', false)
+        ->assertMountedActionModalSee('margin-top: auto', false)
         ->assertFormFieldExists('subject')
         ->assertFormFieldExists('body');
+});
+
+it('lists earlier threads oldest first', function () {
+    $older = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-18 10:00'),
+        ReceiptSource::MailClient,
+        'The first loaf',
+        'Wholemeal on Monday.',
+    );
+
+    app(MarkReplySent::class)($older, london('2026-10-18 16:00'), 'Monday reply', 'Wholemeal it is.');
+
+    $newer = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'The second loaf',
+        'Rye on Wednesday.',
+    );
+
+    app(MarkReplySent::class)($newer, london('2026-10-20 16:04'), 'Wednesday reply', 'Rye is in.');
+
+    $open = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-21 09:00'),
+        ReceiptSource::MailClient,
+        'The form can come off',
+    );
+
+    $earlier = app(ListOpenReplies::class)(london('2026-10-21 12:00'))[0]->earlier;
+
+    expect($earlier)->toHaveCount(2)
+        ->and($earlier[0]->summary)->toBe('The first loaf')
+        ->and($earlier[0]->receipt->format('Y-m-d H:i'))->toBe('2026-10-18 10:00')
+        ->and($earlier[1]->summary)->toBe('The second loaf')
+        ->and($earlier[1]->receipt->format('Y-m-d H:i'))->toBe('2026-10-20 10:00');
+
+    $html = Livewire::test(ListOpenQueue::class)
+        ->mountAction(TestAction::make('reply')->table($open))
+        ->getMountedActionModalHtml();
+
+    expect(strpos($html, 'Wholemeal on Monday.'))->toBeLessThan(strpos($html, 'Rye on Wednesday.'));
 });
 
 it('requires the pasted reply before marking sent', function () {
@@ -301,8 +353,8 @@ it('sends the reply from the queue', function () {
     );
 
     Livewire::test(ListOpenQueue::class)
-        ->assertActionExists(TestAction::make('send')->table('1'))
-        ->callAction(TestAction::make('send')->table('1'), [
+        ->assertActionExists(TestAction::make('reply')->table('1'))
+        ->callAction(TestAction::make('reply')->table('1'), [
             'subject' => 'PHP on the new server',
             'body' => 'Use 8.3 on the new box.',
         ])
