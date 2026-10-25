@@ -10,7 +10,8 @@ it('shows the reply desk login', function () {
         ->assertSuccessful()
         ->assertSee('The open queue for practice client email.')
         ->assertSee('A draft stays on the desk. It does not stop the clock.')
-        ->assertSee('Send the reply from here, or mark it sent after it goes from Mail. A file on the note is stored in HubSpot.')
+        ->assertSee('Companies and contacts come from HubSpot, or from the local tables.')
+        ->assertSee('A file stays on that email.')
         ->assertSee('Closed threads stay on History.')
         ->assertSee('Read the case study')
         ->assertSee('/case-study', false)
@@ -26,6 +27,8 @@ it('shows the case study without signing in', function () {
         ->assertSee('the name of a file opens it')
         ->assertSee('Cursor cannot send.')
         ->assertSee('Open queue')
+        ->assertSee('Companies and contacts')
+        ->assertSee('the screen is the same with HubSpot or with the local tables')
         ->assertSee('The same actions from Cursor')
         ->assertDontSee('Dashboard')
         ->assertDontSee('fi-sidebar', false);

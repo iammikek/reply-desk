@@ -10,15 +10,15 @@
     <div class="reply-desk-case-study-grid">
         <section>
             <p>Practice client email used to be a table in a file. Due time was calculated when someone read it. The next reply still depended on remembering to look.</p>
-            <p>Reply desk is that queue, on a screen. The record is a clock note. Send the reply from here, or mark it sent after it goes from Mail.</p>
+            <p>Reply desk is that queue, on a screen. Companies, contacts, and messages come from HubSpot, or from the local tables when HubSpot is not plugged in. Send the reply from here, or mark it sent after it goes from Mail.</p>
 
             <h2>Why it is useful</h2>
             <ul>
                 <li>One list shows who is waiting. Each open row is a client email with no reply yet.</li>
                 <li>The reply is due 24 hours after the clock starts. Monday to Friday, 08:00 to 20:00, Europe/London. Evening and weekend mail starts at 08:00 on the next working day.</li>
                 <li>Due time is calculated when the page is opened. It is not stored, so it cannot go stale.</li>
-                <li>A draft can sit on the row while the reply is written. The draft does not stop the clock, and it is not a reply.</li>
-                <li>Send delivers the reply and keeps the paste: blank lines, indentation, and runs of spaces. A file on the note is stored in HubSpot. Mark sent records a reply that already went from Mail.</li>
+                <li>A draft can sit on the row while the reply is written. It points at the local email, or at the HubSpot note. The draft does not stop the clock, and it is not a reply.</li>
+                <li>Send delivers the reply and keeps the paste: blank lines, indentation, and runs of spaces. A file stays on that email. On the live desk it is stored in HubSpot. Mark sent records a reply that already went from Mail.</li>
                 <li>Closed threads stay on History, newest first. The timeline shows each message as pasted, and the name of a file opens it.</li>
             </ul>
         </section>
@@ -28,8 +28,10 @@
             <dl>
                 <dt>Open queue</dt>
                 <dd>Company, contact, summary, inbound time, clock start, reply due, and a draft when one is saved. Overdue rows can be filtered. Earlier threads for the same company sit on the open row.</dd>
+                <dt>Companies and contacts</dt>
+                <dd>Two Filament resources. Each reads the store that is plugged in, so the screen is the same with HubSpot or with the local tables. A company page lists only the contacts on that company. The desk creates neither. A match that is not exactly one stops.</dd>
                 <dt>Log inbound</dt>
-                <dd>Company and contact come from the directory already on file. The desk creates neither. A match that is not exactly one stops. Subject and body are logged separately, and an optional file is stored on the note.</dd>
+                <dd>Company and contact come from that directory. Subject and body are logged separately, and an optional file is stored on the email.</dd>
                 <dt>Draft</dt>
                 <dd>One draft per open row. Save replaces it. Discard removes it and leaves the row open. The body keeps the paste.</dd>
                 <dt>Send</dt>

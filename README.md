@@ -23,6 +23,8 @@ Due time is calculated when the page or a command runs. It is not stored. Monday
 
 The site is the Filament panel. Sign-in is at `/login`. A case study at `/case-study` explains why the desk is useful, and lists the features. It is open without a sign-in.
 
+- `app/Filament/Resources/Companies/CompanyResource.php` lists companies. The page reads HubSpot or the local `companies` table, whichever store is plugged in. It has `form()`, `table()`, and a contacts relation manager. There is no create and no edit.
+- `app/Filament/Resources/Contacts/ContactResource.php` lists contacts from that same directory
 - `app/Filament/Pages/OpenQueue.php` is the queue
 - `app/Filament/Pages/History.php` is the closed threads
 - `app/Filament/Tables/OpenRepliesTable.php` is the table, the overdue filter, and the row actions
@@ -110,7 +112,7 @@ A company has many contacts and many emails. A contact belongs to one company, a
 
 A draft is the unsent reply for one open inbound. `email_id` points at the local email. `inbound_note_id` points at the HubSpot note. A row has one of those, not both. Saving a draft does not close the inbound. Marking the reply sent deletes the draft. An attachment is a file on one email.
 
-`fake_parties` and `fake_notes` are replaced by these tables.
+The memory store reads and writes these tables. `fake_parties` and `fake_notes` are gone. A draft on that store uses `email_id`. A draft on the HubSpot store uses `inbound_note_id`.
 
 ## Persistent database
 

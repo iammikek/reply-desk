@@ -3,8 +3,9 @@
     <h1>The open queue for practice client email.</h1>
     <ul>
         <li>See who is waiting, and when the reply is due.</li>
+        <li>Companies and contacts come from HubSpot, or from the local tables.</li>
         <li>A draft stays on the desk. It does not stop the clock.</li>
-        <li>Send the reply from here, or mark it sent after it goes from Mail. A file on the note is stored in HubSpot.</li>
+        <li>Send the reply from here, or mark it sent after it goes from Mail. A file stays on that email.</li>
         <li>Closed threads stay on History.</li>
     </ul>
     <p class="reply-desk-explainer-more"><a href="{{ route('filament.reply-desk.pages.case-study') }}">Read the case study</a></p>
