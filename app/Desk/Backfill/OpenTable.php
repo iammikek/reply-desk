@@ -13,6 +13,8 @@ final class OpenTable
 {
     private const string OUTREACH_SUMMARY = 'Outreach started';
 
+    private const string FOLLOW_UP_SUMMARY = 'Follow-up sent';
+
     /**
      * @return list<OpenTableRow>
      */
@@ -93,7 +95,7 @@ final class OpenTable
             }
         }
 
-        return ['rows' => $rows, 'skipped' => $skipped];
+        return ['rows' => $this->labelFollowUps($rows), 'skipped' => $skipped];
     }
 
     /**
@@ -463,6 +465,47 @@ final class OpenTable
         }
 
         return new SentTableRow($company, $email, $receipt, $source, $summary, $sentAt, $this->subject($mail['notes'], $summary), $mail['client'], $mail['reply']);
+    }
+
+    /**
+     * @param  list<SentTableRow>  $rows
+     * @return list<SentTableRow>
+     */
+    private function labelFollowUps(array $rows): array
+    {
+        $earliest = [];
+
+        foreach ($rows as $row) {
+            if ($row->summary !== self::OUTREACH_SUMMARY) {
+                continue;
+            }
+
+            $current = $earliest[$row->company] ?? null;
+
+            if (! $current instanceof DateTimeImmutable || $row->sentAt < $current) {
+                $earliest[$row->company] = $row->sentAt;
+            }
+        }
+
+        return array_map(function (SentTableRow $row) use ($earliest): SentTableRow {
+            $first = $earliest[$row->company] ?? null;
+
+            if ($row->summary !== self::OUTREACH_SUMMARY || ! $first instanceof DateTimeImmutable || $row->sentAt == $first) {
+                return $row;
+            }
+
+            return new SentTableRow(
+                $row->company,
+                $row->email,
+                $row->receipt,
+                $row->receiptSource,
+                self::FOLLOW_UP_SUMMARY,
+                $row->sentAt,
+                $row->subject,
+                $row->clientEmailPath,
+                $row->replyPath,
+            );
+        }, $rows);
     }
 
     private function logged(string $text): bool

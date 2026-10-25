@@ -18,7 +18,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     config([
-        'reply-desk.portal_id' => '145255358',
+        'reply-desk.portal_id' => '100000001',
         'reply-desk.token' => 'pat-test-token',
         'reply-desk.api_base' => 'https://api.hubapi.com',
     ]);
@@ -47,7 +47,7 @@ it('writes an inbound note when the portal matches one company and one contact',
         $url = $request->url();
 
         if (str_contains($url, 'account-info')) {
-            return Http::response(['portalId' => 145255358]);
+            return Http::response(['portalId' => 100000001]);
         }
 
         if (str_ends_with($url, '/companies/search')) {
@@ -119,7 +119,7 @@ it('uploads an attachment and stores its id on the note', function () {
         $urlPath = parse_url($url, PHP_URL_PATH) ?: '';
 
         if (str_contains($url, 'account-info')) {
-            return Http::response(['portalId' => 145255358]);
+            return Http::response(['portalId' => 100000001]);
         }
 
         if (str_ends_with($url, '/companies/search')) {
@@ -192,7 +192,7 @@ it('reads an attachment name from the file stored on a note', function () {
         $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
 
         if (str_contains($path, 'account-info')) {
-            return Http::response(['portalId' => 145255358]);
+            return Http::response(['portalId' => 100000001]);
         }
 
         if (str_ends_with($path, '/notes/search')) {
@@ -257,7 +257,7 @@ it('uses the one company whose name contains every word', function () {
         $url = $request->url();
 
         if (str_contains($url, 'account-info')) {
-            return Http::response(['portalId' => 145255358]);
+            return Http::response(['portalId' => 100000001]);
         }
 
         if (str_ends_with($url, '/companies/search')) {
@@ -322,7 +322,7 @@ it('uses the one company whose name contains every word', function () {
 it('stops when more than one company matches on the portal', function () {
     Http::fake(function (Request $request) {
         if (str_contains($request->url(), 'account-info')) {
-            return Http::response(['portalId' => 145255358]);
+            return Http::response(['portalId' => 100000001]);
         }
 
         if (str_ends_with($request->url(), '/companies/search')) {
@@ -354,7 +354,7 @@ it('lists an open clock note from recorded HubSpot responses', function () {
         $url = $request->url();
 
         if (str_contains($url, 'account-info')) {
-            return Http::response(['portalId' => 145255358]);
+            return Http::response(['portalId' => 100000001]);
         }
 
         if (str_ends_with($url, '/notes/search')) {
@@ -412,7 +412,7 @@ it('serves the queue from cache for the next minute', function () {
         $url = $request->url();
 
         if (str_contains($url, 'account-info')) {
-            return Http::response(['portalId' => 145255358]);
+            return Http::response(['portalId' => 100000001]);
         }
 
         if (str_ends_with($url, '/notes/search')) {
@@ -461,7 +461,7 @@ it('serves the queue from cache for the next minute', function () {
         return Http::response('unexpected '.$url, 500);
     });
 
-    Cache::put('reply-desk.notes.145255358', [
+    Cache::put('reply-desk.notes.100000001', [
         new StoredNote('9', 'stale', '1', 'Old', '2', 'Old', 'old@example.com'),
     ], 60);
 
@@ -474,8 +474,8 @@ it('serves the queue from cache for the next minute', function () {
     expect($notes)->toHaveCount(1)
         ->and($notes[0]->id)->toBe('55')
         ->and($searches())->toBe(1)
-        ->and(Cache::get('reply-desk.notes.145255358')[0])->toBeArray()
-        ->and(Cache::get('reply-desk.notes.145255358')[0]['id'])->toBe('55');
+        ->and(Cache::get('reply-desk.notes.100000001')[0])->toBeArray()
+        ->and(Cache::get('reply-desk.notes.100000001')[0]['id'])->toBe('55');
 
     expect(app(HubSpotNoteStore::class)->notes())->toHaveCount(1)
         ->and($searches())->toBe(1);
@@ -491,7 +491,7 @@ it('serves the queue from cache for the next minute', function () {
     expect($afterWrite)->toHaveCount(2)
         ->and(collect($afterWrite)->pluck('id')->all())->toContain('56')
         ->and($searches())->toBe(2)
-        ->and(collect(Cache::get('reply-desk.pending.145255358'))->pluck('id')->all())->toContain('56');
+        ->and(collect(Cache::get('reply-desk.pending.100000001'))->pluck('id')->all())->toContain('56');
 });
 
 it('retries once the ten second limit has cleared', function () {
@@ -511,7 +511,7 @@ it('retries once the ten second limit has cleared', function () {
             ], 429, ['Retry-After' => '0']);
         }
 
-        return Http::response(['portalId' => 145255358]);
+        return Http::response(['portalId' => 100000001]);
     });
 
     app(HubSpotNoteStore::class)->assertPortal();
@@ -555,7 +555,7 @@ it('retries the note search when HubSpot is rate limited', function () {
         $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
 
         if (str_contains($path, 'account-info')) {
-            return Http::response(['portalId' => 145255358]);
+            return Http::response(['portalId' => 100000001]);
         }
 
         if (str_ends_with($path, '/notes/search')) {
@@ -628,7 +628,7 @@ it('lists the queue from a serialized cache', function () {
         ['id' => '55', 'properties' => ['hs_note_body' => $body]],
     ]);
 
-    Cache::put('reply-desk.notes.145255358', [
+    Cache::put('reply-desk.notes.100000001', [
         new StoredNote('9', $body, '10', 'Stale Bakery', '20', 'Ada North', 'ada@northwharf.example'),
     ], 60);
 
@@ -661,7 +661,7 @@ it('caches companies and the contacts on them', function () {
         $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
 
         if (str_contains($path, 'account-info')) {
-            return Http::response(['portalId' => 145255358]);
+            return Http::response(['portalId' => 100000001]);
         }
 
         if ($request->method() === 'GET' && str_ends_with($path, '/companies')) {
@@ -702,7 +702,7 @@ it('caches companies and the contacts on them', function () {
         ->and($directory[1]['contacts'])->toHaveCount(1)
         ->and($directory[1]['contacts'][0]['name'])->toBe('Ada North')
         ->and($reads())->toBe(1)
-        ->and(Cache::get('reply-desk.directory.145255358')[0])->toBeArray();
+        ->and(Cache::get('reply-desk.directory.100000001')[0])->toBeArray();
 
     expect(app(HubSpotNoteStore::class)->directory()[1]['contacts'][0]['email'])->toBe('ada@northwharf.example')
         ->and($reads())->toBe(1);
@@ -731,7 +731,7 @@ it('keeps a written note on the next read until search returns it', function () 
         'properties' => ['hs_note_body' => $inbound],
     ]];
 
-    Cache::put('reply-desk.directory.145255358', [[
+    Cache::put('reply-desk.directory.100000001', [[
         'id' => '10',
         'name' => 'Northwharf Bakery',
         'contacts' => [[
@@ -756,12 +756,12 @@ it('keeps a written note on the next read until search returns it', function () 
     expect($written->companyName)->toBe('Northwharf Bakery')
         ->and($written->contactName)->toBe('Ada North')
         ->and($written->body)->toBe($sent)
-        ->and(collect(Cache::get('reply-desk.pending.145255358'))->pluck('id')->all())->toBe(['56']);
+        ->and(collect(Cache::get('reply-desk.pending.100000001'))->pluck('id')->all())->toBe(['56']);
 
     expect(app(HubSpotNoteStore::class)->notes())->toHaveCount(2)
-        ->and(collect(Cache::get('reply-desk.pending.145255358'))->pluck('id')->all())->toBe(['56']);
+        ->and(collect(Cache::get('reply-desk.pending.100000001'))->pluck('id')->all())->toBe(['56']);
 
-    Cache::forget('reply-desk.notes.145255358');
+    Cache::forget('reply-desk.notes.100000001');
     $results[] = [
         'id' => '56',
         'properties' => ['hs_note_body' => $sent],
@@ -770,7 +770,7 @@ it('keeps a written note on the next read until search returns it', function () 
     $caughtUp = app(HubSpotNoteStore::class)->notes();
 
     expect(collect($caughtUp)->pluck('id')->all())->toContain('56')
-        ->and(Cache::get('reply-desk.pending.145255358'))->toBeNull();
+        ->and(Cache::get('reply-desk.pending.100000001'))->toBeNull();
 });
 
 it('keeps a replaced body until search returns that body', function () {
@@ -794,16 +794,16 @@ it('keeps a replaced body until search returns that body', function () {
     expect($notes)->toHaveCount(1)
         ->and($notes[0]->body)->toBe($replaced)
         ->and($notes[0]->companyName)->toBe('Northwharf Bakery')
-        ->and(collect(Cache::get('reply-desk.pending.145255358'))->pluck('id')->all())->toBe(['55']);
+        ->and(collect(Cache::get('reply-desk.pending.100000001'))->pluck('id')->all())->toBe(['55']);
 
-    Cache::forget('reply-desk.notes.145255358');
+    Cache::forget('reply-desk.notes.100000001');
     $results = [[
         'id' => '55',
         'properties' => ['hs_note_body' => $replaced],
     ]];
 
     expect(app(HubSpotNoteStore::class)->notes()[0]->body)->toBe($replaced)
-        ->and(Cache::get('reply-desk.pending.145255358'))->toBeNull();
+        ->and(Cache::get('reply-desk.pending.100000001'))->toBeNull();
 });
 
 it('drops a pending note after fifteen minutes', function () {
@@ -820,7 +820,7 @@ it('drops a pending note after fifteen minutes', function () {
 
     app(HubSpotNoteStore::class)->writeNote($sent, '10', '20');
     $this->travel(16)->minutes();
-    Cache::forget('reply-desk.notes.145255358');
+    Cache::forget('reply-desk.notes.100000001');
 
     expect(collect(app(HubSpotNoteStore::class)->notes())->pluck('id')->all())->toBe(['55']);
 });
@@ -833,7 +833,7 @@ function fakeHubSpotNoteHttp(Request $request, array $results, string $createdId
     $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
 
     if (str_contains($path, 'account-info')) {
-        return Http::response(['portalId' => 145255358]);
+        return Http::response(['portalId' => 100000001]);
     }
 
     if (str_ends_with($path, '/notes/search')) {
@@ -888,7 +888,7 @@ function fakeHubSpotClockNotes(array $results): void
         $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
 
         if (str_contains($path, 'account-info')) {
-            return Http::response(['portalId' => 145255358]);
+            return Http::response(['portalId' => 100000001]);
         }
 
         if (str_ends_with($path, '/notes/search')) {

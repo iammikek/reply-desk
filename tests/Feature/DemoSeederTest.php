@@ -20,17 +20,10 @@ it('seeds an overdue row and an open row with a draft', function () {
         ->and(collect($open)->firstWhere('client', 'Northwharf Bakery / Ada North')->draftSubject)->toBe('PHP on the new server');
 });
 
-it('refuses to seed the live portal', function () {
-    config(['reply-desk.portal_id' => '145255358']);
-
-    expect(fn () => $this->seed(DemoSeeder::class))
-        ->toThrow(DeskException::class, 'never against portal 145255358');
-});
-
 it('refuses to seed a hubspot store', function () {
     config([
         'reply-desk.store' => 'hubspot',
-        'reply-desk.portal_id' => '999',
+        'reply-desk.portal_id' => '100000001',
     ]);
 
     expect(fn () => $this->seed(DemoSeeder::class))

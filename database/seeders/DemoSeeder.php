@@ -17,8 +17,8 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
-        if (config('reply-desk.store') !== 'memory' || (string) config('reply-desk.portal_id') === '145255358') {
-            throw new DeskException('The demo seed only runs on the memory store, and never against portal 145255358.');
+        if (config('reply-desk.store') !== 'memory') {
+            throw new DeskException('The demo seed only runs on the memory store.');
         }
 
         if (DB::table('emails')->count() > 0) {

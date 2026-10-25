@@ -20,9 +20,9 @@ use DateTimeImmutable;
 
 class BackfillOpenCommand extends ReplyDeskCommand
 {
-    protected $signature = 'reply:backfill {path} {--write : Write the notes to portal 145255358}';
+    protected $signature = 'reply:backfill {path} {--write : Write the notes when the store is HubSpot and a portal id is set}';
 
-    protected $description = 'Print open and sent rows from the communications file, and write them only for the live portal';
+    protected $description = 'Print open and sent rows from the communications file, and write them only when the store is HubSpot and a portal id is set';
 
     public function handle(OpenTable $openTable, LogInbound $logInbound, MarkReplySent $markReplySent, SaveDraft $saveDraft, NoteStore $notes): int
     {
@@ -44,8 +44,8 @@ class BackfillOpenCommand extends ReplyDeskCommand
                 return 0;
             }
 
-            if (config('reply-desk.store') !== 'hubspot' || (string) config('reply-desk.portal_id') !== '145255358') {
-                throw new DeskException('Backfill writes only to portal 145255358.');
+            if (config('reply-desk.store') !== 'hubspot' || (string) config('reply-desk.portal_id') === '') {
+                throw new DeskException('Backfill writes only when the store is HubSpot and a portal id is set.');
             }
 
             $notes->assertPortal();
