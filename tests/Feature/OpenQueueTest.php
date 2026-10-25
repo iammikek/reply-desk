@@ -10,7 +10,6 @@ use App\Mail\ClientReply;
 use App\Models\User;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
@@ -135,7 +134,7 @@ it('marks a reply sent from the queue', function () {
         ->assertCanNotSeeTableRecords(['1'])
         ->assertSee('No open replies');
 
-    expect((string) DB::table('fake_notes')->where('body', 'like', '%Clock: sent%')->value('body'))
+    expect(collect(replyDeskNoteBodies())->first(fn (string $body): bool => str_contains($body, 'Clock: sent')))
         ->toContain("Use 8.3 on the new box.\n\nMike");
 });
 
@@ -190,7 +189,7 @@ it('logs an inbound from the queue', function () {
         ->assertSee('Northwharf Bakery / Ada North')
         ->assertSee('The form can come off');
 
-    $note = (string) DB::table('fake_notes')->value('body');
+    $note = replyDeskNoteBodies()[0];
 
     expect($note)->toContain('Subject: The form can come off')
         ->and($note)->toContain("Client email:\nThe form can come off the front.\nCan you look today?")
@@ -211,7 +210,7 @@ it('keeps a pasted body on the logged email', function () {
         ])
         ->assertNotified('Inbound logged');
 
-    expect((string) DB::table('fake_notes')->value('body'))->toContain("Client email:\n".$body);
+    expect(replyDeskNoteBodies()[0])->toContain("Client email:\n".$body);
 
     Livewire::test(OpenQueue::class)
         ->mountAction(TestAction::make('view')->table('1'))
@@ -274,7 +273,7 @@ it('requires the pasted reply before marking sent', function () {
         ])
         ->assertCanSeeTableRecords(['1']);
 
-    expect(DB::table('fake_notes')->where('body', 'like', '%Clock: sent%')->count())->toBe(0);
+    expect(collect(replyDeskNoteBodies())->filter(fn (string $body): bool => str_contains($body, 'Clock: sent')))->toHaveCount(0);
 });
 
 it('sends the reply from the queue', function () {

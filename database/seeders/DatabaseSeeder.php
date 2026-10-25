@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
-        if (DB::table('fake_notes')->count() === 0) {
+        if (DB::table('emails')->count() === 0) {
             $this->call(DemoSeeder::class);
         }
     }

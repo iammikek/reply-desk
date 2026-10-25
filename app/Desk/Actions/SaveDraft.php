@@ -25,7 +25,7 @@ final class SaveDraft
         $this->openInbound($inboundId);
 
         Draft::query()->updateOrCreate(
-            ['inbound_note_id' => $inboundId],
+            Draft::forInbound($inboundId),
             ['subject' => $subject, 'body' => $body],
         );
     }

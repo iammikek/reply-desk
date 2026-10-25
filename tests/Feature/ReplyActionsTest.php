@@ -25,18 +25,6 @@ it('lists an open inbound with the due time from the clock', function () {
         'Which PHP to use',
     );
 
-    DB::table('fake_notes')->insert([
-        'id' => '99',
-        'body' => 'Deposit invoice sent. Open, not paid.',
-        'company_id' => '10',
-        'company_name' => 'Northwharf Bakery',
-        'contact_id' => '20',
-        'contact_name' => 'Ada North',
-        'contact_email' => 'ada@northwharf.example',
-        'created_at' => now(),
-        'updated_at' => now(),
-    ]);
-
     $open = app(ListOpenReplies::class)(london('2026-10-23 09:00'));
 
     expect($open)->toHaveCount(1)
@@ -65,17 +53,17 @@ it('closes a row when the reply is marked sent and refuses a second close', func
 })->throws(DeskException::class, 'already closed');
 
 it('stops when more than one company matches and writes no note', function () {
-    replyDeskParty('company', '11', 'Northwharf Bakery');
+    replyDeskParty('company', '11', 'Northwharf Bakery West');
 
     expect(fn () => app(LogInbound::class)(
-        'Northwharf Bakery',
+        'Northwharf',
         'ada@northwharf.example',
         london('2026-10-20 10:00'),
         ReceiptSource::Logged,
         'Which PHP to use',
     ))->toThrow(DeskException::class, 'More than one company matched');
 
-    expect(DB::table('fake_notes')->count())->toBe(0);
+    expect(DB::table('emails')->count())->toBe(0);
 });
 
 it('keeps the pasted reply and shows that thread on the next open note', function () {
@@ -116,7 +104,6 @@ it('keeps the pasted reply and shows that thread on the next open note', functio
 it('lists the contacts on each company', function () {
     replyDeskParty('company', '11', 'Harbour Cafe');
     replyDeskParty('contact', '21', 'Ned Shore', 'ned@harbour.example', '11');
-    replyDeskParty('contact', '22', 'Loose End', 'loose@example.com');
     replyDeskParty('contact', '23', 'No Address', '', '10');
 
     Artisan::call('reply:directory');
@@ -141,7 +128,7 @@ it('stores the pasted client email on the inbound note', function () {
         'client' => "Which loaf for Friday.\n\nAda",
     ]);
 
-    expect((string) DB::table('fake_notes')->value('body'))
+    expect(replyDeskNoteBodies()[0])
         ->toContain("Which loaf for Friday.\n\nAda");
 });
 
@@ -157,7 +144,7 @@ it('refuses a contact who is not on that company', function () {
         'Which PHP to use',
     ))->toThrow(DeskException::class, 'No contact matched.');
 
-    expect(DB::table('fake_notes')->count())->toBe(0);
+    expect(DB::table('emails')->count())->toBe(0);
 });
 
 it('prints the open queue as json', function () {

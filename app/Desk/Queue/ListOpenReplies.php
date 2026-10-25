@@ -68,9 +68,9 @@ final class ListOpenReplies
 
         $open = [];
         $drafts = Draft::query()
-            ->whereIn('inbound_note_id', array_map(fn (array $row): string => $row[0]->id, $inbound))
+            ->whereIn(Draft::inboundColumn(), array_map(fn (array $row): string => $row[0]->id, $inbound))
             ->get()
-            ->keyBy('inbound_note_id');
+            ->keyBy(Draft::inboundColumn());
 
         foreach ($inbound as [$note, $parsed]) {
             if (isset($sent[$note->id])) {

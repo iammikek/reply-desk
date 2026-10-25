@@ -7,6 +7,8 @@ use App\Clock\ReplyClock;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\SaveDraft;
 use App\Desk\DeskException;
+use App\Models\Company;
+use App\Models\Contact;
 use DateTimeImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -19,16 +21,24 @@ class DemoSeeder extends Seeder
             throw new DeskException('The demo seed only runs on the memory store, and never against portal 145255358.');
         }
 
-        if (DB::table('fake_notes')->count() > 0) {
+        if (DB::table('emails')->count() > 0) {
             throw new DeskException('The demo queue is already seeded.');
         }
 
         $now = DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE));
 
-        $this->party('company', '10', 'Northwharf Bakery', '');
-        $this->party('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
-        $this->party('company', '11', 'Harbour Cafe', '');
-        $this->party('contact', '21', 'Ned Shore', 'ned@harbour.example', '11');
+        $northwharf = Company::query()->create(['name' => 'Northwharf Bakery']);
+        Contact::query()->create([
+            'company_id' => $northwharf->id,
+            'name' => 'Ada North',
+            'email' => 'ada@northwharf.example',
+        ]);
+        $harbour = Company::query()->create(['name' => 'Harbour Cafe']);
+        Contact::query()->create([
+            'company_id' => $harbour->id,
+            'name' => 'Ned Shore',
+            'email' => 'ned@harbour.example',
+        ]);
 
         $overdue = app(LogInbound::class)(
             'Northwharf Bakery',
@@ -63,21 +73,5 @@ class DemoSeeder extends Seeder
         }
 
         throw new DeskException('Could not place an overdue demo row.');
-    }
-
-    private function party(string $kind, string $id, string $name, string $email, ?string $companyId = null): void
-    {
-        $existing = DB::table('fake_parties')->where('kind', $kind)->where('id', $id)->exists();
-
-        DB::table('fake_parties')->updateOrInsert(
-            ['kind' => $kind, 'id' => $id],
-            [
-                'name' => $name,
-                'email' => $email,
-                'company_id' => $companyId,
-                'updated_at' => now(),
-                ...($existing ? [] : ['created_at' => now()]),
-            ],
-        );
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Desk\Notes\NoteStore;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -15,13 +16,34 @@ function london(string $time): DateTimeImmutable
 
 function replyDeskParty(string $kind, string $id, string $name, string $email = '', ?string $companyId = null): void
 {
-    DB::table('fake_parties')->insert([
-        'kind' => $kind,
+    if ($kind === 'company') {
+        DB::table('companies')->insert([
+            'id' => $id,
+            'name' => $name,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return;
+    }
+
+    DB::table('contacts')->insert([
         'id' => $id,
-        'name' => $name,
-        'email' => $email,
         'company_id' => $companyId,
+        'name' => $name,
+        'email' => $email === '' ? null : strtolower($email),
         'created_at' => now(),
         'updated_at' => now(),
     ]);
+}
+
+/**
+ * @return list<string>
+ */
+function replyDeskNoteBodies(): array
+{
+    return array_map(
+        fn ($note): string => $note->body,
+        app(NoteStore::class)->notes(),
+    );
 }

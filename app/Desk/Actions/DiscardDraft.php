@@ -8,6 +8,6 @@ final class DiscardDraft
 {
     public function __invoke(string $inboundId): void
     {
-        Draft::query()->where('inbound_note_id', $inboundId)->delete();
+        Draft::query()->where(Draft::forInbound($inboundId))->delete();
     }
 }

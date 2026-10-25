@@ -43,7 +43,7 @@ final class MarkReplySent
             $file,
         );
 
-        Draft::query()->where('inbound_note_id', $inboundId)->delete();
+        Draft::query()->where(Draft::forInbound($inboundId))->delete();
 
         return $id;
     }

@@ -24,7 +24,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->travelTo(london('2026-10-23 15:30'));
     replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example');
+    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
 });
 
 it('closes the row after the mail server accepts', function () {
@@ -49,7 +49,7 @@ it('closes the row after the mail server accepts', function () {
             && $mail->replyBody === 'Use 8.3 on the new box.';
     });
 
-    $sent = (string) DB::table('fake_notes')->where('body', 'like', '%Clock: sent%')->value('body');
+    $sent = (string) collect(replyDeskNoteBodies())->first(fn (string $body): bool => str_contains($body, 'Clock: sent'));
 
     expect(app(ListOpenReplies::class)(london('2026-10-23 15:30')))->toBeEmpty()
         ->and(Draft::query()->count())->toBe(0)
@@ -83,7 +83,7 @@ it('sends the attachment with the reply and stores it on the note', function () 
         return count($attachments) === 1 && $attachments[0]->as === 'audit.txt';
     });
 
-    expect(DB::table('fake_notes')->where('id', $sentId)->value('attachment_name'))->toBe('audit.txt')
+    expect(DB::table('attachments')->where('email_id', $sentId)->value('name'))->toBe('audit.txt')
         ->and(Storage::disk('local')->exists('note-files/'.$sentId.'/audit.txt'))->toBeTrue();
 });
 
@@ -104,7 +104,7 @@ it('sends a pasted reply without flattening it', function () {
 
     Mail::assertSent(ClientReply::class, fn (ClientReply $mail): bool => $mail->replyBody === $body && $mail->subjectLine === 'The loaf');
 
-    expect((string) DB::table('fake_notes')->where('body', 'like', '%Clock: sent%')->value('body'))
+    expect((string) collect(replyDeskNoteBodies())->first(fn (string $body): bool => str_contains($body, 'Clock: sent')))
         ->toContain("Reply:\n".$body);
 });
 

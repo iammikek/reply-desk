@@ -19,7 +19,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->travelTo(london('2026-10-23 12:00'));
     replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example');
+    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
 });
 
 it('keeps the row open when a draft is saved', function () {

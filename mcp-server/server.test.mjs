@@ -47,9 +47,11 @@ test('lists the desk tools and returns the same open row', async () => {
         $app = require 'bootstrap/app.php';
         $app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
         $now = now();
-        Illuminate\\Support\\Facades\\DB::table('fake_parties')->insert([
-            ['kind' => 'company', 'id' => '10', 'name' => 'Northwharf Bakery', 'email' => '', 'company_id' => null, 'created_at' => $now, 'updated_at' => $now],
-            ['kind' => 'contact', 'id' => '20', 'name' => 'Ada North', 'email' => 'ada@northwharf.example', 'company_id' => '10', 'created_at' => $now, 'updated_at' => $now],
+        Illuminate\\Support\\Facades\\DB::table('companies')->insert([
+            ['id' => '10', 'name' => 'Northwharf Bakery', 'created_at' => $now, 'updated_at' => $now],
+        ]);
+        Illuminate\\Support\\Facades\\DB::table('contacts')->insert([
+            ['id' => '20', 'company_id' => '10', 'name' => 'Ada North', 'email' => 'ada@northwharf.example', 'created_at' => $now, 'updated_at' => $now],
         ]);`,
     ]);
 
