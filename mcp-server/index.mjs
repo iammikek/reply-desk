@@ -190,15 +190,26 @@ server.registerTool(
     'mark_reply_sent',
     {
         description:
-            'Record a reply that was already sent from the mail client. The first sent note closes the row. A later reply at a different minute is another sent note on that same inbound. The same minute is refused. Deletes any draft. This does not send mail.',
+            'Record a reply that was already sent from the mail client. The first sent note closes the row. A later reply at a different minute is another sent note on that same inbound. The same minute is refused. A reply with no subject keeps the subject of the previous message. Deletes any draft. This does not send mail.',
         inputSchema: {
             inbound: z.string().describe('Inbound note id.'),
             sent: z.string().describe('When the reply was sent, Y-m-d H:i Europe/London.'),
-            subject: z.string().describe('Subject of the sent reply, one line.'),
+            subject: z
+                .string()
+                .optional()
+                .describe('Subject of the sent reply, one line. Omit to keep the subject of the previous message.'),
             reply: z.string().describe('The reply that was sent, pasted from Mail.'),
         },
     },
-    async ({ inbound, sent, subject, reply }) => run(['reply:mark-sent', inbound, sent, subject, reply]),
+    async ({ inbound, sent, subject, reply }) => {
+        const args = ['reply:mark-sent', inbound, sent, reply];
+
+        if (subject) {
+            args.push(`--subject=${subject}`);
+        }
+
+        return run(args);
+    },
 );
 
 const transport = new StdioServerTransport();

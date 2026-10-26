@@ -27,6 +27,27 @@ beforeEach(function () {
     replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
 });
 
+it('sends a reply with the subject of the client email when none is given', function () {
+    Mail::fake();
+
+    $id = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+        subject: 'Friday loaf',
+    );
+
+    app(SendReply::class)($id, '', 'Use 8.3 on the new box.');
+
+    Mail::assertSent(ClientReply::class, fn (ClientReply $mail): bool => $mail->subjectLine === 'Friday loaf');
+
+    $sent = (string) collect(replyDeskNoteBodies())->first(fn (string $body): bool => str_contains($body, 'Clock: sent'));
+
+    expect($sent)->toContain('Subject: Friday loaf');
+});
+
 it('closes the row after the mail server accepts', function () {
     Mail::fake();
 

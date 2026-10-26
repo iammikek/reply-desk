@@ -88,8 +88,8 @@ it('keeps the pasted reply and shows that thread on the next open note', functio
     Artisan::call('reply:mark-sent', [
         'inbound' => $closed,
         'sent' => '2026-10-20 16:04',
-        'subject' => 'PHP on the new server',
         'reply' => "Use 8.3 on the new box.\n\nMike",
+        '--subject' => 'PHP on the new server',
     ]);
 
     $openId = app(LogInbound::class)(

@@ -18,6 +18,19 @@ final class MarkReplySent
 {
     public function __construct(private NoteStore $notes) {}
 
+    public function subject(string $inboundId, string $subject): string
+    {
+        $subject = trim($subject);
+
+        if ($subject !== '') {
+            return $subject;
+        }
+
+        [$previous, $inboundSubject] = $this->subjects($inboundId);
+
+        return $previous !== '' ? $previous : $inboundSubject;
+    }
+
     public function __invoke(string $inboundId, DateTimeImmutable $sent, string $subject, string $reply = '', ?NoteFile $file = null): string
     {
         $inbound = null;
@@ -38,6 +51,8 @@ final class MarkReplySent
             throw new DeskException("No open inbound {$inboundId}.");
         }
 
+        $subject = $this->subject($inboundId, $subject);
+
         $id = $this->notes->writeNote(
             ClockNote::sent($inboundId, $sent, $subject, $reply),
             $inbound->companyId,
@@ -53,5 +68,32 @@ final class MarkReplySent
     private function minute(DateTimeImmutable $moment): string
     {
         return $moment->setTimezone(new DateTimeZone(ReplyClock::ZONE))->format('Y-m-d H:i');
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function subjects(string $inboundId): array
+    {
+        $previous = '';
+        $previousAt = null;
+        $inboundSubject = '';
+
+        foreach ($this->notes->notes() as $note) {
+            $parsed = ClockNote::parse($note->body);
+
+            if ($parsed instanceof ParsedSent && $parsed->closes === $inboundId && $parsed->subject !== '') {
+                if (! $previousAt instanceof DateTimeImmutable || $parsed->sent >= $previousAt) {
+                    $previousAt = $parsed->sent;
+                    $previous = $parsed->subject;
+                }
+            }
+
+            if ($note->id === $inboundId && $parsed instanceof ParsedInbound) {
+                $inboundSubject = ClockNote::subjectOf($note->body);
+            }
+        }
+
+        return [$previous, $inboundSubject];
     }
 }

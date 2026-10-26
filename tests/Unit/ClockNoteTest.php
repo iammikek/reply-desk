@@ -136,6 +136,15 @@ it('rejects a subject that runs over more than one line', function () {
     ClockNote::inbound(london('2026-10-22 10:42'), ReceiptSource::MailClient, '', "The loaf\nToday");
 })->throws(InvalidArgumentException::class, 'Subject must be one line.');
 
+it('parses a sent note that has no subject', function () {
+    $body = ClockNote::sent('123456789', london('2026-10-22 16:04'), '');
+    $parsed = ClockNote::parse($body);
+
+    expect($parsed)->toBeInstanceOf(ParsedSent::class)
+        ->and($parsed->subject)->toBe('')
+        ->and($body)->not->toContain('Subject:');
+});
+
 it('writes a sent note that parses back', function () {
     $sent = new DateTimeImmutable('2026-10-22 16:04', new DateTimeZone('Europe/London'));
     $body = ClockNote::sent('123456789', $sent, 'PHP on the new server');

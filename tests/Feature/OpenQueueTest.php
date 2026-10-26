@@ -321,9 +321,9 @@ it('requires the pasted reply before marking sent', function () {
         ->assertFormFieldExists('reply')
         ->callMountedAction()
         ->assertHasFormErrors([
-            'subject' => 'required',
             'reply' => 'required',
         ])
+        ->assertHasNoFormErrors(['subject'])
         ->assertCanSeeTableRecords(['1']);
 
     expect(collect(replyDeskNoteBodies())->filter(fn (string $body): bool => str_contains($body, 'Clock: sent')))->toHaveCount(0);

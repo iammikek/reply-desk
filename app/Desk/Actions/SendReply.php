@@ -27,11 +27,16 @@ final class SendReply
         $subject = trim($subject);
         $body = ClockNote::pasted($body);
 
-        if ($subject === '' || $body === '' || str_contains($subject, "\n") || str_contains($subject, "\r")) {
-            throw new DeskException('A reply needs a subject and a body.');
+        if ($body === '') {
+            throw new DeskException('A reply needs a body.');
+        }
+
+        if (str_contains($subject, "\n") || str_contains($subject, "\r")) {
+            throw new DeskException('Subject must be one line.');
         }
 
         $inbound = $this->openInbound($inboundId);
+        $subject = $this->markReplySent->subject($inboundId, $subject);
 
         if (filter_var($inbound->contactEmail, FILTER_VALIDATE_EMAIL) === false) {
             throw new DeskException('That contact has no email address.');

@@ -24,7 +24,6 @@ final class MarkSentForm
                 ->required(),
             TextInput::make('subject')
                 ->label('Subject')
-                ->required()
                 ->maxLength(255),
             Textarea::make('reply')
                 ->label('Reply')

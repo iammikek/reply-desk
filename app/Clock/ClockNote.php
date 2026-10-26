@@ -37,16 +37,31 @@ final class ClockNote
             throw new InvalidArgumentException('A sent note must name the inbound note id.');
         }
 
-        $subject = self::oneLine($subject, 'Subject');
-
-        $body = implode("\n", [
+        $lines = [
             'Clock: sent',
             'Closes: '.$closes,
             'Sent: '.$sent->setTimezone(self::zone())->format('Y-m-d H:i').' Europe/London',
-            'Subject: '.$subject,
-        ]);
+        ];
+        $subject = trim($subject);
+
+        if ($subject !== '') {
+            $lines[] = 'Subject: '.self::oneLine($subject, 'Subject');
+        }
+
+        $body = implode("\n", $lines);
 
         return self::withMail($body, reply: $reply);
+    }
+
+    public static function subjectOf(string $body): string
+    {
+        foreach (self::header($body) as $line) {
+            if (preg_match('/^Subject: (.+)$/', $line, $matches) === 1) {
+                return $matches[1];
+            }
+        }
+
+        return '';
     }
 
     public static function parse(string $body): ParsedInbound|ParsedSent|null
@@ -230,7 +245,7 @@ final class ClockNote
      */
     private static function parseSent(array $lines): ?ParsedSent
     {
-        if (count($lines) !== 4) {
+        if (count($lines) < 3 || count($lines) > 4) {
             return null;
         }
 
@@ -239,12 +254,21 @@ final class ClockNote
         }
 
         $sent = self::moment($lines[2], 'Sent');
+        $subject = '';
 
-        if ($sent === null || preg_match('/^Subject: (.+)$/', $lines[3], $subject) !== 1) {
+        if ($sent === null) {
             return null;
         }
 
-        return new ParsedSent($closes[1], $sent, $subject[1]);
+        if (isset($lines[3]) && preg_match('/^Subject: (.+)$/', $lines[3], $matches) !== 1) {
+            return null;
+        }
+
+        if (isset($lines[3])) {
+            $subject = $matches[1];
+        }
+
+        return new ParsedSent($closes[1], $sent, $subject);
     }
 
     private static function moment(string $line, string $label): ?DateTimeImmutable

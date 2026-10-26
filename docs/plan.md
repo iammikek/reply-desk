@@ -139,7 +139,7 @@ Sent: 2026-10-22 16:04 Europe/London
 Subject: PHP on the new server
 ```
 
-`Closes` is the HubSpot id of the inbound note, digits only. `Subject` is one line. A second sent note at a different minute can close the same inbound. The same sent minute is not written twice.
+`Closes` is the HubSpot id of the inbound note, digits only. `Subject` is one line, and it may be absent. A reply that arrives without one keeps the subject of the previous message: the latest reply on that inbound, or the client email when this is the first reply. When that message has no subject either, the sent note has no Subject line. A second sent note at a different minute can close the same inbound. The same sent minute is not written twice.
 
 After a blank line, the note may carry the correspondence. A section is filled only when that section is empty.
 
@@ -173,7 +173,7 @@ The Artisan command and the MCP tool take the company name and the contact email
 | `log_inbound` | Writes one inbound clock note. The panel takes a subject and a body. The command takes a one-line summary, the client email text, and an optional subject. |
 | `save_draft` | Creates or replaces the draft for an open inbound id. Arguments: subject, body. Refuses if that inbound is already closed. Writes no HubSpot note. |
 | `discard_draft` | Deletes the draft for an inbound id. Writes no HubSpot note. |
-| `mark_reply_sent` | Writes a sent clock note. Arguments: sent time, subject, and the reply text pasted from Mail. The first note closes the row. A later reply at a different minute is another sent note on that inbound. The same minute is refused. Deletes any draft for that id. |
+| `mark_reply_sent` | Writes a sent clock note. Arguments: sent time, an optional subject, and the reply text pasted from Mail. A reply with no subject keeps the subject of the previous message. The first note closes the row. A later reply at a different minute is another sent note on that inbound. The same minute is refused. Deletes any draft for that id. |
 
 `save_draft` and `discard_draft` write no clock note. The only note that closes a row is the sent note from `mark_reply_sent`. One draft per open inbound. The draft stores the subject, the body, and the time it was saved. On the memory store it points at the local email. On HubSpot it points at the inbound note id. It is not itself a note. A draft does not stop the clock.
 
