@@ -113,6 +113,8 @@ Received inside the window: the clock starts at receipt. The reply is due 24 hou
 
 Received after 20:00, or on Saturday or Sunday: the clock starts at 08:00 on the next working day. Friday evening starts on Monday 08:00.
 
+These hours are fixed in the clock. Section 16 is the design for reading them from config. That is not built.
+
 ## 6. Clock note shape
 
 The header is the lines before the first blank line. Ordinary progress notes stay ordinary. The reader ignores any note whose header does not match.
@@ -297,3 +299,19 @@ Tests for this use a stand-in mailbox. No test opens a network mailbox.
 - The poll logs a known contact, skips an unknown sender, skips a date with no time, and logs a reply to a stored Message-ID as a new inbound.
 - Save draft writes one Drafts message and replaces it. Discard removes it. An unchanged close does not write again.
 - Send removes the Drafts message and writes the sent note. A refused send leaves the row open.
+
+## 16. Practice hours
+
+This is the design. It is not built.
+
+A practice can set its own working window and its own reply interval in `config/reply-desk.php`. The same values can be overridden from the environment. With nothing set, the clock stays section 5: Monday to Friday, 08:00 to 20:00, Europe/London, and the reply is due 24 hours after the clock starts.
+
+The settings are the timezone, the open time, the close time, the working days, and the reply interval in hours. One setting supplies the zone used to calculate the clock, to write a note, and to show a time. The note header names that zone. Notes already stored name Europe/London, and the reader still accepts that name.
+
+A receipt inside the window starts the clock at the receipt. The close time is inside the window, as 20:00 is today. A receipt before open on a working day starts at open that day. A receipt after close, or on a day that is not a working day, starts at open on the next working day. The reply is due the interval after the clock start. That due time is not pulled back into the window. Thursday 21:00 is still due on Saturday 08:00 under the default.
+
+An empty day list, a close before the open, an interval below one hour, or an unknown timezone is refused. The desk does not guess a window.
+
+Replied in still counts from the clock start, so it follows the configured window.
+
+The tests for section 5 keep passing when the config is unset. One further case sets a shorter week and a shorter interval and checks the clock start and the due time. A refused setting is tested. The showable copy uses the default.
