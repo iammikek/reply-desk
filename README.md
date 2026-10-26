@@ -1,14 +1,18 @@
 # Reply desk
 
-Reply desk is the open queue for practice client email. Filament is the screen. Companies, contacts, and messages come from HubSpot or from the local tables, whichever store is plugged in. A draft stays on this machine and does not stop the clock.
+Reply desk is the queue for a practice's client email. It shows who is waiting for a reply, and when that reply is due. One person signs in and works that queue.
 
-The panel has a single sign-in, for the person working the queue.
+A client email starts a clock. The reply is due 24 hours after the clock starts. From Monday to Friday, 08:00 to 20:00 Europe/London, the clock starts when the email arrives. Mail that arrives in the evening or at the weekend starts at 08:00 on the next working morning, so overnight waiting is not counted as time the practice had to answer. The due time is calculated when the queue is opened. It is not stored, so an old reading cannot linger.
+
+The reply is sent from this screen, or sent from Mail and then marked sent here. A draft can sit on the row while the reply is written. The draft does not stop the clock. Sending, or marking sent, takes the row off the queue. What has already been answered stays on History, each message in the order it was sent.
+
+Filament is the screen. Companies and contacts come from HubSpot, or from local stand-in tables when HubSpot is not connected. On the live desk, what arrived and what was sent is stored as a HubSpot note. The copy that can be shown uses those local tables, with no token and no real names.
 
 [![Tests](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml/badge.svg)](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml)
 
 ## What the queue shows
 
-Each open row is an inbound clock note with no matching sent note.
+Each open row is one client email, stored as an inbound clock note, with no reply sent yet.
 
 - Client, shown as company and contact
 - Summary
@@ -41,6 +45,24 @@ php artisan serve
 ```
 
 Sign in as `admin@example.com`. The panel shows Administrator.
+
+## Sail
+
+Sail runs that same showable copy in Docker, on PHP 8.4. The container uses the SQLite file and `REPLY_DESK_STORE=memory`, so a `.env` that points at HubSpot or Supabase is left untouched. Docker has to be running.
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan db:seed
+```
+
+`APP_PORT=8000` in `.env` publishes the app at [http://localhost:8000](http://localhost:8000). The seed creates the user `admin@example.com`. The password is in `database/seeders/DatabaseSeeder.php`. The panel shows Administrator.
+
+`./vendor/bin/sail stop` stops the container. `./vendor/bin/sail artisan` runs a command inside it.
 
 ## Where the panel lives
 
