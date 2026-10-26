@@ -21,7 +21,7 @@ That file is now the archive. New receipts and sent replies go through the actio
 | Administrator | Opens the queue, sees who is waiting and when the reply is due, logs an inbound, saves a draft, sends a reply, or marks a reply sent after it went from Mail. |
 | Cursor | Lists companies, logs an inbound, saves a draft, discards a draft, and marks a reply sent, through the same actions as the panel. |
 
-One user. The panel is not a client login. Sign in as `admin@example.com`.
+One user. The panel is not a client login. Sign in as `admin@example.com`. Section 17 is the design for that first sign-in, and for changing the password later. That is not built.
 
 ## 3. The queue
 
@@ -315,3 +315,17 @@ An empty day list, a close before the open, an interval below one hour, or an un
 Replied in still counts from the clock start, so it follows the configured window.
 
 The tests for section 5 keep passing when the config is unset. One further case sets a shorter week and a shorter interval and checks the clock start and the due time. A refused setting is tested. The showable copy uses the default.
+
+## 17. Administrator password
+
+This is the design. It is not built.
+
+There is still one administrator, created by the seed or by hand. The panel leaves registration off. Opening an account for another practice would mean a tenanted desk, and that design is not part of this version. The password work uses Laravel's own pieces: the hashed password cast, `Password` rules, the `password_reset_tokens` table, and the password broker. Filament already wraps those. The panel turns on `profile()` for a signed-in change, and `passwordReset()` for a forgotten password. The reset message goes through the configured mailer. On the showable copy that mailer is the log, so the link is written there.
+
+A user who has never changed the password is asked to change it before the queue opens. The column is `password_changed_at`. Empty means the password is still the one they were given. After sign-in, the only page they can open is the change form. It asks for the current password and the new one. A wrong current password is refused. When the new password is stored, `password_changed_at` is set and the queue opens. A later visit goes straight to the queue.
+
+The migration sets `password_changed_at` for users who already exist, so the live administrator is not asked again. The showable seed leaves it empty for `admin@example.com`. Seeding again puts that seed password back and clears the timestamp, so the next sign-in asks again.
+
+The same `Password` rule is used on the first change, on the profile page, and on the reset page.
+
+Tests cover a first sign-in that cannot open the queue, a change that then opens it, a user who has already changed it, a wrong current password, and a reset link issued through the password broker. No test sends a real message.
