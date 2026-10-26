@@ -14,6 +14,8 @@ class OpenQueueOverview extends StatsOverviewWidget
 {
     protected static bool $isDiscovered = false;
 
+    protected static bool $isLazy = false;
+
     protected function getStats(): array
     {
         $now = DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE));

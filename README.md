@@ -2,6 +2,8 @@
 
 Reply desk is the queue for a practice's client email. It shows who is waiting for a reply, and when that reply is due. One person signs in and works that queue.
 
+Case study: [automica.io/reply-desk](https://automica.io/reply-desk)
+
 A client email starts a clock. The reply is due 24 hours after the clock starts. From Monday to Friday, 08:00 to 20:00 Europe/London, the clock starts when the email arrives. Mail that arrives in the evening or at the weekend starts at 08:00 on the next working morning, so overnight waiting is not counted as time the practice had to answer. The due time is calculated when the queue is opened. It is not stored, so an old reading cannot linger.
 
 The reply is sent from this screen, or sent from Mail and then marked sent here. A draft can sit on the row while the reply is written. The draft does not stop the clock. Sending, or marking sent, takes the row off the queue. What has already been answered stays on History, each message in the order it was sent.
@@ -13,6 +15,18 @@ The client receives the reply inside the window the practice set. A practice tha
 Filament is the screen. Companies and contacts are read from HubSpot, or from local tables when HubSpot is not connected. The desk can add a company or a contact. When HubSpot is connected, that write goes to HubSpot. Otherwise it is stored in the local tables. A search that is not exactly one match stops. On the live desk, what arrived and what was sent is stored as a HubSpot note. The seeded copy uses the local tables.
 
 [![Tests](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml/badge.svg)](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml)
+
+## Contents
+
+- [What the queue shows](#what-the-queue-shows)
+- [Run the showable copy](#run-the-showable-copy)
+- [Where the panel lives](#where-the-panel-lives)
+- [Local record](#local-record)
+- [Persistent database](#persistent-database)
+- [Live desk](#live-desk)
+- [Commands](#commands)
+- [Cursor](#cursor)
+- [Tests](#tests)
 
 ## What the queue shows
 
@@ -57,11 +71,11 @@ docker run --rm \
 
 ## Where the panel lives
 
-The site is the Filament panel. Sign-in is at `/login`. The case study is [automica.io/reply-desk](https://automica.io/reply-desk).
+The site is the Filament panel. Sign-in is at `/login`.
 
 - `app/Filament/Resources/Companies/CompanyResource.php` lists companies. The page reads HubSpot or the local `companies` table, whichever store is plugged in. New company adds a company on that store. A company page lists the contacts on that company, and New contact adds one. There is no edit.
 - `app/Filament/Resources/Contacts/ContactResource.php` lists contacts from that same directory. New contact adds a name and an email on one company.
-- `app/Filament/Resources/Inbounds/InboundResource.php` is the open queue and History. It has `form()`, `table()`, and a replies relation manager. The open list is the panel home. There is no create and no edit.
+- `app/Filament/Resources/Inbounds/InboundResource.php` is the open queue and History. The open list is the panel home. A count shows how many rows are open, and how many are overdue. Each row is one client email. There is no create and no edit for a message.
 - `app/Filament/Tables/OpenRepliesTable.php` is the open table, the overdue filter, and the row actions
 - `app/Filament/Widgets/OpenQueueOverview.php` counts open and overdue rows
 - `app/Providers/Filament/AdminPanelProvider.php` registers the panel
