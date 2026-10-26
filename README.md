@@ -6,6 +6,10 @@ A client email starts a clock. The reply is due 24 hours after the clock starts.
 
 The reply is sent from this screen, or sent from Mail and then marked sent here. A draft can sit on the row while the reply is written. The draft does not stop the clock. Sending, or marking sent, takes the row off the queue. What has already been answered stays on History, each message in the order it was sent.
 
+The person who answers the mail opens that queue and sees who is waiting, and whether the reply is late on the practice's own clock. They write on the row. The next time they open that client, the last answer is already on History.
+
+The client receives the reply inside the window the practice set. A practice that answers inside that window keeps the next instruction. A late reply shows on the queue while there is still time to send it. The time saved is the time that used to go on working out who was waiting.
+
 Filament is the screen. Companies and contacts come from HubSpot, or from local stand-in tables when HubSpot is not connected. On the live desk, what arrived and what was sent is stored as a HubSpot note. The copy that can be shown uses those local tables, with no token and no real names.
 
 [![Tests](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml/badge.svg)](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml)

@@ -11,6 +11,7 @@
         <section>
             <p>Practice client email used to be a table in a file. Due time was calculated when someone read it. The next reply still depended on remembering to look.</p>
             <p>Reply desk is that queue, on a screen. Companies, contacts, and messages come from HubSpot, or from the local tables when HubSpot is not plugged in. Send the reply from here, or mark it sent after it goes from Mail.</p>
+            <p>The person who answers the mail sees who is waiting, and whether that reply is late on the practice's own clock. The client receives the reply inside the window the practice set. A practice that answers inside that window keeps the next instruction. A late reply shows while there is still time to send it. The time saved is the time that used to go on working out who was waiting.</p>
 
             <h2>Why it is useful</h2>
             <ul>
@@ -43,6 +44,18 @@
             </dl>
         </section>
     </div>
+
+    <section>
+        <h2>What the desk keeps</h2>
+        <p>The old table went wrong because the record and the work came apart. A due time was written down and then sat there after it was wrong. A half-written reply could look finished. The next look still depended on remembering which client was waiting. The desk keeps four records, and it leaves the clock off the page.</p>
+        <ul>
+            <li>Company and contact are the directory the practice already has. A message is logged against one company and one contact. The desk creates neither, so the row is a client the practice already knows.</li>
+            <li>An inbound is one client message with no reply yet. That inbound is the open row. The queue is those rows, so who is waiting is on the screen.</li>
+            <li>A draft is the reply being written, kept on that one inbound. Saving it leaves the inbound open. The row still shows as waiting, and the clock still runs.</li>
+            <li>A reply is the message that was sent. It points back at the inbound and closes it, so the row leaves the queue. History keeps the inbound and the reply in the order they were sent.</li>
+        </ul>
+        <p>Clock start and reply due are worked out when the queue is opened. They are left off the record, so a figure written into a file cannot linger after it is wrong.</p>
+    </section>
 </article>
 
 <style>
