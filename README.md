@@ -29,44 +29,31 @@ Due time is calculated when the page or a command runs. It is not stored. Monday
 
 The desk can send a reply. Mark sent records a reply that already went from Mail. A draft does not stop the clock.
 
-Seed the showable copy with `php artisan db:seed` while `REPLY_DESK_STORE` is `memory`. The command refuses to run when the store is HubSpot. The seed loads two stand-in companies, one overdue row and one open row, and a draft on the overdue row.
+Seed the showable copy with `./vendor/bin/sail artisan db:seed` while `REPLY_DESK_STORE` is `memory`. The command refuses to run when the store is HubSpot. The seed loads two stand-in companies, one overdue row and one open row, and a draft on the overdue row.
 
-Tests are `composer test`, in the Tests section below.
+Tests are `./vendor/bin/sail composer test`, in the Tests section below.
 
 ## Run the showable copy
 
-The memory store needs no HubSpot token and no real names. Send delivers the reply through the configured mailbox.
+Sail runs the desk in Docker, on PHP 8.4. The database is MySQL in that same Compose file. The container sets `REPLY_DESK_STORE=memory`, so the copy needs no HubSpot token and no real names. Docker has to be running. PHP does not need to be installed on the host.
 
 ```bash
-composer install
 cp .env.example .env
-php artisan key:generate
-touch database/database.sqlite
-php artisan migrate
-php artisan db:seed
-npm install
-php artisan serve
-```
-
-Sign in as `admin@example.com`. The panel shows Administrator.
-
-## Sail
-
-Sail runs that same showable copy in Docker, on PHP 8.4. The container uses the SQLite file and `REPLY_DESK_STORE=memory`, so a `.env` that points at HubSpot or Supabase is left untouched. Docker has to be running.
-
-```bash
-composer install
-cp .env.example .env
-php artisan key:generate
-touch database/database.sqlite
+docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "$(pwd):/var/www/html" \
+    -w /var/www/html \
+    laravelsail/php84-composer:latest \
+    composer install --ignore-platform-reqs
 ./vendor/bin/sail up -d
+./vendor/bin/sail artisan key:generate
 ./vendor/bin/sail artisan migrate
 ./vendor/bin/sail artisan db:seed
 ```
 
 `APP_PORT=8000` in `.env` publishes the app at [http://localhost:8000](http://localhost:8000). The seed creates the user `admin@example.com`. The password is in `database/seeders/DatabaseSeeder.php`. The panel shows Administrator.
 
-`./vendor/bin/sail stop` stops the container. `./vendor/bin/sail artisan` runs a command inside it.
+`./vendor/bin/sail stop` stops the containers. `./vendor/bin/sail artisan` runs a command inside the app container.
 
 ## Where the panel lives
 
@@ -147,23 +134,20 @@ The memory store reads and writes these tables. `fake_parties` and `fake_notes` 
 
 Login, sessions, and the company-list cache are Laravel tables. The local record above is the companies, contacts, emails, drafts, and attachments. With HubSpot plugged in, companies, contacts, and clock notes stay in HubSpot, and a draft keeps the HubSpot note id.
 
-The showable copy uses SQLite. The running desk uses Supabase Postgres in an EU region. Copy the direct connection from the Supabase dashboard into `.env`:
+The showable copy keeps those Laravel tables in MySQL. The Compose file starts that server and sets these values on the app container, matching `.env.example`:
 
 ```
-DB_CONNECTION=pgsql
-DB_HOST=db.YOUR_PROJECT_REF.supabase.co
-DB_PORT=5432
-DB_DATABASE=postgres
-DB_USERNAME=postgres
-DB_PASSWORD=
-DB_SSLMODE=require
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=reply_desk
+DB_USERNAME=sail
+DB_PASSWORD=password
 ```
 
-Use port 5432. The transaction pooler on port 6543 breaks Laravel migrations. The direct host is IPv6-only, so from this Mac use the session pooler and set `DB_USERNAME` to `postgres.YOUR_PROJECT_REF`.
+`DB_HOST` is the Compose service name. From a client on the host, the published port is 3306. `./vendor/bin/sail artisan migrate` creates the tables. Do not commit `.env`.
 
-Then run `php artisan migrate`. Do not commit `.env`.
-
-Leave these in `.env` for the showable copy:
+Leave this in `.env` for the showable copy:
 
 ```
 REPLY_DESK_STORE=memory
@@ -173,20 +157,20 @@ REPLY_DESK_STORE=memory
 
 Set `REPLY_DESK_STORE=hubspot`, `HUBSPOT_ACCESS_TOKEN`, and `HUBSPOT_PORTAL_ID`. A write stops unless the token's portal matches `HUBSPOT_PORTAL_ID`. The token stays in `.env` and is never printed.
 
-`php artisan reply:backfill {path}` prints the open rows and the sent rows. A sent row is an inbound note plus the sent note that closes it. A row with no clock time, or no email address, is skipped. A Client email or Reply link is copied onto the note, and an unsent reply becomes the draft, so the queue can be read away from the files. It writes only with `--write`, and only when the store is HubSpot and a portal id is set.
+`./vendor/bin/sail artisan reply:backfill {path}` prints the open rows and the sent rows. A sent row is an inbound note plus the sent note that closes it. A row with no clock time, or no email address, is skipped. A Client email or Reply link is copied onto the note, and an unsent reply becomes the draft, so the queue can be read away from the files. It writes only with `--write`, and only when the store is HubSpot and a portal id is set.
 
 ## Commands
 
 The same actions the panel uses:
 
 ```bash
-php artisan reply:list-open
-php artisan reply:list-closed
-php artisan reply:directory
-php artisan reply:log-inbound {company} {email} {receipt} {source} {summary} {client?}
-php artisan reply:save-draft {inbound} {subject} {body}
-php artisan reply:discard-draft {inbound}
-php artisan reply:mark-sent {inbound} {sent} {subject} {reply}
+./vendor/bin/sail artisan reply:list-open
+./vendor/bin/sail artisan reply:list-closed
+./vendor/bin/sail artisan reply:directory
+./vendor/bin/sail artisan reply:log-inbound {company} {email} {receipt} {source} {summary} {client?}
+./vendor/bin/sail artisan reply:save-draft {inbound} {subject} {body}
+./vendor/bin/sail artisan reply:discard-draft {inbound}
+./vendor/bin/sail artisan reply:mark-sent {inbound} {sent} {subject} {reply}
 ```
 
 `receipt`, `sent`, and `--now` are `Y-m-d H:i` in Europe/London. `source` is `mail client`, `logged`, or `whatsapp`.
@@ -209,7 +193,7 @@ Add `reply-desk` inside `mcpServers` in `~/.cursor/mcp.json`. The entry has to s
 }
 ```
 
-`PHP_BINARY` is the Herd PHP on this Mac, so the server can run `php artisan`. The process reads the HubSpot token from this project's `.env`. The token does not go in `mcp.json`.
+The panel runs in Docker. These tools call `php artisan` on the machine that starts Cursor. Set `PHP_BINARY` when that binary is not on `PATH`. The process reads the HubSpot token from this project's `.env`. The token does not go in `mcp.json`.
 
 Open the Agents sidebar, the one that lists chats. **Customize** is under that list. It is not in the file explorer. Open **Customize**, then **MCPs**, and turn **reply-desk** on. If that sidebar is hidden, press **Cmd+Shift+J** and open MCP from Cursor Settings. When the tools appear, start a new Agent chat.
 
@@ -218,9 +202,9 @@ Ask in plain language, for example "list the open replies". Cursor calls the too
 ## Tests
 
 ```bash
-composer test
+./vendor/bin/sail composer test
 ```
 
-That runs the Pest suite. One test starts the MCP server and checks the tool list. The suite uses the memory store and recorded HubSpot responses. It does not call a live portal.
+That runs the Pest suite inside the app container. One test starts the MCP server and checks the tool list. The suite uses the memory store and recorded HubSpot responses. It does not call a live portal.
 
 GitHub Actions runs the same command on every push and pull request: [`.github/workflows/tests.yml`](.github/workflows/tests.yml). The job uses PHP 8.4 and Node 22.
