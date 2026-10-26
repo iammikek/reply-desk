@@ -157,7 +157,7 @@ The wholemeal.
 
 Companies is a Filament resource. Contacts is a Filament resource. Each one reads the store that is plugged in. With `REPLY_DESK_STORE=hubspot` the rows are the HubSpot companies and the HubSpot contacts. With the memory store the rows are the local `companies` and `contacts` tables. The screen is the same either way. A company page lists only the contacts on that company, from that same store.
 
-The panel logs an inbound from that directory. Company is a searchable list of companies already on the store. Contact is a searchable list of the contacts already on that company, labelled with name and email. Choosing another company clears the contact. The desk creates no companies and no contacts.
+The panel logs an inbound from that directory. Company is a searchable list of companies already on the store. Contact is a searchable list of the contacts already on that company, labelled with name and email. Choosing another company clears the contact. New company and New contact add a row on that store. There is no edit. The MCP tools do the same. A company or contact already there is refused.
 
 The Artisan command and the MCP tool take the company name and the contact email from that same list. The company match is the full name, then a token match on every word of the name. The contact match is the lowercased email. Zero matches or more than one match stops, and no note is written. The contact must be on the chosen company when the panel records by id.
 
@@ -168,10 +168,12 @@ The Artisan command and the MCP tool take the company name and the contact email
 | `list_open_replies` | Reads clock notes. Returns inbound rows with no sent note, including clock start and reply due calculated at call time. Includes the saved draft when one exists. The draft does not change the due time. Includes earlier closed threads for the same company. |
 | `list_closed_replies` | Returns inbound rows that have a sent note, newest sent time first. Includes the client email and each pasted reply. A company with nothing open is included. |
 | `list_companies` | Lists companies and the contacts on each company. The list is cached for one hour. |
-| `log_inbound` | Writes one inbound clock note. The panel takes a subject and a body. The command takes a one-line summary and the client email text. |
+| `create_company` | Adds a company on the store in use. A blank name is refused. A company already there is refused. |
+| `create_contact` | Adds a contact on one company. The email is stored in lowercase. A contact already there is refused. The company match is one match or it stops. |
+| `log_inbound` | Writes one inbound clock note. The panel takes a subject and a body. The command takes a one-line summary, the client email text, and an optional subject. |
 | `save_draft` | Creates or replaces the draft for an open inbound id. Arguments: subject, body. Refuses if that inbound is already closed. Writes no HubSpot note. |
 | `discard_draft` | Deletes the draft for an inbound id. Writes no HubSpot note. |
-| `mark_reply_sent` | Writes one sent clock note for an open inbound id. Arguments: sent time, subject, and the reply text pasted from Mail. Refuses if that inbound is already closed. Deletes any draft for that id. |
+| `mark_reply_sent` | Writes a sent clock note. Arguments: sent time, subject, and the reply text pasted from Mail. The first note closes the row. A later reply at a different minute is another sent note on that inbound. The same minute is refused. Deletes any draft for that id. |
 
 `save_draft` and `discard_draft` write no clock note. The only note that closes a row is the sent note from `mark_reply_sent`. One draft per open inbound. The draft stores the subject, the body, and the time it was saved. On the memory store it points at the local email. On HubSpot it points at the inbound note id. It is not itself a note. A draft does not stop the clock.
 
@@ -188,6 +190,8 @@ In Cursor, **Customize** is in the Agents sidebar, under the chat list. Open **C
 | Tool | Calls |
 | --- | --- |
 | `list_companies` | `reply:directory` |
+| `create_company` | `reply:create-company` |
+| `create_contact` | `reply:create-contact` |
 | `list_open_replies` | `reply:list-open` |
 | `list_closed_replies` | `reply:list-closed` |
 | `log_inbound` | `reply:log-inbound` |
@@ -234,7 +238,7 @@ Action tests use the memory note store and the draft table:
 
 - An open list contains only inbound notes with no sent note, and the due time matches the clock.
 - A saved draft is returned with that row, and the due time stays the same. Discarding it removes the text and leaves the row open.
-- Mark sent closes the row, stores the pasted reply, and deletes the draft. Marking a closed row is refused.
+- Mark sent closes the row, stores the pasted reply, and deletes the draft. A later reply at a different minute is kept. The same minute is refused.
 - A company or contact search that is not exactly one match stops, and no note is written.
 - A contact who is not on the chosen company is refused.
 - A portal id that does not match the env value stops before any write.

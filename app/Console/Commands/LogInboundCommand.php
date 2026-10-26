@@ -7,7 +7,7 @@ use App\Desk\DeskException;
 
 class LogInboundCommand extends ReplyDeskCommand
 {
-    protected $signature = 'reply:log-inbound {company} {email} {receipt} {source} {summary} {client?}';
+    protected $signature = 'reply:log-inbound {company} {email} {receipt} {source} {summary} {client?} {--subject=}';
 
     protected $description = 'Record one inbound client email';
 
@@ -21,6 +21,7 @@ class LogInboundCommand extends ReplyDeskCommand
                 $this->source((string) $this->argument('source')),
                 (string) $this->argument('summary'),
                 (string) ($this->argument('client') ?? ''),
+                subject: (string) $this->option('subject'),
             );
 
             return $this->json(['id' => $id]);

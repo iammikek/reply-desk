@@ -4,6 +4,7 @@ use App\Clock\ReceiptSource;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
 use App\Desk\DeskException;
+use App\Desk\Queue\ListClosedThreads;
 use App\Desk\Queue\ListOpenReplies;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -36,7 +37,7 @@ it('lists an open inbound with the due time from the clock', function () {
         ->and($open[0]->overdueAt(london('2026-10-24 08:01')))->toBeTrue();
 });
 
-it('closes a row when the reply is marked sent and refuses a second close', function () {
+it('keeps a later reply and refuses the same minute', function () {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -45,12 +46,20 @@ it('closes a row when the reply is marked sent and refuses a second close', func
         'Which PHP to use',
     );
 
-    app(MarkReplySent::class)($id, london('2026-10-20 16:04'), 'PHP on the new server');
+    app(MarkReplySent::class)($id, london('2026-10-20 16:04'), 'PHP on the new server', 'Use 8.3.');
+    app(MarkReplySent::class)($id, london('2026-10-20 18:00'), 'Again', 'Use 8.4.');
 
-    expect(app(ListOpenReplies::class)(london('2026-10-20 17:00')))->toBe([]);
+    $closed = app(ListClosedThreads::class)();
 
-    app(MarkReplySent::class)($id, london('2026-10-20 18:00'), 'Again');
-})->throws(DeskException::class, 'already closed');
+    expect(app(ListOpenReplies::class)(london('2026-10-20 19:00')))->toBe([])
+        ->and($closed)->toHaveCount(1)
+        ->and($closed[0]->replies)->toHaveCount(2)
+        ->and($closed[0]->replies[1]['subject'])->toBe('Again')
+        ->and($closed[0]->replies[1]['body'])->toBe('Use 8.4.');
+
+    expect(fn () => app(MarkReplySent::class)($id, london('2026-10-20 18:00'), 'Again', 'Once more'))
+        ->toThrow(DeskException::class, 'already recorded at that minute');
+});
 
 it('stops when more than one company matches and writes no note', function () {
     replyDeskParty('company', '11', 'Northwharf Bakery West');
@@ -126,10 +135,29 @@ it('stores the pasted client email on the inbound note', function () {
         'source' => 'mail client',
         'summary' => 'Which PHP to use',
         'client' => "Which loaf for Friday.\n\nAda",
+        '--subject' => 'Friday loaf',
     ]);
 
     expect(replyDeskNoteBodies()[0])
-        ->toContain("Which loaf for Friday.\n\nAda");
+        ->toContain("Which loaf for Friday.\n\nAda")
+        ->toContain('Subject: Friday loaf');
+});
+
+it('adds a company and a contact', function () {
+    Artisan::call('reply:create-company', ['name' => 'West Quay']);
+    $company = json_decode(Artisan::output(), true);
+
+    Artisan::call('reply:create-contact', [
+        'company' => 'West Quay',
+        'name' => 'Bea Quay',
+        'email' => 'Bea@West.example',
+    ]);
+    $contact = json_decode(Artisan::output(), true);
+
+    expect($company['name'])->toBe('West Quay')
+        ->and($contact['email'])->toBe('bea@west.example');
+
+    expect(Artisan::call('reply:create-company', ['name' => 'West Quay']))->toBe(1);
 });
 
 it('refuses a contact who is not on that company', function () {

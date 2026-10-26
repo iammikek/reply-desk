@@ -211,13 +211,15 @@ The same actions the panel uses:
 ./vendor/bin/sail artisan reply:list-open
 ./vendor/bin/sail artisan reply:list-closed
 ./vendor/bin/sail artisan reply:directory
-./vendor/bin/sail artisan reply:log-inbound {company} {email} {receipt} {source} {summary} {client?}
+./vendor/bin/sail artisan reply:create-company {name}
+./vendor/bin/sail artisan reply:create-contact {company} {name} {email}
+./vendor/bin/sail artisan reply:log-inbound {company} {email} {receipt} {source} {summary} {client?} {--subject=}
 ./vendor/bin/sail artisan reply:save-draft {inbound} {subject} {body}
 ./vendor/bin/sail artisan reply:discard-draft {inbound}
 ./vendor/bin/sail artisan reply:mark-sent {inbound} {sent} {subject} {reply}
 ```
 
-`receipt`, `sent`, and `--now` are `Y-m-d H:i` in Europe/London. `source` is `mail client`, `logged`, or `whatsapp`.
+`receipt`, `sent`, and `--now` are `Y-m-d H:i` in Europe/London. `source` is `mail client`, `logged`, or `whatsapp`. `--subject` is the client email subject, one line, and it is omitted when the paste has none. A later reply at a different minute is another sent note on that inbound. The same minute is refused.
 
 ## MCP
 
@@ -239,7 +241,7 @@ Cursor and Claude load the same `reply-desk` entry inside `mcpServers`. Each cli
 
 The panel runs in Docker. These tools call `php artisan` on the machine that starts the client. Set `PHP_BINARY` when that binary is not on `PATH`. The process reads the HubSpot token from this project's `.env`. The token does not go in the MCP configuration.
 
-Ask in plain language, for example "list the open replies". The client calls the tool and asks for approval. The tools are `list_companies`, `list_open_replies`, `list_closed_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. `list_companies` is the cached company and contact list. `log_inbound` records a client email against one of those contacts. There is no send tool. The process shells to the Artisan commands. It does not talk to HubSpot itself.
+Ask in plain language, for example "list the open replies". The client calls the tool and asks for approval. The tools are `list_companies`, `create_company`, `create_contact`, `list_open_replies`, `list_closed_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. `list_companies` is the cached company and contact list. `create_company` and `create_contact` add a row on that list. A company or contact already there is refused. `log_inbound` records a client email against one of those contacts, and it can keep the subject. `mark_reply_sent` records a reply that already went from Mail. A later reply at a different minute is another message on that inbound. The same minute is refused. There is no send tool. The process shells to the Artisan commands. It does not talk to HubSpot itself.
 
 ## Tests
 

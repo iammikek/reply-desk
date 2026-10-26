@@ -70,6 +70,8 @@ test('lists the desk tools and returns the same open row', async () => {
         const names = listed.tools.map((tool) => tool.name).sort();
 
         assert.deepEqual(names, [
+            'create_company',
+            'create_contact',
             'discard_draft',
             'list_closed_replies',
             'list_companies',
@@ -94,6 +96,7 @@ test('lists the desk tools and returns the same open row', async () => {
                 source: 'mail client',
                 summary: 'Which PHP to use',
                 client: 'Which loaf for Friday.',
+                subject: 'Friday loaf',
             },
         });
         assert.equal(logged.isError, undefined);
@@ -122,6 +125,7 @@ test('lists the desk tools and returns the same open row', async () => {
         assert.equal(rows[0].draft_body, 'Use 8.3 on the new box.');
         assert.equal(rows[0].has_draft, true);
         assert.match(rows[0].body, /Which loaf for Friday\./);
+        assert.match(rows[0].body, /Subject: Friday loaf/);
     } finally {
         await client.close();
     }

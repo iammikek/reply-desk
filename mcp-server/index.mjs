@@ -100,6 +100,32 @@ server.registerTool(
 );
 
 server.registerTool(
+    'create_company',
+    {
+        description:
+            'Add a company. A blank name is refused. A company already there is refused. More than one match stops. This does not send mail.',
+        inputSchema: {
+            name: z.string().describe('Company name.'),
+        },
+    },
+    async ({ name }) => run(['reply:create-company', name]),
+);
+
+server.registerTool(
+    'create_contact',
+    {
+        description:
+            'Add a contact on one company from list_companies. The email is stored in lowercase. A contact already there is refused. More than one company match stops. This does not send mail.',
+        inputSchema: {
+            company: z.string().describe('Company name from list_companies.'),
+            name: z.string().describe('Contact name.'),
+            email: z.string().describe('Contact email address.'),
+        },
+    },
+    async ({ company, name, email }) => run(['reply:create-contact', company, name, email]),
+);
+
+server.registerTool(
     'list_companies',
     {
         description:
@@ -121,10 +147,18 @@ server.registerTool(
             source: z.enum(['mail client', 'logged', 'whatsapp']).describe('Where the message came from. whatsapp is a pasted WhatsApp message.'),
             summary: z.string().describe('One line describing the email.'),
             client: z.string().describe('The client email, pasted from Mail.'),
+            subject: z.string().optional().describe('Subject of the client email, one line. Omit when the paste has none.'),
         },
     },
-    async ({ company, email, receipt, source, summary, client }) =>
-        run(['reply:log-inbound', company, email, receipt, source, summary, client]),
+    async ({ company, email, receipt, source, summary, client, subject }) => {
+        const args = ['reply:log-inbound', company, email, receipt, source, summary, client];
+
+        if (subject) {
+            args.push(`--subject=${subject}`);
+        }
+
+        return run(args);
+    },
 );
 
 server.registerTool(
@@ -156,7 +190,7 @@ server.registerTool(
     'mark_reply_sent',
     {
         description:
-            'Record a reply that was already sent from the mail client. Writes one sent clock note and deletes any draft. This does not send mail.',
+            'Record a reply that was already sent from the mail client. The first sent note closes the row. A later reply at a different minute is another sent note on that same inbound. The same minute is refused. Deletes any draft. This does not send mail.',
         inputSchema: {
             inbound: z.string().describe('Inbound note id.'),
             sent: z.string().describe('When the reply was sent, Y-m-d H:i Europe/London.'),
