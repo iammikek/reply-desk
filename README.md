@@ -4,7 +4,7 @@ Reply desk is the queue for a practice's client email. It shows who is waiting f
 
 Case study: [automica.io/reply-desk](https://automica.io/reply-desk)
 
-A client email starts a clock. This practice is due to reply 24 hours after the clock starts. The person using the desk can set a different interval. The practice window is Monday to Friday, 08:00 to 20:00 Europe/London. Inside that window, the clock starts when the email arrives. Mail that arrives in the evening or at the weekend starts at 08:00 on the next working morning, so overnight waiting is not counted as time the practice had to answer. The due time is calculated when the queue is opened. It is not stored, so an old reading cannot linger.
+A client email starts a clock. This practice is due to reply 24 hours after the clock starts. The person using the desk can set a different interval. The practice window is Monday to Friday, 08:00 to 20:00 Europe/London. Inside that window, the clock starts when the email arrives. Mail that arrives in the evening or at the weekend starts at 08:00 on the next working morning, so overnight waiting is not counted as time the practice had to answer. Replied in counts from that clock start, and only while the window is open. The due time is calculated when the queue is opened. It is not stored, so an old reading cannot linger.
 
 The reply is sent from this screen, or sent from Mail and then marked sent here. A draft can sit on the row while the reply is written. The draft does not stop the clock. Sending, or marking sent, takes the row off the queue. What has already been answered stays on History, each message in the order it was sent.
 

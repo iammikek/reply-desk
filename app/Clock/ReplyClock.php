@@ -30,6 +30,38 @@ final class ReplyClock
         );
     }
 
+    public function openMinutes(DateTimeImmutable $start, DateTimeImmutable $end): int
+    {
+        $start = $start->setTimezone($this->zone);
+        $end = $end->setTimezone($this->zone);
+
+        if ($end < $start) {
+            return 0;
+        }
+
+        $minutes = 0;
+        $cursor = $start;
+
+        while ($cursor < $end) {
+            if ($this->insideWindow($cursor) && $cursor->format('H:i:s') < '20:00:00') {
+                $close = $cursor->setTime(20, 0);
+                $slice = $end < $close ? $end : $close;
+                $minutes += (int) (($slice->getTimestamp() - $cursor->getTimestamp()) / 60);
+                $cursor = $slice;
+
+                continue;
+            }
+
+            $cursor = $this->nextWorkingMorning($cursor);
+
+            if ($cursor > $end) {
+                break;
+            }
+        }
+
+        return $minutes;
+    }
+
     private function insideWindow(DateTimeImmutable $moment): bool
     {
         $day = (int) $moment->format('N');

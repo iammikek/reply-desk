@@ -20,6 +20,11 @@ it('counts a reply from the next working morning', function () {
     expect(ReplyInfolist::repliedIn('2026-10-23 21:00', '2026-10-26 09:30'))->toBe('Replied in 1 hour 30 minutes');
 });
 
+it('leaves the weekend and the evening out of replied in', function () {
+    expect(ReplyInfolist::repliedIn('2026-10-23 09:40', '2026-10-26 19:30'))->toBe('Replied in 21 hours 50 minutes')
+        ->and(ReplyInfolist::repliedIn('2026-10-20 10:00', '2026-10-21 10:00'))->toBe('Replied in 12 hours');
+});
+
 it('places a later clock start after the receipt', function () {
     $kinds = collect(ReplyInfolist::events([
         'inbound' => '2026-10-23 21:00',

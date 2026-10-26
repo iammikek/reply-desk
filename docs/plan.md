@@ -38,7 +38,7 @@ Due time is calculated when the page or a tool runs. It is not stored.
 
 A filter shows rows whose reply is overdue. Marking a reply sent fills the sent time and the row leaves the queue.
 
-The clock note opens as a timeline: earlier threads oldest first, then this inbound, the clock start when it is later than the receipt, and the reply due. A reply on that timeline, and on History, shows how long it took from the clock start. The reply window still lists those earlier threads above the form. The History page lists closed threads, newest sent time first, ten at a time, including a company that has nothing open. Opening a thread shows a timeline: the client email, then each reply in sent order. The client name on History and the open queue opens that client's page: every inbound and reply for that company and contact, in time order, including a row that is still open. Open queue and History are one Filament resource: `form()`, `table()`, and a relation manager for the replies that close the inbound. The open list is the panel home. Due time is calculated when that list loads. A row that is not overdue is not in the loaded set when the overdue filter is on.
+The clock note opens as a timeline: earlier threads oldest first, then this inbound, the clock start when it is later than the receipt, and the reply due. A reply on that timeline, and on History, shows how long it took from the clock start. Only time inside the practice window is counted, so an evening or a weekend is not part of that figure. The reply window still lists those earlier threads above the form. The History page lists closed threads, newest sent time first, ten at a time, including a company that has nothing open. Opening a thread shows a timeline: the client email, then each reply in sent order. The client name on History and the open queue opens that client's page: every inbound and reply for that company and contact, in time order, including a row that is still open. Open queue and History are one Filament resource: `form()`, `table()`, and a relation manager for the replies that close the inbound. The open list is the panel home. Due time is calculated when that list loads. A row that is not overdue is not in the loaded set when the overdue filter is on.
 
 ```mermaid
 flowchart LR
@@ -316,7 +316,7 @@ A receipt inside the window starts the clock at the receipt. The close time is i
 
 An empty day list, a close before the open, an interval below one hour, or an unknown timezone is refused. The desk does not guess a window.
 
-Replied in still counts from the clock start, so it follows the configured window.
+Replied in still counts from the clock start, and only inside the configured window. An evening or a weekend is not part of that figure.
 
 The tests for section 5 keep passing when the config is unset. One further case sets a shorter week and a shorter interval and checks the clock start and the due time. A refused setting is tested. The showable copy uses the default.
 

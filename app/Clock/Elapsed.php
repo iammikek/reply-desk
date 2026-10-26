@@ -17,7 +17,45 @@ final class Elapsed
             return '';
         }
 
-        $diff = $start->diff($end);
+        return self::phrase($start->diff($end));
+    }
+
+    public static function open(DateTimeImmutable $start, DateTimeImmutable $end): string
+    {
+        $minutes = app(ReplyClock::class)->openMinutes($start, $end);
+
+        if ($minutes < 1) {
+            return $end < $start ? '' : 'under a minute';
+        }
+
+        $days = intdiv($minutes, 24 * 60);
+        $hours = intdiv($minutes % (24 * 60), 60);
+        $remainder = $minutes % 60;
+        $parts = [];
+
+        if ($days === 1) {
+            $parts[] = '1 day';
+        } elseif ($days > 1) {
+            $parts[] = $days.' days';
+        }
+
+        if ($hours === 1) {
+            $parts[] = '1 hour';
+        } elseif ($hours > 1) {
+            $parts[] = $hours.' hours';
+        }
+
+        if ($remainder === 1) {
+            $parts[] = '1 minute';
+        } elseif ($remainder > 1) {
+            $parts[] = $remainder.' minutes';
+        }
+
+        return implode(' ', $parts);
+    }
+
+    private static function phrase(\DateInterval $diff): string
+    {
         $parts = [];
         $days = (int) $diff->days;
 

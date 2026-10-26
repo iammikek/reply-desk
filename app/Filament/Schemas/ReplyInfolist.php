@@ -147,7 +147,8 @@ final class ReplyInfolist
             return '';
         }
 
-        $elapsed = Elapsed::between(app(ReplyClock::class)->schedule($start)->clockStart, $end);
+        $clockStart = app(ReplyClock::class)->schedule($start)->clockStart;
+        $elapsed = Elapsed::open($clockStart, $end);
 
         return $elapsed === '' ? '' : 'Replied in '.$elapsed;
     }
