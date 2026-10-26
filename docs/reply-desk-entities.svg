@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" role="img" aria-labelledby="title desc">
+  <title id="title">Reply desk records</title>
+  <desc id="desc">A company has contacts. An inbound is one message logged against one company and one contact. A draft sits on that inbound and leaves the row open. A reply closes the inbound.</desc>
+
+  <rect width="960" height="480" fill="#f7f7f4"/>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0e0e0e"/>
+    </marker>
+  </defs>
+
+  <g fill="none" stroke="#0e0e0e" stroke-width="1.5" marker-end="url(#arrow)">
+    <line x1="316" y1="80" x2="640" y2="80"/>
+    <polyline points="178,128 178,164 426,164 426,188"/>
+    <polyline points="782,128 782,164 534,164 534,188"/>
+    <polyline points="480,296 480,332 188,332 188,364"/>
+    <polyline points="480,296 480,332 772,332 772,364"/>
+  </g>
+
+  <g font-family="IBM Plex Sans, Helvetica, sans-serif" font-size="14" fill="#0e0e0e" text-anchor="middle">
+    <text x="480" y="68">has</text>
+    <text x="480" y="156">logged against</text>
+    <text x="330" y="324">one draft</text>
+    <text x="630" y="324">closes</text>
+  </g>
+
+  <g font-family="IBM Plex Sans, Helvetica, sans-serif" text-anchor="middle">
+    <rect x="48" y="40" width="260" height="88" fill="#ffffff" stroke="#0e0e0e" stroke-width="1.5"/>
+    <text x="178" y="78" font-size="20" font-weight="600" fill="#0e0e0e">Company</text>
+    <text x="178" y="104" font-size="14" fill="#3a3a3a">the directory</text>
+
+    <rect x="652" y="40" width="260" height="88" fill="#ffffff" stroke="#0e0e0e" stroke-width="1.5"/>
+    <text x="782" y="78" font-size="20" font-weight="600" fill="#0e0e0e">Contact</text>
+    <text x="782" y="104" font-size="14" fill="#3a3a3a">belongs to one company</text>
+
+    <rect x="350" y="196" width="260" height="100" fill="#ffffff" stroke="#ff4d00" stroke-width="2.5"/>
+    <text x="480" y="238" font-size="20" font-weight="600" fill="#0e0e0e">Inbound</text>
+    <text x="480" y="264" font-size="14" fill="#3a3a3a">one message, no reply yet</text>
+
+    <rect x="48" y="372" width="280" height="80" fill="#ffffff" stroke="#0e0e0e" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="188" y="406" font-size="20" font-weight="600" fill="#0e0e0e">Draft</text>
+    <text x="188" y="430" font-size="14" fill="#3a3a3a">row stays open</text>
+
+    <rect x="632" y="372" width="280" height="80" fill="#ffffff" stroke="#0e0e0e" stroke-width="1.5"/>
+    <text x="772" y="406" font-size="20" font-weight="600" fill="#0e0e0e">Reply</text>
+    <text x="772" y="430" font-size="14" fill="#3a3a3a">row leaves the queue</text>
+  </g>
+</svg>

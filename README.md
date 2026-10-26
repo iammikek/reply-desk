@@ -74,7 +74,9 @@ History lists closed threads, newest sent time first, ten at a time. A company w
 
 Companies and Contacts are Filament resources. Each reads the store that is plugged in. HubSpot supplies the rows when `REPLY_DESK_STORE` is `hubspot`. The tables below supply them when it is not. The screen is the same either way. The desk creates no company and no contact. A match that is not exactly one stops.
 
-Clock start and reply due are calculated when the page or a command runs. They are not stored.
+Clock start and reply due are calculated when the page or a command runs. They are not stored, and they are left off this diagram.
+
+![A company has contacts. An inbound is one message logged against one company and one contact. A draft sits on that inbound and leaves the row open. A reply closes the inbound.](docs/reply-desk-entities.svg)
 
 ```mermaid
 erDiagram
