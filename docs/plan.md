@@ -252,3 +252,48 @@ The V8 16:00 note `532462679236` and the Boughton 10:59 note `532027260095` are 
 The 15:43 sent note `532483362036` has the subject `Re: Access to technical textiles site`, and the filed reply is on the note. The sent time is still 23 Oct 2026 15:43. The 11:22 note `532028809439` already had that subject. The 15:44 note `532483362028` has no subject on the filed reply, so it still reads "Mike said he assumes Nick can verify this at Mailchimp".
 
 James Bakewell's acceptance is inbound note `532726657229`, received 22 Oct 2026 17:38. It is his reply to the 16:04 offer on sent note `532028309699`. The client email is "Alright, Mike. Go ahead; I'll transfer £325 this evening." No later mail has been sent, so the row stays open.
+
+## 15. Mailbox
+
+This is the design. It is not built.
+
+The desk can be the only screen for the practice, so the inbox and HubSpot do not both have to stay open. A mailbox is optional. With none configured, the current path stays. Log inbound fills the queue. A draft is only the local row. Send uses the Laravel mailer. Mark sent records a reply that already went from Mail. The showable copy and the tests never open a real mailbox.
+
+With a mailbox configured, the desk reads and writes that account over IMAP and SMTP. That is the account the mail client already uses, so a draft appears in Drafts and a sent message appears in Sent. The desk does not drive the Mail application. That application would have to stay open.
+
+```mermaid
+flowchart LR
+  inbox[Inbox]
+  desk[Reply desk]
+  drafts[Drafts folder]
+  smtp[SMTP send]
+  notes[Clock notes]
+  inbox -->|"known contact or reply"| desk
+  desk -->|"save draft"| drafts
+  desk -->|"send"| smtp
+  desk --> notes
+  smtp --> notes
+```
+
+The poll reads Inbox since the last seen message. It does not delete or move mail.
+
+A message is kept only when its From address is exactly one contact already on a company. The company match stays one match or stop. An unknown address is skipped. The desk still creates no company and no contact, and it does not match a company by domain.
+
+A reply is a message whose In-Reply-To or References contains a Message-ID this desk stored when it sent. That becomes a new inbound on that contact and starts the clock in the usual way. It does not reopen the closed note. A message from a known contact with no such reference is a fresh inbound.
+
+The receipt time is the Date header, to the minute, in Europe/London. A missing time, or a date with no time, is skipped. The desk does not invent `00:00` or `08:00`. The receipt source is `mail client`. Our own From address is ignored. A Message-ID already stored is ignored.
+
+Message-IDs live in a local table, pointed at the inbound or the sent note. They are not written into the clock note. When no mailbox is configured, the poll does nothing.
+
+Save draft still writes the local row. When a mailbox is configured, it also creates or replaces one message in Drafts and stores that identity on the draft. Discard removes that message. Closing an unchanged draft does not write it again. With no mailbox, only the local row changes.
+
+Send, when a mailbox is configured, goes out through that account, stores the Message-ID, removes the Drafts message, then writes the sent note. If the server refuses, the row stays open and both drafts stay. With no mailbox, Send stays the Laravel mailer.
+
+Mark sent stays for a reply that already left from the mail client. The poll does not read Sent and does not close a row by itself. Cursor still cannot send.
+
+Tests for this use a stand-in mailbox. No test opens a network mailbox.
+
+- No mailbox: save draft, send, and a refused send behave as they do now.
+- The poll logs a known contact, skips an unknown sender, skips a date with no time, and logs a reply to a stored Message-ID as a new inbound.
+- Save draft writes one Drafts message and replaces it. Discard removes it. An unchanged close does not write again.
+- Send removes the Drafts message and writes the sent note. A refused send leaves the row open.
