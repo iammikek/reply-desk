@@ -2,7 +2,6 @@
 
 namespace App\Filament\Tables;
 
-use App\Clock\ClockNote;
 use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
 use App\Desk\Actions\DiscardDraft;
@@ -14,12 +13,12 @@ use App\Desk\LondonTime;
 use App\Desk\Notes\NoteFile;
 use App\Desk\Queue\ListOpenReplies;
 use App\Desk\Queue\OpenReply;
+use App\Filament\MountedReply;
 use App\Filament\Resources\Inbounds\Pages\ListOpenQueue;
 use App\Filament\Schemas\AttachmentField;
 use App\Filament\Schemas\DraftForm;
 use App\Filament\Schemas\MarkSentForm;
 use App\Filament\Schemas\ReplyInfolist;
-use App\Models\Draft;
 use DateTimeImmutable;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -96,8 +95,8 @@ final class OpenRepliesTable
 
                             return $action
                                 ->close(false)
-                                ->modalHeading(fn (): ?string => self::asksToSaveDraft($action) ? 'Save this as a draft?' : null)
-                                ->modalDescription(fn (): ?string => self::asksToSaveDraft($action) ? 'The reply has not been sent.' : null)
+                                ->modalHeading(fn (): ?string => MountedReply::asksToSave($action) ? 'Save this as a draft?' : null)
+                                ->modalDescription(fn (): ?string => MountedReply::asksToSave($action) ? 'The reply has not been sent.' : null)
                                 ->modalSubmitActionLabel('Save draft')
                                 ->modalCancelAction(fn (Action $dontSave): Action => $dontSave
                                     ->label("Don't save")
@@ -105,9 +104,9 @@ final class OpenRepliesTable
                                     ->cancelParentActionsOnClose())
                                 ->cancelParentActions()
                                 ->action(function () use ($action): void {
-                                    $data = self::replyForm($action);
+                                    $data = MountedReply::form($action);
 
-                                    if (! self::asksToSaveDraft($action)) {
+                                    if (! MountedReply::asksToSave($action)) {
                                         return;
                                     }
 
@@ -116,7 +115,7 @@ final class OpenRepliesTable
 
                                     try {
                                         app(SaveDraft::class)(
-                                            self::replyRecordKey($action),
+                                            MountedReply::recordKey($action),
                                             $subject !== '' ? $subject : 'Reply',
                                             (string) ($data['body'] ?? ''),
                                         );
@@ -227,51 +226,5 @@ final class OpenRepliesTable
         $row['receipt_source'] = $reply->receiptSource === ReceiptSource::MailClient ? 'Mail client' : 'Logged';
 
         return InboundTable::withKey($row, $reply->id);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private static function replyForm(Action $action): array
-    {
-        $index = $action->getNestingIndex();
-        $parent = is_int($index) && $index > 0 ? $index - 1 : 0;
-        $data = $action->getLivewire()->mountedActions[$parent]['data'] ?? [];
-
-        return is_array($data) ? $data : [];
-    }
-
-    private static function replyMessage(Action $action): string
-    {
-        return trim((string) (self::replyForm($action)['body'] ?? ''));
-    }
-
-    private static function asksToSaveDraft(Action $action): bool
-    {
-        return self::replyMessage($action) !== '' && ! self::draftUnchanged($action);
-    }
-
-    private static function draftUnchanged(Action $action): bool
-    {
-        $draft = Draft::query()->where(Draft::forInbound(self::replyRecordKey($action)))->first();
-
-        if (! $draft instanceof Draft) {
-            return false;
-        }
-
-        $data = self::replyForm($action);
-        $subject = trim((string) ($data['subject'] ?? ''));
-        $body = ClockNote::pasted((string) ($data['body'] ?? ''));
-
-        return $subject === $draft->subject && $body === $draft->body;
-    }
-
-    private static function replyRecordKey(Action $action): string
-    {
-        $index = $action->getNestingIndex();
-        $parent = is_int($index) && $index > 0 ? $index - 1 : 0;
-        $context = $action->getLivewire()->mountedActions[$parent]['context'] ?? [];
-
-        return (string) (is_array($context) ? ($context['recordKey'] ?? '') : '');
     }
 }

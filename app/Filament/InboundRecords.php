@@ -7,6 +7,9 @@ use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
 use App\Clock\ReplyClock;
 use App\Desk\Notes\NoteStore;
+use App\Models\Company;
+use App\Models\Contact;
+use App\Models\Email;
 use DateTimeZone;
 use Filament\Support\ArrayRecord;
 
@@ -43,6 +46,42 @@ final class InboundRecords
         }
 
         return null;
+    }
+
+    public static function model(string $id): ?Email
+    {
+        $row = self::find($id);
+
+        if ($row === null) {
+            return null;
+        }
+
+        if (config('reply-desk.store') !== 'hubspot') {
+            $email = Email::query()->with(['company', 'contact'])->find($id);
+
+            if ($email instanceof Email) {
+                return $email;
+            }
+        }
+
+        $email = new Email([
+            'summary' => $row['summary'],
+            'subject' => $row['subject'] !== '' ? $row['subject'] : null,
+            'body' => $row['body'],
+            'at' => $row['at'],
+            'company_id' => $row['company_id'],
+            'contact_id' => $row['contact_id'],
+            'direction' => 'inbound',
+        ]);
+        $email->setAttribute('id', $row['id']);
+        $email->setRelation('company', new Company(['name' => $row['company']]));
+        $email->setRelation('contact', new Contact([
+            'name' => $row['contact'],
+            'email' => $row['email'],
+            'company_id' => $row['company_id'],
+        ]));
+
+        return $email;
     }
 
     /**

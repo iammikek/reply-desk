@@ -3,6 +3,8 @@
 namespace App\Filament;
 
 use App\Desk\Notes\NoteStore;
+use App\Models\Company;
+use App\Models\Contact;
 
 final class DirectoryRecords
 {
@@ -66,5 +68,56 @@ final class DirectoryRecords
         }
 
         return null;
+    }
+
+    public static function companyModel(string $id): ?Company
+    {
+        $row = self::company($id);
+
+        if ($row === null) {
+            return null;
+        }
+
+        if (config('reply-desk.store') !== 'hubspot') {
+            $company = Company::query()->find($id);
+
+            if ($company instanceof Company) {
+                return $company;
+            }
+        }
+
+        $company = new Company(['name' => $row['name']]);
+        $company->setAttribute('id', $row['id']);
+
+        return $company;
+    }
+
+    public static function contactModel(string $id): ?Contact
+    {
+        $row = self::contact($id);
+
+        if ($row === null) {
+            return null;
+        }
+
+        if (config('reply-desk.store') !== 'hubspot') {
+            $contact = Contact::query()->find($id);
+
+            if ($contact instanceof Contact) {
+                $contact->load('company');
+
+                return $contact;
+            }
+        }
+
+        $contact = new Contact([
+            'name' => $row['name'],
+            'email' => $row['email'],
+            'company_id' => $row['company_id'],
+        ]);
+        $contact->setAttribute('id', $row['id']);
+        $contact->setRelation('company', new Company(['name' => $row['company']]));
+
+        return $contact;
     }
 }

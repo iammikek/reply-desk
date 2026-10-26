@@ -106,6 +106,10 @@ class InboundResource extends Resource
         ];
     }
 
+    /**
+     * The open queue is the panel home. The paths are /, /history, and
+     * /inbounds/{record}. The resource slug would prefix all three.
+     */
     public static function registerRoutes(Panel $panel, ?Closure $registerPageRoutes = null, ?ResourceConfiguration $configuration = null): void
     {
         if ($registerPageRoutes !== null || $configuration !== null) {
