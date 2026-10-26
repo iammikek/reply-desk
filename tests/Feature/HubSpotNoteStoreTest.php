@@ -12,6 +12,7 @@ use App\Desk\Queue\ListOpenReplies;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
@@ -823,6 +824,71 @@ it('drops a pending note after fifteen minutes', function () {
     Cache::forget('reply-desk.notes.100000001');
 
     expect(collect(app(HubSpotNoteStore::class)->notes())->pluck('id')->all())->toBe(['55']);
+});
+
+it('does not create a company when the portal does not match', function () {
+    Http::fake([
+        'https://api.hubapi.com/account-info/v3/details' => Http::response(['portalId' => 999]),
+    ]);
+
+    expect(fn () => app(HubSpotNoteStore::class)->createCompany('West Quay'))
+        ->toThrow(DeskException::class, 'does not match');
+
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/crm/'));
+});
+
+it('creates a company and a contact on HubSpot and not in the local tables', function () {
+    Http::fake(function (Request $request) {
+        $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
+        $method = $request->method();
+
+        if (str_contains($path, 'account-info')) {
+            return Http::response(['portalId' => 100000001]);
+        }
+
+        if ($method === 'POST' && str_ends_with($path, '/companies/search')) {
+            return Http::response(['results' => []]);
+        }
+
+        if ($method === 'POST' && str_ends_with($path, '/contacts/search')) {
+            return Http::response(['results' => []]);
+        }
+
+        if ($method === 'POST' && str_ends_with($path, '/companies')) {
+            return Http::response(['id' => '77'], 201);
+        }
+
+        if ($method === 'POST' && str_ends_with($path, '/contacts')) {
+            return Http::response(['id' => '88'], 201);
+        }
+
+        if ($method === 'PUT' && str_contains($path, '/associations/default/company/10')) {
+            return Http::response('', 204);
+        }
+
+        return Http::response('unexpected '.$path, 500);
+    });
+
+    $store = app(HubSpotNoteStore::class);
+    $company = $store->createCompany('West Quay');
+    $contact = $store->createContact('10', 'Bea Quay', 'Bea@West.example');
+
+    expect($company->id)->toBe('77')
+        ->and($company->name)->toBe('West Quay')
+        ->and($contact->id)->toBe('88')
+        ->and($contact->email)->toBe('bea@west.example')
+        ->and(DB::table('companies')->count())->toBe(0)
+        ->and(DB::table('contacts')->count())->toBe(0);
+
+    Http::assertSent(function (Request $request): bool {
+        $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
+
+        return $request->method() === 'POST'
+            && str_ends_with($path, '/contacts')
+            && ($request['properties']['firstname'] ?? null) === 'Bea'
+            && ($request['properties']['lastname'] ?? null) === 'Quay'
+            && ($request['properties']['email'] ?? null) === 'bea@west.example';
+    });
 });
 
 /**

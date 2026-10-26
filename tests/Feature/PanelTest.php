@@ -14,25 +14,13 @@ it('shows the reply desk login', function () {
         ->assertSee('A file stays on that email.')
         ->assertSee('Closed threads stay on History.')
         ->assertSee('Read the case study')
-        ->assertSee('/case-study', false)
+        ->assertSee('https://automica.io/reply-desk', false)
+        ->assertDontSee('/case-study', false)
         ->assertSee('Sign in');
 });
 
-it('shows the case study without signing in', function () {
-    $this->get('/case-study')
-        ->assertSuccessful()
-        ->assertSee('Why this desk exists')
-        ->assertSee('Due time is calculated when the page is opened')
-        ->assertSee('Send delivers the reply and keeps the paste')
-        ->assertSee('the name of a file opens it')
-        ->assertSee('Cursor cannot send.')
-        ->assertSee('Open queue')
-        ->assertSee('Companies and contacts')
-        ->assertSee('the screen is the same with HubSpot or with the local tables')
-        ->assertSee('a relation manager for the replies')
-        ->assertSee('The same actions from Cursor')
-        ->assertDontSee('Dashboard')
-        ->assertDontSee('fi-sidebar', false);
+it('leaves the in-app case study', function () {
+    $this->get('/case-study')->assertNotFound();
 });
 
 it('shows the seeded user after sign-in', function () {

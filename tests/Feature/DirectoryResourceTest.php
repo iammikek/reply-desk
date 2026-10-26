@@ -9,6 +9,7 @@ use App\Filament\Resources\Contacts\ContactResource;
 use App\Filament\Resources\Contacts\Pages\ListContacts;
 use App\Filament\Resources\Contacts\Pages\ViewContact;
 use App\Models\Company;
+use App\Models\Contact;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -93,4 +94,48 @@ it('reads HubSpot companies without writing a local company', function () {
     expect($tables)->not->toContain('companies')
         ->and($tables)->not->toContain('contacts')
         ->and(Company::query()->where('name', 'Spectra Stand-in')->exists())->toBeFalse();
+});
+
+it('adds a company and a contact on the local directory', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(ListCompanies::class)
+        ->callAction('createCompany', ['name' => 'West Quay'])
+        ->assertNotified('Company added')
+        ->assertSee('West Quay');
+
+    $companyId = (string) Company::query()->where('name', 'West Quay')->value('id');
+
+    Livewire::test(ListContacts::class)
+        ->callAction('createContact', [
+            'company_id' => $companyId,
+            'name' => 'Bea Quay',
+            'email' => 'Bea@West.example',
+        ])
+        ->assertNotified('Contact added')
+        ->assertSee('Bea Quay')
+        ->assertSee('bea@west.example');
+
+    Livewire::test(ViewCompany::class, ['record' => '10'])
+        ->callAction('createContact', [
+            'name' => 'Ida North',
+            'email' => 'ida@northwharf.example',
+        ])
+        ->assertNotified('Contact added');
+
+    Livewire::test(ViewCompany::class, ['record' => '10'])
+        ->assertSee('Ida North')
+        ->assertSee('ida@northwharf.example');
+
+    expect(Contact::query()->where('email', 'bea@west.example')->value('name'))->toBe('Bea Quay');
+});
+
+it('refuses a company name that is already there', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(ListCompanies::class)
+        ->callAction('createCompany', ['name' => 'Northwharf Bakery'])
+        ->assertNotified('That company is already there.');
+
+    expect(Company::query()->where('name', 'Northwharf Bakery')->count())->toBe(1);
 });

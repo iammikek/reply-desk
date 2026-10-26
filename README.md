@@ -10,7 +10,7 @@ The person who answers the mail opens that queue and sees who is waiting, and wh
 
 The client receives the reply inside the window the practice set. A practice that answers inside that window keeps the next instruction. A late reply shows on the queue while there is still time to send it. The time saved is the time that used to go on working out who was waiting.
 
-Filament is the screen. Companies and contacts come from HubSpot, or from local stand-in tables when HubSpot is not connected. On the live desk, what arrived and what was sent is stored as a HubSpot note. The copy that can be shown uses those local tables, with no token and no real names.
+Filament is the screen. Companies and contacts are read from HubSpot, or from local tables when HubSpot is not connected. The desk can add a company or a contact. When HubSpot is connected, that write goes to HubSpot. Otherwise it is stored in the local tables. A search that is not exactly one match stops. On the live desk, what arrived and what was sent is stored as a HubSpot note. The seeded copy uses the local tables.
 
 [![Tests](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml/badge.svg)](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml)
 
@@ -57,10 +57,10 @@ docker run --rm \
 
 ## Where the panel lives
 
-The site is the Filament panel. Sign-in is at `/login`. A case study at `/case-study` explains why the desk is useful, and lists the features. It is open without a sign-in.
+The site is the Filament panel. Sign-in is at `/login`. The case study is [automica.io/reply-desk](https://automica.io/reply-desk).
 
-- `app/Filament/Resources/Companies/CompanyResource.php` lists companies. The page reads HubSpot or the local `companies` table, whichever store is plugged in. It has `form()`, `table()`, and a contacts relation manager. There is no create and no edit.
-- `app/Filament/Resources/Contacts/ContactResource.php` lists contacts from that same directory
+- `app/Filament/Resources/Companies/CompanyResource.php` lists companies. The page reads HubSpot or the local `companies` table, whichever store is plugged in. New company adds a company on that store. A company page lists the contacts on that company, and New contact adds one. There is no edit.
+- `app/Filament/Resources/Contacts/ContactResource.php` lists contacts from that same directory. New contact adds a name and an email on one company.
 - `app/Filament/Resources/Inbounds/InboundResource.php` is the open queue and History. It has `form()`, `table()`, and a replies relation manager. The open list is the panel home. There is no create and no edit.
 - `app/Filament/Tables/OpenRepliesTable.php` is the open table, the overdue filter, and the row actions
 - `app/Filament/Widgets/OpenQueueOverview.php` counts open and overdue rows
@@ -72,7 +72,7 @@ History lists closed threads, newest sent time first, ten at a time. A company w
 
 ## Local record
 
-Companies and Contacts are Filament resources. Each reads the store that is plugged in. HubSpot supplies the rows when `REPLY_DESK_STORE` is `hubspot`. The tables below supply them when it is not. The screen is the same either way. The desk creates no company and no contact. A match that is not exactly one stops.
+Companies and Contacts are Filament resources. Each reads the store that is plugged in. HubSpot supplies the rows when `REPLY_DESK_STORE` is `hubspot`. The tables below supply them when it is not. The screen is the same either way. New company and New contact write to that same store. A search that is not exactly one match stops.
 
 Clock start and reply due are calculated when the page or a command runs. They are not stored, and they are left off this diagram.
 

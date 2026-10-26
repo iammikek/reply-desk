@@ -8,7 +8,7 @@
         <li>Send the reply from here, or mark it sent after it goes from Mail. A file stays on that email.</li>
         <li>Closed threads stay on History.</li>
     </ul>
-    <p class="reply-desk-explainer-more"><a href="{{ route('filament.reply-desk.pages.case-study') }}">Read the case study</a></p>
+    <p class="reply-desk-explainer-more"><a href="https://automica.io/reply-desk" target="_blank" rel="noopener noreferrer">Read the case study</a></p>
 </section>
 
 <style>

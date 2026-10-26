@@ -90,6 +90,69 @@ final class DatabaseNoteStore implements NoteStore
         return $this->contactParty($rows->first());
     }
 
+    public function createCompany(string $name): Party
+    {
+        $name = trim($name);
+
+        if ($name === '') {
+            throw new DeskException('A company is required.');
+        }
+
+        $existing = Company::query()->where('name', $name)->orderBy('id')->get();
+
+        if ($existing->count() > 1) {
+            throw new DeskException('More than one company matched ('.$existing->pluck('id')->implode(', ').'). Stop and choose one.');
+        }
+
+        if ($existing->count() === 1) {
+            throw new DeskException('That company is already there.');
+        }
+
+        try {
+            $company = Company::query()->create(['name' => $name]);
+        } catch (QueryException) {
+            throw new DeskException('That company is already there.');
+        }
+
+        return $this->companyParty($company);
+    }
+
+    public function createContact(string $companyId, string $name, string $email): Party
+    {
+        $name = trim($name);
+        $email = strtolower(trim($email));
+
+        if ($name === '') {
+            throw new DeskException('A contact is required.');
+        }
+
+        if ($email === '' || ! str_contains($email, '@')) {
+            throw new DeskException('A contact needs an email address.');
+        }
+
+        $company = $this->company($companyId);
+        $existing = Contact::query()->where('email', $email)->orderBy('id')->get();
+
+        if ($existing->count() > 1) {
+            throw new DeskException('More than one contact matched ('.$existing->pluck('id')->implode(', ').'). Stop and choose one.');
+        }
+
+        if ($existing->count() === 1) {
+            throw new DeskException('That contact is already there.');
+        }
+
+        try {
+            $contact = $company->contacts()->create([
+                'name' => $name,
+                'email' => $email,
+            ]);
+        } catch (QueryException) {
+            throw new DeskException('That contact is already there.');
+        }
+
+        return $this->contactParty($contact);
+    }
+
     public function writeNote(string $body, string $companyId, string $contactId, ?NoteFile $file = null): string
     {
         $company = $this->company($companyId);

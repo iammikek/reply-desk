@@ -158,6 +158,114 @@ final class HubSpotNoteStore implements NoteStore
         );
     }
 
+    public function createCompany(string $name): Party
+    {
+        $name = trim($name);
+
+        if ($name === '') {
+            throw new DeskException('A company is required.');
+        }
+
+        $this->assertPortal();
+        $results = $this->companyResults('EQ', [$name]);
+
+        if (count($results) > 1) {
+            $this->one($results, 'company');
+        }
+
+        if ($results !== []) {
+            throw new DeskException('That company is already there.');
+        }
+
+        $created = $this->send('POST', '/crm/objects/2026-03/companies', [
+            'properties' => ['name' => $name],
+        ]);
+        $id = (string) ($created['id'] ?? '');
+
+        if ($id === '') {
+            throw new DeskException('HubSpot did not return a company id.');
+        }
+
+        Cache::forget($this->directoryCacheKey());
+
+        return new Party($id, $name);
+    }
+
+    public function createContact(string $companyId, string $name, string $email): Party
+    {
+        $companyId = trim($companyId);
+        $name = trim($name);
+        $email = strtolower(trim($email));
+
+        if ($companyId === '') {
+            throw new DeskException('A company is required.');
+        }
+
+        if ($name === '') {
+            throw new DeskException('A contact is required.');
+        }
+
+        if ($email === '' || ! str_contains($email, '@')) {
+            throw new DeskException('A contact needs an email address.');
+        }
+
+        $this->assertPortal();
+        $found = $this->send('POST', '/crm/objects/2026-03/contacts/search', [
+            'filterGroups' => [[
+                'filters' => [[
+                    'propertyName' => 'email',
+                    'operator' => 'EQ',
+                    'value' => $email,
+                ]],
+            ]],
+            'properties' => ['email'],
+            'limit' => 10,
+        ]);
+        $results = $found['results'] ?? [];
+
+        if (count($results) > 1) {
+            $this->one($results, 'contact');
+        }
+
+        if ($results !== []) {
+            throw new DeskException('That contact is already there.');
+        }
+
+        [$firstName, $lastName] = $this->personName($name);
+        $properties = [
+            'email' => $email,
+            'firstname' => $firstName,
+        ];
+
+        if ($lastName !== '') {
+            $properties['lastname'] = $lastName;
+        }
+
+        $created = $this->send('POST', '/crm/objects/2026-03/contacts', [
+            'properties' => $properties,
+        ]);
+        $id = (string) ($created['id'] ?? '');
+
+        if ($id === '') {
+            throw new DeskException('HubSpot did not return a contact id.');
+        }
+
+        $this->send('PUT', "/crm/objects/2026-03/contact/{$id}/associations/default/company/{$companyId}");
+        Cache::forget($this->directoryCacheKey());
+
+        return new Party($id, $name, $email);
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function personName(string $name): array
+    {
+        $parts = explode(' ', $name, 2);
+
+        return [$parts[0], $parts[1] ?? ''];
+    }
+
     public function writeNote(string $body, string $companyId, string $contactId, ?NoteFile $file = null): string
     {
         $this->assertPortal();

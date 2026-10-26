@@ -10,6 +10,10 @@ interface NoteStore
 
     public function findContact(string $email): Party;
 
+    public function createCompany(string $name): Party;
+
+    public function createContact(string $companyId, string $name, string $email): Party;
+
     public function writeNote(string $body, string $companyId, string $contactId, ?NoteFile $file = null): string;
 
     public function attachmentFor(string $noteId): ?NoteAttachment;
