@@ -86,7 +86,7 @@ These tables are the record when HubSpot is not plugged in. When it is plugged i
 | summary | The queue line for an inbound. A few sentences, no time |
 | body | The message as pasted |
 | at | Receipt time, or the time the reply was sent, Europe/London |
-| receipt_source | `mail client` or `logged` on an inbound. Empty on an outbound |
+| receipt_source | `mail client`, `logged`, or `whatsapp` on an inbound. Empty on an outbound |
 | closes_id | The inbound this outbound closes. Empty when Mike wrote first |
 
 A second outbound at a different minute may close the same inbound. The same sent minute on that inbound is refused. An outbound with an empty `closes_id` is a first write or a later write with no new inbound. The queue line for that row stays Outreach started or Follow-up sent. Clock start and reply due are not stored.
@@ -128,7 +128,7 @@ Receipt source: mail client
 Summary: Which PHP to use
 ```
 
-`Receipt source` is `mail client` or `logged`. `logged` means the receipt time was not on the mail, and the time it was brought into the desk was used. Summary is one line.
+`Receipt source` is `mail client`, `logged`, or `whatsapp`. `logged` means the receipt time was not on the mail, and the time it was brought into the desk was used. `whatsapp` means the message was pasted from WhatsApp. The desk does not connect to WhatsApp. Summary is one line.
 
 Sent:
 

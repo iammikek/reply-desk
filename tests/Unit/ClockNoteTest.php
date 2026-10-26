@@ -44,6 +44,17 @@ it('ignores a note that only mentions the clock in prose', function () {
     expect(ClockNote::parse("The clock starts when the mail arrives.\nCloses: 1"))->toBeNull();
 });
 
+it('writes a pasted WhatsApp message that parses back', function () {
+    $receipt = new DateTimeImmutable('2026-10-26 11:15', new DateTimeZone('Europe/London'));
+    $body = ClockNote::inbound($receipt, ReceiptSource::WhatsApp, 'The form can come off');
+    $parsed = ClockNote::parse($body);
+
+    expect($parsed)->toBeInstanceOf(ParsedInbound::class)
+        ->and($parsed->receiptSource)->toBe(ReceiptSource::WhatsApp)
+        ->and($parsed->receiptSource->label())->toBe('WhatsApp')
+        ->and($body)->toContain('Receipt source: whatsapp');
+});
+
 it('writes an inbound note that parses back', function () {
     $receipt = new DateTimeImmutable('2026-10-22 10:42', new DateTimeZone('Europe/London'));
     $body = ClockNote::inbound($receipt, ReceiptSource::MailClient, 'Which PHP to use');

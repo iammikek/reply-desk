@@ -42,10 +42,7 @@ final class LogInboundForm
                 ->required(),
             Radio::make('receipt_source')
                 ->label('Receipt source')
-                ->options([
-                    ReceiptSource::MailClient->value => 'Mail client',
-                    ReceiptSource::Logged->value => 'Logged',
-                ])
+                ->options(ReceiptSource::options())
                 ->inline()
                 ->required(),
             TextInput::make('subject')

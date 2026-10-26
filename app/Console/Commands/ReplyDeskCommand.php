@@ -39,6 +39,6 @@ abstract class ReplyDeskCommand extends Command
 
     protected function source(string $value): ReceiptSource
     {
-        return ReceiptSource::tryFrom($value) ?? throw new DeskException('Receipt source must be "mail client" or "logged".');
+        return ReceiptSource::tryFrom($value) ?? throw new DeskException('Receipt source must be "mail client", "logged", or "whatsapp".');
     }
 }

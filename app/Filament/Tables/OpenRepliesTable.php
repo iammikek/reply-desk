@@ -2,7 +2,6 @@
 
 namespace App\Filament\Tables;
 
-use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
 use App\Desk\Actions\DiscardDraft;
 use App\Desk\Actions\MarkReplySent;
@@ -223,7 +222,7 @@ final class OpenRepliesTable
     private static function record(OpenReply $reply, DateTimeImmutable $now): array
     {
         $row = $reply->toArray($now);
-        $row['receipt_source'] = $reply->receiptSource === ReceiptSource::MailClient ? 'Mail client' : 'Logged';
+        $row['receipt_source'] = $reply->receiptSource->label();
 
         return InboundTable::withKey($row, $reply->id);
     }

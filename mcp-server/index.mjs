@@ -113,12 +113,12 @@ server.registerTool(
     'log_inbound',
     {
         description:
-            'Record one inbound client email as a clock note. Use a company name and contact email from list_companies. Receipt source is "mail client" or "logged". This does not send mail.',
+            'Record one inbound client message as a clock note. Use a company name and contact email from list_companies. Receipt source is "mail client", "logged", or "whatsapp". WhatsApp is a pasted message. This does not connect to WhatsApp and it does not send mail.',
         inputSchema: {
             company: z.string().describe('Company name from list_companies.'),
             email: z.string().describe('Contact email from list_companies.'),
             receipt: z.string().describe('When the email arrived, Y-m-d H:i Europe/London.'),
-            source: z.enum(['mail client', 'logged']).describe('Where the receipt time came from.'),
+            source: z.enum(['mail client', 'logged', 'whatsapp']).describe('Where the message came from. whatsapp is a pasted WhatsApp message.'),
             summary: z.string().describe('One line describing the email.'),
             client: z.string().describe('The client email, pasted from Mail.'),
         },
