@@ -4,13 +4,13 @@ Reply desk is the queue for a practice's client email. It shows who is waiting f
 
 Case study: [automica.io/reply-desk](https://automica.io/reply-desk)
 
-A client email starts a clock. The reply is due 24 hours after the clock starts. From Monday to Friday, 08:00 to 20:00 Europe/London, the clock starts when the email arrives. Mail that arrives in the evening or at the weekend starts at 08:00 on the next working morning, so overnight waiting is not counted as time the practice had to answer. The due time is calculated when the queue is opened. It is not stored, so an old reading cannot linger.
+A client email starts a clock. This practice is due to reply 24 hours after the clock starts. The person using the desk can set a different interval. The practice window is Monday to Friday, 08:00 to 20:00 Europe/London. Inside that window, the clock starts when the email arrives. Mail that arrives in the evening or at the weekend starts at 08:00 on the next working morning, so overnight waiting is not counted as time the practice had to answer. The due time is calculated when the queue is opened. It is not stored, so an old reading cannot linger.
 
 The reply is sent from this screen, or sent from Mail and then marked sent here. A draft can sit on the row while the reply is written. The draft does not stop the clock. Sending, or marking sent, takes the row off the queue. What has already been answered stays on History, each message in the order it was sent.
 
 The person who answers the mail opens that queue and sees who is waiting, and whether the reply is late on the practice's own clock. They write on the row. The next time they open that client, the last answer is already on History.
 
-The client receives the reply inside the window the practice set. A practice that answers inside that window keeps the next instruction. A late reply shows on the queue while there is still time to send it. The time saved is the time that used to go on working out who was waiting.
+The client receives the reply within the 24 hours this practice set. A practice that answers in its own time keeps the next instruction. A late reply is late on that clock, and it shows on the queue while there is still time to send it. The time saved is the time that used to go on working out who was waiting.
 
 Filament is the screen. Companies and contacts are read from HubSpot, or from local tables when HubSpot is not connected. The desk can add a company or a contact. When HubSpot is connected, that write goes to HubSpot. Otherwise it is stored in the local tables. A search that is not exactly one match stops. On the live desk, what arrived and what was sent is stored as a HubSpot note. The seeded copy uses the local tables.
 
@@ -19,13 +19,13 @@ Filament is the screen. Companies and contacts are read from HubSpot, or from lo
 ## Contents
 
 - [What the queue shows](#what-the-queue-shows)
-- [Run the showable copy](#run-the-showable-copy)
+- [Run the desk](#run-the-desk)
 - [Where the panel lives](#where-the-panel-lives)
 - [Local record](#local-record)
 - [Persistent database](#persistent-database)
 - [Live desk](#live-desk)
 - [Commands](#commands)
-- [Cursor](#cursor)
+- [MCP](#mcp)
 - [Tests](#tests)
 
 ## What the queue shows
@@ -39,15 +39,15 @@ Each open row is one client email, stored as an inbound clock note, with no repl
 - Reply due
 - A draft, when one is saved
 
-Due time is calculated when the page or a command runs. It is not stored. Monday to Friday, 08:00 to 20:00 Europe/London, the clock starts at receipt and the reply is due 24 hours later. Outside that window, including the weekend, the clock starts at 08:00 on the next working day.
+Due time is calculated when the page or a command runs. It is not stored. This practice is due to reply 24 hours after the clock starts. The person using the desk can set a different interval. The practice window is Monday to Friday, 08:00 to 20:00 Europe/London. Inside that window, the clock starts at receipt. Outside it, including the weekend, the clock starts at 08:00 on the next working day.
 
 The desk can send a reply. Mark sent records a reply that already went from Mail. A draft does not stop the clock.
 
-Seed the showable copy with `./vendor/bin/sail artisan db:seed` while `REPLY_DESK_STORE` is `memory`. The command refuses to run when the store is HubSpot. The seed loads two stand-in companies, one overdue row and one open row, and a draft on the overdue row.
+Seed the desk with `./vendor/bin/sail artisan db:seed` while `REPLY_DESK_STORE` is `memory`. The command refuses to run when the store is HubSpot. The seed loads three stand-in companies: one overdue row, one open row, a draft on the overdue row, and one closed thread.
 
 Tests are `./vendor/bin/sail composer test`, in the Tests section below.
 
-## Run the showable copy
+## Run the desk
 
 Sail runs the desk in Docker, on PHP 8.4. The database is MySQL in that same Compose file. The container sets `REPLY_DESK_STORE=memory`, so the copy needs no HubSpot token and no real names. Docker has to be running. PHP does not need to be installed on the host.
 
@@ -150,7 +150,7 @@ The memory store reads and writes these tables. `fake_parties` and `fake_notes` 
 
 Login, sessions, and the company-list cache are Laravel tables. The local record above is the companies, contacts, emails, drafts, and attachments. With HubSpot plugged in, companies, contacts, and clock notes stay in HubSpot, and a draft keeps the HubSpot note id.
 
-The showable copy keeps those Laravel tables in MySQL. The Compose file starts that server and sets these values on the app container, matching `.env.example`:
+The desk keeps those Laravel tables in MySQL. The Compose file starts that server and sets these values on the app container, matching `.env.example`:
 
 ```
 DB_CONNECTION=mysql
@@ -163,7 +163,7 @@ DB_PASSWORD=password
 
 `DB_HOST` is the Compose service name. From a client on the host, the published port is 3306. `./vendor/bin/sail artisan migrate` creates the tables. Do not commit `.env`.
 
-Leave this in `.env` for the showable copy:
+Leave this in `.env` when running the desk:
 
 ```
 REPLY_DESK_STORE=memory
@@ -173,7 +173,35 @@ REPLY_DESK_STORE=memory
 
 Set `REPLY_DESK_STORE=hubspot`, `HUBSPOT_ACCESS_TOKEN`, and `HUBSPOT_PORTAL_ID`. A write stops unless the token's portal matches `HUBSPOT_PORTAL_ID`. The token stays in `.env` and is never printed.
 
-`./vendor/bin/sail artisan reply:backfill {path}` prints the open rows and the sent rows. A sent row is an inbound note plus the sent note that closes it. A row with no clock time, or no email address, is skipped. A Client email or Reply link is copied onto the note, and an unsent reply becomes the draft, so the queue can be read away from the files. It writes only with `--write`, and only when the store is HubSpot and a portal id is set.
+`./vendor/bin/sail artisan reply:backfill {path}` prints the open rows and the sent rows. A sent row is an inbound note plus the sent note that closes it. A row with no clock time, or no email address, is skipped. A date with no time is skipped. The desk does not invent a time. A Client email or Reply link is copied onto the note, and an unsent reply becomes the draft, so the queue can be read away from the files. It writes only with `--write`, and only when the store is HubSpot and a portal id is set.
+
+The file has an Open table and a Sent table. Client is the company and the contact. Inbound starts with the receipt, then the summary. Reply sent stays empty while the row is open. The address sits in Attachment. A link labelled Client email or Reply is a file beside the table.
+
+```markdown
+# Communications
+
+## Open
+
+| Client | Inbound | Clock start | Reply due | Reply sent | Attachment |
+| --- | --- | --- | --- | --- | --- |
+| Northwharf Bakery / Ada North | 20 Oct 2026 10:00. Which PHP to use. | 20 Oct 2026 10:00 | 21 Oct 2026 10:00 |  | [Client email](./emails/ada.md). [Reply](./emails/ada-draft.md). ada@northwharf.example |
+
+## Sent
+
+| Client | Inbound | Clock start | Reply due | Reply sent | Attachment |
+| --- | --- | --- | --- | --- | --- |
+| Harbour Cafe / Ned Shore | 22 Oct 2026 11:00. Menu for the weekend. | 22 Oct 2026 11:00 | 23 Oct 2026 11:00 | 22 Oct 2026 16:00 | [Reply](./emails/ned-reply.md). Subject Weekend menu. ned@harbour.example |
+```
+
+A linked reply names the subject, then the body:
+
+```markdown
+**Subject:** Weekend menu
+
+## Body
+
+The Saturday menu can go out on Friday.
+```
 
 ## Commands
 
@@ -191,11 +219,11 @@ The same actions the panel uses:
 
 `receipt`, `sent`, and `--now` are `Y-m-d H:i` in Europe/London. `source` is `mail client`, `logged`, or `whatsapp`.
 
-## Cursor
+## MCP
 
-The panel on port 8000 does not expose the MCP. Cursor starts the stdio process itself. A copy already running from `npm run mcp` in a terminal cannot be attached.
+The panel on port 8000 does not expose the MCP. The client starts the stdio process itself. A copy already running from `npm run mcp` in a terminal cannot be attached.
 
-Add `reply-desk` inside `mcpServers` in `~/.cursor/mcp.json`. The entry has to sit inside that object. Pasting it after the closing brace leaves the file invalid and Cursor will not load the server.
+Cursor and Claude load the same `reply-desk` entry inside `mcpServers`. Each client keeps that object in its own MCP configuration. The entry has to sit inside that object. Pasting it after the closing brace leaves the file invalid and the client will not load the server.
 
 ```json
 "reply-desk": {
@@ -209,11 +237,9 @@ Add `reply-desk` inside `mcpServers` in `~/.cursor/mcp.json`. The entry has to s
 }
 ```
 
-The panel runs in Docker. These tools call `php artisan` on the machine that starts Cursor. Set `PHP_BINARY` when that binary is not on `PATH`. The process reads the HubSpot token from this project's `.env`. The token does not go in `mcp.json`.
+The panel runs in Docker. These tools call `php artisan` on the machine that starts the client. Set `PHP_BINARY` when that binary is not on `PATH`. The process reads the HubSpot token from this project's `.env`. The token does not go in the MCP configuration.
 
-Open the Agents sidebar, the one that lists chats. **Customize** is under that list. It is not in the file explorer. Open **Customize**, then **MCPs**, and turn **reply-desk** on. If that sidebar is hidden, press **Cmd+Shift+J** and open MCP from Cursor Settings. When the tools appear, start a new Agent chat.
-
-Ask in plain language, for example "list the open replies". Cursor calls the tool and asks for approval. The tools are `list_companies`, `list_open_replies`, `list_closed_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. `list_companies` is the cached company and contact list. `log_inbound` records a client email against one of those contacts. There is no send tool. The process shells to the Artisan commands. It does not talk to HubSpot itself.
+Ask in plain language, for example "list the open replies". The client calls the tool and asks for approval. The tools are `list_companies`, `list_open_replies`, `list_closed_replies`, `log_inbound`, `save_draft`, `discard_draft`, and `mark_reply_sent`. `list_companies` is the cached company and contact list. `log_inbound` records a client email against one of those contacts. There is no send tool. The process shells to the Artisan commands. It does not talk to HubSpot itself.
 
 ## Tests
 
