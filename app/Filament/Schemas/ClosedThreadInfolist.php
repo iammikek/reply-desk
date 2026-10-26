@@ -44,10 +44,12 @@ final class ClosedThreadInfolist
                 continue;
             }
 
+            $sent = (string) ($reply['sent'] ?? '');
             $events[] = [
-                'at' => (string) ($reply['sent'] ?? ''),
+                'at' => $sent,
                 'kind' => 'Reply',
                 'title' => (string) ($reply['subject'] ?? ''),
+                'detail' => ReplyInfolist::repliedIn((string) ($record['inbound'] ?? ''), $sent),
                 'body' => (string) ($reply['body'] ?? ''),
                 'attachment' => (string) ($reply['attachment'] ?? ''),
                 'note_id' => (string) ($reply['note_id'] ?? ''),

@@ -3,48 +3,31 @@
 namespace App\Filament\Schemas;
 
 use App\Clock\ClockNote;
-use Filament\Infolists\Components\TextEntry;
+use App\Clock\Elapsed;
+use App\Clock\ReplyClock;
+use DateTimeImmutable;
+use DateTimeZone;
+use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\View;
 
 final class ReplyInfolist
 {
     /**
      * @param  array<string, mixed>  $record
-     * @return array<int, TextEntry>
+     * @return array<int, Component>
      */
     public static function forRecord(array $record): array
     {
-        $entries = [
-            self::entry('client', 'Client', $record),
-            self::entry('contact_email', 'Contact email', $record),
-            self::entry('receipt_source', 'Receipt source', $record),
-            self::entry('inbound', 'Inbound', $record),
-            self::entry('clock_start', 'Clock start', $record),
-            self::entry('reply_due', 'Reply due', $record),
-            self::entry('id', 'Note', $record),
-            self::entry('summary', preg_match('/^Subject: /m', (string) ($record['body'] ?? '')) === 1 ? 'Subject' : 'Summary', $record),
+        return [
+            View::make('filament.thread-timeline')
+                ->viewData([
+                    'client' => (string) ($record['client'] ?? ''),
+                    'email' => (string) ($record['contact_email'] ?? ''),
+                    'note' => (string) ($record['id'] ?? ''),
+                    'events' => self::events($record),
+                ])
+                ->columnSpanFull(),
         ];
-
-        $mail = ClockNote::correspondence((string) ($record['body'] ?? ''));
-
-        if ($mail['client'] !== '') {
-            $entries[] = self::mail('client_email_text', 'Client email', $mail['client']);
-        }
-
-        if ($mail['reply'] !== '') {
-            $entries[] = self::mail('reply_text', 'Reply', $mail['reply']);
-        }
-
-        $earlier = self::earlierText($record);
-
-        if ($earlier !== '') {
-            $entries[] = self::mail('earlier', 'Earlier on this client', $earlier);
-        }
-
-        $entries[] = self::entry('body', 'Note body', $record)
-            ->extraAttributes(['style' => 'white-space: pre-wrap'])
-            ->columnSpanFull();
-
-        return $entries;
     }
 
     /**
@@ -84,6 +67,12 @@ final class ReplyInfolist
 
                 $lines[] = '';
                 $lines[] = 'Reply '.(string) ($reply['sent'] ?? '');
+                $repliedIn = self::repliedIn((string) ($thread['receipt'] ?? ''), (string) ($reply['sent'] ?? ''));
+
+                if ($repliedIn !== '') {
+                    $lines[] = $repliedIn;
+                }
+
                 $lines[] = 'Subject: '.(string) ($reply['subject'] ?? '');
                 $body = (string) ($reply['body'] ?? '');
 
@@ -99,22 +88,91 @@ final class ReplyInfolist
         return implode("\n\n", $blocks);
     }
 
-    private static function mail(string $name, string $label, string $text): TextEntry
+    /**
+     * @param  array<string, mixed>  $record
+     * @return list<array{at: string, rank: int, kind: string, title: string, detail: string, body: string, attachment: string, note_id: string}>
+     */
+    public static function events(array $record): array
     {
-        return TextEntry::make($name)
-            ->label($label)
-            ->state($text)
-            ->extraAttributes(['style' => 'white-space: pre-wrap'])
-            ->columnSpanFull();
+        $events = [];
+
+        foreach ($record['earlier'] ?? [] as $thread) {
+            if (! is_array($thread)) {
+                continue;
+            }
+
+            $receipt = (string) ($thread['receipt'] ?? '');
+            $events[] = self::event($receipt, 0, 'Client email', (string) ($thread['summary'] ?? ''), '', (string) ($thread['client'] ?? ''));
+
+            foreach ($thread['replies'] ?? [] as $reply) {
+                if (! is_array($reply)) {
+                    continue;
+                }
+
+                $sent = (string) ($reply['sent'] ?? '');
+                $events[] = self::event($sent, 2, 'Reply', (string) ($reply['subject'] ?? ''), self::repliedIn($receipt, $sent), (string) ($reply['body'] ?? ''));
+            }
+        }
+
+        $inbound = (string) ($record['inbound'] ?? '');
+        $clockStart = (string) ($record['clock_start'] ?? '');
+        $mail = ClockNote::correspondence((string) ($record['body'] ?? ''));
+        $events[] = self::event($inbound, 0, 'Client email', (string) ($record['summary'] ?? ''), (string) ($record['receipt_source'] ?? ''), $mail['client']);
+
+        if ($clockStart !== '' && $clockStart !== $inbound) {
+            $events[] = self::event($clockStart, 1, 'Clock start', '', '', '');
+        }
+
+        $due = (string) ($record['reply_due'] ?? '');
+
+        if ($due !== '') {
+            $events[] = self::event($due, 3, 'Reply due', '', '', '');
+        }
+
+        usort($events, function (array $left, array $right): int {
+            $byTime = $left['at'] <=> $right['at'];
+
+            return $byTime !== 0 ? $byTime : $left['rank'] <=> $right['rank'];
+        });
+
+        return $events;
+    }
+
+    public static function repliedIn(string $receipt, string $sent): string
+    {
+        $start = self::moment($receipt);
+        $end = self::moment($sent);
+
+        if (! $start instanceof DateTimeImmutable || ! $end instanceof DateTimeImmutable) {
+            return '';
+        }
+
+        $elapsed = Elapsed::between(app(ReplyClock::class)->schedule($start)->clockStart, $end);
+
+        return $elapsed === '' ? '' : 'Replied in '.$elapsed;
     }
 
     /**
-     * @param  array<string, mixed>  $record
+     * @return array{at: string, rank: int, kind: string, title: string, detail: string, body: string, attachment: string, note_id: string}
      */
-    private static function entry(string $name, string $label, array $record): TextEntry
+    private static function event(string $at, int $rank, string $kind, string $title, string $detail, string $body): array
     {
-        return TextEntry::make($name)
-            ->label($label)
-            ->state((string) ($record[$name] ?? ''));
+        return [
+            'at' => $at,
+            'rank' => $rank,
+            'kind' => $kind,
+            'title' => $title,
+            'detail' => $detail,
+            'body' => $body,
+            'attachment' => '',
+            'note_id' => '',
+        ];
+    }
+
+    private static function moment(string $value): ?DateTimeImmutable
+    {
+        $moment = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $value, new DateTimeZone(ReplyClock::ZONE));
+
+        return $moment instanceof DateTimeImmutable ? $moment : null;
     }
 }

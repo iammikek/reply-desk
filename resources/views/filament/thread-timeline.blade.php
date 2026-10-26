@@ -4,6 +4,9 @@
         @if ($email !== '')
             <p style="margin: 0.15rem 0 0; opacity: 0.7;">{{ $email }}</p>
         @endif
+        @if (($note ?? '') !== '')
+            <p class="thread-note">Note {{ $note }}</p>
+        @endif
     @endif
 
     <ol class="thread-timeline">
@@ -13,6 +16,9 @@
                 <p class="kind">{{ $event['kind'] }}</p>
                 @if ($event['title'] !== '')
                     <p class="title">{{ $event['title'] }}</p>
+                @endif
+                @if (($event['detail'] ?? '') !== '')
+                    <p class="detail">{{ $event['detail'] }}</p>
                 @endif
                 @if ($event['body'] !== '')
                     <div class="body">{{ $event['body'] }}</div>
@@ -71,6 +77,19 @@
     .thread-timeline .title {
         margin: 0.2rem 0 0;
         font-weight: 600;
+    }
+
+    .thread-note {
+        margin: 0.35rem 0 0;
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+
+    .thread-timeline .detail {
+        margin: 0.2rem 0 0;
+        font-size: 0.8rem;
+        font-variant-numeric: tabular-nums;
+        opacity: 0.75;
     }
 
     .thread-timeline .body {

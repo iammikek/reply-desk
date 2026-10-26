@@ -83,42 +83,37 @@ it('opens the clock note', function () {
         ->assertSet('mountedActions.0.name', 'view')
         ->assertSet('mountedActions.0.context.recordKey', '1');
 
-    $states = array_map(
-        fn ($entry) => $entry->getState(),
-        ReplyInfolist::forRecord([
-            'client' => 'Northwharf Bakery / Ada North',
-            'contact_email' => 'ada@northwharf.example',
-            'receipt_source' => 'Mail client',
-            'inbound' => '2026-10-20 10:00',
-            'clock_start' => '2026-10-20 10:00',
-            'reply_due' => '2026-10-21 10:00',
-            'id' => '1',
-            'summary' => 'Which PHP to use',
-            'body' => "Clock: inbound\nReceipt: 2026-10-20 10:00 Europe/London",
-        ]),
-    );
+    $events = ReplyInfolist::events([
+        'client' => 'Northwharf Bakery / Ada North',
+        'contact_email' => 'ada@northwharf.example',
+        'receipt_source' => 'Mail client',
+        'inbound' => '2026-10-20 10:00',
+        'clock_start' => '2026-10-20 10:00',
+        'reply_due' => '2026-10-21 10:00',
+        'id' => '1',
+        'summary' => 'Which PHP to use',
+        'body' => "Clock: inbound\nReceipt: 2026-10-20 10:00 Europe/London",
+    ]);
 
-    expect($states)->toContain('ada@northwharf.example')
-        ->and($states)->toContain('Which PHP to use');
+    expect(collect($events)->pluck('title'))->toContain('Which PHP to use')
+        ->and(collect($events)->pluck('kind'))->toContain('Reply due')
+        ->and(collect($events)->where('kind', 'Clock start'))->toBeEmpty();
 });
 
 it('shows the filed client email in the note', function () {
-    $states = array_map(
-        fn ($entry) => (string) $entry->getState(),
-        ReplyInfolist::forRecord([
-            'client' => 'Northwharf Bakery / Ada North',
-            'contact_email' => 'ada@northwharf.example',
-            'receipt_source' => 'Mail client',
-            'inbound' => '2026-10-20 10:00',
-            'clock_start' => '2026-10-20 10:00',
-            'reply_due' => '2026-10-21 10:00',
-            'id' => '1',
-            'summary' => 'Which PHP to use',
-            'body' => "Clock: inbound\nReceipt: 2026-10-20 10:00 Europe/London\nReceipt source: mail client\nSummary: Which PHP to use\n\nClient email:\nWhich loaf for Friday.",
-        ]),
-    );
+    $events = ReplyInfolist::events([
+        'client' => 'Northwharf Bakery / Ada North',
+        'contact_email' => 'ada@northwharf.example',
+        'receipt_source' => 'Mail client',
+        'inbound' => '2026-10-20 10:00',
+        'clock_start' => '2026-10-20 10:00',
+        'reply_due' => '2026-10-21 10:00',
+        'id' => '1',
+        'summary' => 'Which PHP to use',
+        'body' => "Clock: inbound\nReceipt: 2026-10-20 10:00 Europe/London\nReceipt source: mail client\nSummary: Which PHP to use\n\nClient email:\nWhich loaf for Friday.",
+    ]);
 
-    expect($states)->toContain('Which loaf for Friday.');
+    expect(collect($events)->pluck('body'))->toContain('Which loaf for Friday.');
 });
 
 it('marks a reply sent from the queue', function () {
@@ -245,9 +240,10 @@ it('shows the earlier thread on the note and the draft', function () {
 
     Livewire::test(ListOpenQueue::class)
         ->mountAction(TestAction::make('view')->table($open))
-        ->assertMountedActionModalSee('Earlier on this client')
         ->assertMountedActionModalSee('Which loaf for Friday.')
-        ->assertMountedActionModalSee('Use 8.3 on the new box.');
+        ->assertMountedActionModalSee('Use 8.3 on the new box.')
+        ->assertMountedActionModalSee('Replied in 6 hours 4 minutes')
+        ->assertMountedActionModalSee('thread-timeline', false);
 
     Livewire::test(ListOpenQueue::class)
         ->mountAction(TestAction::make('reply')->table($open))

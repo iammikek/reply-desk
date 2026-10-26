@@ -194,6 +194,7 @@ it('shows a pasted client email and reply on the thread', function () {
         ->mountAction(TestAction::make('view')->table($closed))
         ->assertMountedActionModalSee($client)
         ->assertMountedActionModalSee($reply)
+        ->assertMountedActionModalSee('Replied in 6 hours 4 minutes')
         ->assertMountedActionModalSee('white-space: pre-wrap');
 });
 
