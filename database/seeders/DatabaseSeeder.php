@@ -23,13 +23,14 @@ class DatabaseSeeder extends Seeder
 
         User::query()->where('email', 'mike@automica.io')->delete();
 
-        User::query()->updateOrCreate(
+        $administrator = User::query()->updateOrCreate(
             ['email' => 'admin@example.com'],
             [
                 'name' => 'Administrator',
                 'password' => 'seed-PShhT4DYcUyMfzO5',
             ],
         );
+        $administrator->forceFill(['password_changed_at' => null])->save();
 
         if (DB::table('emails')->count() === 0) {
             $this->call(DemoSeeder::class);

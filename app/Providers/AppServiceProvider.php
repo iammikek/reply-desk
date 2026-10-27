@@ -7,7 +7,11 @@ use App\Clock\ReplyClock;
 use App\Desk\Notes\DatabaseNoteStore;
 use App\Desk\Notes\HubSpotNoteStore;
 use App\Desk\Notes\NoteStore;
+use App\Models\User;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -38,6 +42,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Password::defaults(fn (): Password => Password::min(8));
+
+        Event::listen(PasswordReset::class, function (PasswordReset $event): void {
+            if ($event->user instanceof User) {
+                $event->user->forceFill(['password_changed_at' => now()])->save();
+            }
+        });
     }
 }

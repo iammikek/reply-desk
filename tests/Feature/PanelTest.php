@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Auth\Pages\ChangePassword;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -26,16 +27,15 @@ it('leaves the in-app case study', function () {
 it('shows the seeded user after sign-in', function () {
     $this->seed();
 
-    expect(User::query()->where('email', 'mike@automica.io')->exists())->toBeFalse()
-        ->and(User::query()->where('email', 'admin@example.com')->value('name'))->toBe('Administrator');
+    $administrator = User::query()->where('email', 'admin@example.com')->first();
 
-    $this->actingAs(User::query()->where('email', 'admin@example.com')->first())
+    expect(User::query()->where('email', 'mike@automica.io')->exists())->toBeFalse()
+        ->and($administrator?->name)->toBe('Administrator')
+        ->and($administrator?->mustChangePassword())->toBeTrue();
+
+    $this->actingAs($administrator)
         ->get('/')
-        ->assertSuccessful()
-        ->assertSee('Open queue')
-        ->assertSee('Administrator')
-        ->assertDontSee('Dashboard')
-        ->assertDontSee('Case study');
+        ->assertRedirect(ChangePassword::getUrl());
 });
 
 it('shows the outside hours banner on saturday', function () {

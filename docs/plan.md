@@ -21,7 +21,7 @@ That file is now the archive. New receipts and sent replies go through the actio
 | Administrator | Opens the queue, sees who is waiting and when the reply is due, logs an inbound, saves a draft, sends a reply, or marks a reply sent after it went from Mail. |
 | Cursor | Lists companies, logs an inbound, saves a draft, discards a draft, and marks a reply sent, through the same actions as the panel. |
 
-One user. The panel is not a client login. Sign in as `admin@example.com`. Section 17 is the design for that first sign-in, and for changing the password later. That is not built.
+One user. The panel is not a client login. Sign in as `admin@example.com`. Section 17 is the first sign-in password change, the profile page, and forgotten-password reset.
 
 ## 3. The queue
 
@@ -321,8 +321,6 @@ When the signed-in user opens the panel outside those ranges, a banner names the
 The tests for section 5 keep passing on the defaults. Further cases set Saturday hours and a shorter interval, leave a mid-day gap out of open minutes, and refuse a bad setting. The panel banner is tested inside and outside the window. The showable copy uses the default.
 
 ## 17. Administrator password
-
-This is the design. It is not built.
 
 There is still one administrator, created by the seed or by hand. The panel leaves registration off. Opening an account for another practice would mean a tenanted desk, and that design is not part of this version. The password work uses Laravel's own pieces: the hashed password cast, `Password` rules, the `password_reset_tokens` table, and the password broker. Filament already wraps those. The panel turns on `profile()` for a signed-in change, and `passwordReset()` for a forgotten password. The reset message goes through the configured mailer. On the showable copy that mailer is the log, so the link is written there.
 

@@ -2,6 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\Pages\ChangePassword;
+use App\Filament\Auth\Pages\EditProfile;
+use App\Http\Middleware\EnsurePasswordChanged;
 use Filament\Auth\Pages\Login;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -27,6 +30,11 @@ class AdminPanelProvider extends PanelProvider
             ->id('reply-desk')
             ->path('')
             ->login()
+            ->profile(EditProfile::class)
+            ->passwordReset()
+            ->pages([
+                ChangePassword::class,
+            ])
             ->renderHook(
                 PanelsRenderHook::SIMPLE_LAYOUT_START,
                 fn () => view('filament.auth.explainer'),
@@ -56,6 +64,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                EnsurePasswordChanged::class,
             ]);
     }
 }
