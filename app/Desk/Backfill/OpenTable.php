@@ -133,7 +133,7 @@ final class OpenTable
         $seen = [];
 
         foreach ($sent['rows'] as $row) {
-            $key = $row->company.'|'.$row->receipt->setTimezone(new DateTimeZone(ReplyClock::ZONE))->format('Y-m-d H:i');
+            $key = $row->company.'|'.$row->receipt->setTimezone(new DateTimeZone(ReplyClock::zoneName()))->format('Y-m-d H:i');
 
             if (! isset($seen[$key])) {
                 $client = $this->filed($baseDirectory, $row->clientEmailPath);
@@ -159,7 +159,7 @@ final class OpenTable
             $lines[] = implode("\n", [
                 'Clock: sent',
                 'Closes: the inbound above',
-                'Sent: '.$row->sentAt->setTimezone(new DateTimeZone(ReplyClock::ZONE))->format('Y-m-d H:i').' Europe/London',
+                'Sent: '.$row->sentAt->setTimezone(new DateTimeZone(ReplyClock::zoneName()))->format('Y-m-d H:i').' '.ReplyClock::zoneName(),
                 'Subject: '.($reply instanceof FiledEmail && $reply->subject !== '' ? $reply->subject : $row->subject),
             ]);
 
@@ -652,7 +652,7 @@ final class OpenTable
         $moment = DateTimeImmutable::createFromFormat(
             '!Y-m-d H:i',
             sprintf('%04d-%02d-%02d %02d:%02d', (int) $year, $month, (int) $day, (int) $hour, (int) $minute),
-            new DateTimeZone(ReplyClock::ZONE),
+            new DateTimeZone(ReplyClock::zoneName()),
         );
 
         return $moment === false ? null : $moment;

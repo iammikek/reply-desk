@@ -195,7 +195,7 @@ final class OpenRepliesTable
      */
     private static function records(?string $search, ?array $filters, ?string $sortColumn, ?string $sortDirection): array
     {
-        $now = DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE));
+        $now = DateTimeImmutable::createFromInterface(now(ReplyClock::zoneName()));
         $overdue = $filters['overdue']['value'] ?? null;
         $onlyOverdue = match (true) {
             $overdue === true, $overdue === 1, $overdue === '1' => true,

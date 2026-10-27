@@ -21,7 +21,7 @@ Case study: [automica.io/reply-desk](https://automica.io/reply-desk)
 
 In the mail app, a client message sits among everything else. To keep it with that client's records, it was moved into a file. The due time was calculated when it was stored there, and that figure could stay written after it was wrong. Who to answer next still depended on remembering to look. HubSpot can hold the same message on the client, but it sits deep in that record, a few clicks away, mixed in with everything else. Reply desk puts that queue on a screen.
 
-A client email starts a clock. This practice is due to reply 24 hours after the clock starts. The person using the desk can set a different interval. The practice window is Monday to Friday, 08:00 to 20:00 Europe/London. Inside that window, the clock starts when the email arrives. Mail that arrives in the evening or at the weekend starts at 08:00 on the next working morning, so overnight waiting is not counted as time the practice had to answer. Replied in counts from that clock start, and only while the window is open. The due time is calculated when the queue is opened. It is not stored, so an old reading cannot linger.
+A client email starts a clock. This practice is due to reply 24 hours after the clock starts. The person using the desk can set a different interval, and each day can have its own open ranges in config, including Saturday or Sunday. The default is Monday to Friday, 08:00 to 20:00 Europe/London. Inside an open range, the clock starts when the email arrives. Mail that arrives outside those ranges starts at the next open, so overnight waiting is not counted as time the practice had to answer. Replied in counts from that clock start, and only while a range is open. When the desk is opened outside those ranges, a banner names the next open. The due time is calculated when the queue is opened. It is not stored, so an old reading cannot linger.
 
 The reply is sent from this screen, or sent from Mail and then marked sent here. A draft can sit on the row while the reply is written. The draft does not stop the clock. Sending, or marking sent, takes the row off the queue. What has already been answered stays on History, each message in the order it was sent.
 
@@ -44,7 +44,7 @@ Each open row is one client email, stored as an inbound clock note, with no repl
 - Reply due
 - A draft, when one is saved
 
-Due time is calculated when the page or a command runs. It is not stored. This practice is due to reply 24 hours after the clock starts. The person using the desk can set a different interval. The practice window is Monday to Friday, 08:00 to 20:00 Europe/London. Inside that window, the clock starts at receipt. Outside it, including the weekend, the clock starts at 08:00 on the next working day.
+Due time is calculated when the page or a command runs. It is not stored. This practice is due to reply 24 hours after the clock starts. The person using the desk can set a different interval, and each day can have its own open ranges. The default is Monday to Friday, 08:00 to 20:00 Europe/London. Inside an open range, the clock starts at receipt. Outside those ranges, the clock starts at the next open.
 
 The desk can send a reply. Mark sent records a reply that already went from Mail. A draft does not stop the clock.
 

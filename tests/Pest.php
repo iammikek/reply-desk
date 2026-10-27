@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)
+    ->in('Unit');
+
+pest()->extend(TestCase::class)
     ->beforeEach(fn () => Cache::flush())
     ->in('Feature');
 

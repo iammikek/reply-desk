@@ -56,7 +56,7 @@ final class SendReply
 
         return ($this->markReplySent)(
             $inboundId,
-            DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE)),
+            DateTimeImmutable::createFromInterface(now(ReplyClock::zoneName())),
             $subject,
             $body,
             $file,

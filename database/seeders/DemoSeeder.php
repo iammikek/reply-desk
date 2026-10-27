@@ -26,7 +26,7 @@ class DemoSeeder extends Seeder
             throw new DeskException('The demo queue is already seeded.');
         }
 
-        $now = DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE));
+        $now = DateTimeImmutable::createFromInterface(now(ReplyClock::zoneName()));
 
         $northwharf = Company::query()->create(['name' => 'Northwharf Bakery']);
         Contact::query()->create([

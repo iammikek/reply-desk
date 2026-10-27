@@ -16,7 +16,7 @@ final class ClockNote
     ): string {
         $lines = [
             'Clock: inbound',
-            'Receipt: '.$receipt->setTimezone(self::zone())->format('Y-m-d H:i').' Europe/London',
+            'Receipt: '.$receipt->setTimezone(self::zone())->format('Y-m-d H:i').' '.ReplyClock::zoneName(),
             'Receipt source: '.$receiptSource->value,
         ];
 
@@ -40,7 +40,7 @@ final class ClockNote
         $lines = [
             'Clock: sent',
             'Closes: '.$closes,
-            'Sent: '.$sent->setTimezone(self::zone())->format('Y-m-d H:i').' Europe/London',
+            'Sent: '.$sent->setTimezone(self::zone())->format('Y-m-d H:i').' '.ReplyClock::zoneName(),
         ];
         $subject = trim($subject);
 
@@ -273,11 +273,17 @@ final class ClockNote
 
     private static function moment(string $line, string $label): ?DateTimeImmutable
     {
-        if (preg_match('/^'.preg_quote($label, '/').': (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) Europe\/London$/', $line, $matches) !== 1) {
+        if (preg_match('/^'.preg_quote($label, '/').': (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) (.+)$/', $line, $matches) !== 1) {
             return null;
         }
 
-        $moment = DateTimeImmutable::createFromFormat('Y-m-d H:i', $matches[1], self::zone());
+        try {
+            $zone = new DateTimeZone($matches[2]);
+        } catch (\Exception) {
+            return null;
+        }
+
+        $moment = DateTimeImmutable::createFromFormat('Y-m-d H:i', $matches[1], $zone);
 
         if ($moment === false) {
             return null;
@@ -308,6 +314,6 @@ final class ClockNote
 
     private static function zone(): DateTimeZone
     {
-        return new DateTimeZone(ReplyClock::ZONE);
+        return new DateTimeZone(ReplyClock::zoneName());
     }
 }

@@ -4,7 +4,7 @@ use App\Clock\ReplyClock;
 
 it('schedules a reply from the working window', function (string $receipt, string $clockStart, string $replyDue) {
     $zone = new DateTimeZone(ReplyClock::ZONE);
-    $schedule = (new ReplyClock)->schedule(new DateTimeImmutable($receipt, $zone));
+    $schedule = app(ReplyClock::class)->schedule(new DateTimeImmutable($receipt, $zone));
 
     expect($schedule->clockStart->setTimezone($zone)->format('Y-m-d H:i'))->toBe($clockStart)
         ->and($schedule->replyDue->setTimezone($zone)->format('Y-m-d H:i'))->toBe($replyDue);

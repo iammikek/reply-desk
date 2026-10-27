@@ -113,7 +113,7 @@ Received inside the window: the clock starts at receipt. The reply is due 24 hou
 
 Received after 20:00, or on Saturday or Sunday: the clock starts at 08:00 on the next working day. Friday evening starts on Monday 08:00.
 
-These hours are fixed in the clock. Section 16 is the design for reading them from config. That is not built.
+These hours are the default. Section 16 reads per-day ranges from config.
 
 ## 6. Clock note shape
 
@@ -306,19 +306,21 @@ Tests for this use a stand-in mailbox. No test opens a network mailbox.
 
 ## 16. Practice hours
 
-This is the design. It is not built.
+A practice can set its own hours and its own reply interval in `config/reply-desk.php`. The timezone and the interval can be overridden from the environment. With nothing set, the clock stays section 5: Monday to Friday, 08:00 to 20:00, Europe/London, and the reply is due 24 hours after the clock starts.
 
-A practice can set its own working window and its own reply interval in `config/reply-desk.php`. The same values can be overridden from the environment. With nothing set, the clock stays section 5: Monday to Friday, 08:00 to 20:00, Europe/London, and the reply is due 24 hours after the clock starts.
+The settings are the timezone, the reply interval in hours, and a list of open time ranges for each day of the week. One setting supplies the zone used to calculate the clock, to write a note, and to show a time. The note header names that zone. Notes already stored name Europe/London, and the reader still accepts that name.
 
-The settings are the timezone, the open time, the close time, the working days, and the reply interval in hours. One setting supplies the zone used to calculate the clock, to write a note, and to show a time. The note header names that zone. Notes already stored name Europe/London, and the reader still accepts that name.
+Each day has zero or more ranges. A range is an open time and a close time on that day. The close is inside the range, as 20:00 is today. An empty list for a day means the practice is closed that day. A practice that works on Saturday or Sunday puts ranges on those days. More than one range on the same day is allowed, so a mid-day close can leave a gap. Under the default, Monday to Friday each have `08:00` to `20:00`, and Saturday and Sunday have none.
 
-A receipt inside the window starts the clock at the receipt. The close time is inside the window, as 20:00 is today. A receipt before open on a working day starts at open that day. A receipt after close, or on a day that is not a working day, starts at open on the next working day. The reply is due the interval after the clock start. That due time is not pulled back into the window. Thursday 21:00 is still due on Saturday 08:00 under the default.
+A receipt inside a range starts the clock at the receipt. A receipt before the first range that day starts at that open. A receipt in a gap, after the last range, or on a closed day starts at the next open: the next range later that day, or the first range on a later day that has one. The reply is due the interval after the clock start. That due time is not pulled back into a range. Thursday 21:00 is still due on Saturday 08:00 under the default.
 
-An empty day list, a close before the open, an interval below one hour, or an unknown timezone is refused. The desk does not guess a window.
+A week with no ranges at all, a range whose close is before its open, overlapping ranges on the same day, an interval below one hour, or an unknown timezone is refused. The desk does not guess a window.
 
-Replied in still counts from the clock start, and only inside the configured window. An evening or a weekend is not part of that figure.
+Replied in still counts from the clock start, and only inside the configured ranges. Time outside those ranges is not part of that figure.
 
-The tests for section 5 keep passing when the config is unset. One further case sets a shorter week and a shorter interval and checks the clock start and the due time. A refused setting is tested. The showable copy uses the default.
+When the signed-in user opens the panel outside those ranges, a banner names the next open. It does not block the queue.
+
+The tests for section 5 keep passing when the config is unset. One further case sets Saturday hours and a shorter interval and checks the clock start and the due time. A refused setting is tested. The showable copy uses the default.
 
 ## 17. Administrator password
 

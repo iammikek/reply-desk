@@ -32,6 +32,10 @@ class AdminPanelProvider extends PanelProvider
                 fn () => view('filament.auth.explainer'),
                 scopes: Login::class,
             )
+            ->renderHook(
+                PanelsRenderHook::PAGE_START,
+                fn (): string => (string) view('filament.outside-hours'),
+            )
             ->brandName('Reply desk')
             ->colors([
                 'primary' => Color::Stone,

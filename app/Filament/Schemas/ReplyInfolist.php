@@ -172,7 +172,7 @@ final class ReplyInfolist
 
     private static function moment(string $value): ?DateTimeImmutable
     {
-        $moment = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $value, new DateTimeZone(ReplyClock::ZONE));
+        $moment = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $value, new DateTimeZone(ReplyClock::zoneName()));
 
         return $moment instanceof DateTimeImmutable ? $moment : null;
     }

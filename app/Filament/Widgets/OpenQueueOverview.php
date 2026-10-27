@@ -18,7 +18,7 @@ class OpenQueueOverview extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $now = DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE));
+        $now = DateTimeImmutable::createFromInterface(now(ReplyClock::zoneName()));
         $open = app(ListOpenReplies::class)($now);
         $overdue = count(array_filter($open, fn (OpenReply $reply): bool => $reply->overdueAt($now)));
         $next = collect($open)->sortBy(fn (OpenReply $reply): int => $reply->replyDue->getTimestamp())->first();
@@ -28,7 +28,7 @@ class OpenQueueOverview extends StatsOverviewWidget
             Stat::make('Overdue', (string) $overdue)
                 ->color($overdue > 0 ? 'danger' : 'gray'),
             Stat::make('Next due', $next instanceof OpenReply
-                ? $next->replyDue->setTimezone(new DateTimeZone(ReplyClock::ZONE))->format('D j M H:i')
+                ? $next->replyDue->setTimezone(new DateTimeZone(ReplyClock::zoneName()))->format('D j M H:i')
                 : 'None'),
         ];
     }

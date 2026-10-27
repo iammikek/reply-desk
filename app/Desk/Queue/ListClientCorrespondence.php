@@ -101,6 +101,6 @@ final class ListClientCorrespondence
 
     private function format(DateTimeImmutable $moment): string
     {
-        return $moment->setTimezone(new DateTimeZone(ReplyClock::ZONE))->format('Y-m-d H:i');
+        return $moment->setTimezone(new DateTimeZone(ReplyClock::zoneName()))->format('Y-m-d H:i');
     }
 }

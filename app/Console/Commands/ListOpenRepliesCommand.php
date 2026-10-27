@@ -18,7 +18,7 @@ class ListOpenRepliesCommand extends ReplyDeskCommand
         try {
             $now = $this->option('now')
                 ? $this->moment((string) $this->option('now'))
-                : DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE));
+                : DateTimeImmutable::createFromInterface(now(ReplyClock::zoneName()));
 
             return $this->json(array_map(
                 fn ($reply) => $reply->toArray($now),

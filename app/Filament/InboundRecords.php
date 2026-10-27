@@ -36,7 +36,7 @@ final class InboundRecords
                 'summary' => $parsed->summary,
                 'subject' => self::line($note->body, 'Subject'),
                 'body' => ClockNote::correspondence($note->body)['client'],
-                'at' => $parsed->receipt->setTimezone(new DateTimeZone(ReplyClock::ZONE))->format('Y-m-d H:i:s'),
+                'at' => $parsed->receipt->setTimezone(new DateTimeZone(ReplyClock::zoneName()))->format('Y-m-d H:i:s'),
                 'company_id' => $note->companyId,
                 'contact_id' => $note->contactId,
                 'company' => $note->companyName,
@@ -100,7 +100,7 @@ final class InboundRecords
 
             $replies[] = [
                 ArrayRecord::getKeyName() => $note->id,
-                'sent' => $parsed->sent->setTimezone(new DateTimeZone(ReplyClock::ZONE))->format('Y-m-d H:i'),
+                'sent' => $parsed->sent->setTimezone(new DateTimeZone(ReplyClock::zoneName()))->format('Y-m-d H:i'),
                 'subject' => $parsed->subject,
                 'body' => ClockNote::correspondence($note->body)['reply'],
             ];

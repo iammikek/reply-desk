@@ -9,7 +9,7 @@ final class Elapsed
 {
     public static function between(DateTimeImmutable $start, DateTimeImmutable $end): string
     {
-        $zone = new DateTimeZone(ReplyClock::ZONE);
+        $zone = new DateTimeZone(ReplyClock::zoneName());
         $start = $start->setTimezone($zone);
         $end = $end->setTimezone($zone);
 

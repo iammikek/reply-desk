@@ -28,7 +28,7 @@ abstract class ReplyDeskCommand extends Command
 
     protected function moment(string $value): DateTimeImmutable
     {
-        $moment = DateTimeImmutable::createFromFormat('Y-m-d H:i', $value, new DateTimeZone(ReplyClock::ZONE));
+        $moment = DateTimeImmutable::createFromFormat('Y-m-d H:i', $value, new DateTimeZone(ReplyClock::zoneName()));
 
         if ($moment === false) {
             throw new DeskException('A time must be Y-m-d H:i in Europe/London.');

@@ -10,23 +10,41 @@ final class ReplyClock
 {
     public const string ZONE = 'Europe/London';
 
+    private PracticeHours $hours;
+
     private DateTimeZone $zone;
 
-    public function __construct()
+    public function __construct(?PracticeHours $hours = null)
     {
-        $this->zone = new DateTimeZone(self::ZONE);
+        $this->hours = $hours ?? PracticeHours::fromConfig(config('reply-desk'));
+        $this->zone = $this->hours->zone();
+    }
+
+    public function timezone(): string
+    {
+        return $this->hours->timezone();
+    }
+
+    public static function zoneName(): string
+    {
+        return app(self::class)->timezone();
+    }
+
+    public function hours(): PracticeHours
+    {
+        return $this->hours;
     }
 
     public function schedule(DateTimeImmutable $receipt): ClockSchedule
     {
         $receipt = $receipt->setTimezone($this->zone);
-        $clockStart = $this->insideWindow($receipt)
+        $clockStart = $this->hours->contains($receipt)
             ? $receipt
-            : $this->nextWorkingMorning($receipt);
+            : $this->hours->nextOpen($receipt);
 
         return new ClockSchedule(
             $clockStart,
-            $clockStart->add(new DateInterval('PT24H')),
+            $clockStart->add(new DateInterval('PT'.$this->hours->intervalHours().'H')),
         );
     }
 
@@ -43,8 +61,22 @@ final class ReplyClock
         $cursor = $start;
 
         while ($cursor < $end) {
-            if ($this->insideWindow($cursor) && $cursor->format('H:i:s') < '20:00:00') {
-                $close = $cursor->setTime(20, 0);
+            $range = $this->hours->rangeContaining($cursor);
+
+            if ($range !== null) {
+                [$hour, $minute] = array_map('intval', explode(':', $range->close));
+                $close = $cursor->setTime($hour, $minute);
+
+                if ($cursor->format('H:i:s') >= $range->close.':00') {
+                    $cursor = $this->hours->nextOpen($cursor);
+
+                    if ($cursor > $end) {
+                        break;
+                    }
+
+                    continue;
+                }
+
                 $slice = $end < $close ? $end : $close;
                 $minutes += (int) (($slice->getTimestamp() - $cursor->getTimestamp()) / 60);
                 $cursor = $slice;
@@ -52,7 +84,7 @@ final class ReplyClock
                 continue;
             }
 
-            $cursor = $this->nextWorkingMorning($cursor);
+            $cursor = $this->hours->nextOpen($cursor);
 
             if ($cursor > $end) {
                 break;
@@ -60,30 +92,5 @@ final class ReplyClock
         }
 
         return $minutes;
-    }
-
-    private function insideWindow(DateTimeImmutable $moment): bool
-    {
-        $day = (int) $moment->format('N');
-        $time = $moment->format('H:i:s');
-
-        return $day <= 5 && $time >= '08:00:00' && $time <= '20:00:00';
-    }
-
-    private function nextWorkingMorning(DateTimeImmutable $receipt): DateTimeImmutable
-    {
-        $morning = $receipt->setTime(8, 0);
-
-        if ((int) $receipt->format('N') <= 5 && $receipt->format('H:i:s') < '08:00:00') {
-            return $morning;
-        }
-
-        $morning = $morning->modify('+1 day');
-
-        while ((int) $morning->format('N') >= 6) {
-            $morning = $morning->modify('+1 day');
-        }
-
-        return $morning;
     }
 }

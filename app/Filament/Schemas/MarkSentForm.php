@@ -19,8 +19,8 @@ final class MarkSentForm
             DateTimePicker::make('sent')
                 ->label('Sent')
                 ->seconds(false)
-                ->timezone(ReplyClock::ZONE)
-                ->default(now(ReplyClock::ZONE))
+                ->timezone(ReplyClock::zoneName())
+                ->default(now(ReplyClock::zoneName()))
                 ->required(),
             TextInput::make('subject')
                 ->label('Subject')

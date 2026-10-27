@@ -11,7 +11,8 @@ final class LondonTime
 {
     public static function parse(mixed $value): DateTimeImmutable
     {
-        $zone = new DateTimeZone(ReplyClock::ZONE);
+        $zoneName = ReplyClock::zoneName();
+        $zone = new DateTimeZone($zoneName);
 
         if ($value instanceof DateTimeInterface) {
             return DateTimeImmutable::createFromInterface($value)->setTimezone($zone);
@@ -27,6 +28,6 @@ final class LondonTime
             }
         }
 
-        throw new DeskException('A time must be Y-m-d H:i in Europe/London.');
+        throw new DeskException('A time must be Y-m-d H:i in '.$zoneName.'.');
     }
 }

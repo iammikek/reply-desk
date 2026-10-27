@@ -37,3 +37,19 @@ it('shows the seeded user after sign-in', function () {
         ->assertDontSee('Dashboard')
         ->assertDontSee('Case study');
 });
+
+it('shows the outside hours banner on saturday', function () {
+    $this->travelTo(london('2026-10-24 15:00'));
+    $this->actingAs(User::factory()->create())
+        ->get('/')
+        ->assertSuccessful()
+        ->assertSee('Outside practice hours. Next open Monday 08:00.');
+});
+
+it('hides the outside hours banner inside the window', function () {
+    $this->travelTo(london('2026-10-20 10:00'));
+    $this->actingAs(User::factory()->create())
+        ->get('/')
+        ->assertSuccessful()
+        ->assertDontSee('Outside practice hours');
+});

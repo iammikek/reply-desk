@@ -22,7 +22,7 @@ final class ListOpenReplies
      */
     public function __invoke(?DateTimeImmutable $now = null, ?bool $overdue = null): array
     {
-        $now ??= DateTimeImmutable::createFromInterface(now(ReplyClock::ZONE));
+        $now ??= DateTimeImmutable::createFromInterface(now(ReplyClock::zoneName()));
         $sent = [];
         $inbound = [];
 

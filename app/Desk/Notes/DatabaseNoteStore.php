@@ -305,7 +305,7 @@ final class DatabaseNoteStore implements NoteStore
 
     private function stored(Email $email): StoredNote
     {
-        $at = new DateTimeImmutable($email->at->format('Y-m-d H:i'), new DateTimeZone(ReplyClock::ZONE));
+        $at = new DateTimeImmutable($email->at->format('Y-m-d H:i'), new DateTimeZone(ReplyClock::zoneName()));
         $attachment = $email->attachments->sortBy('id')->first();
 
         if ($email->direction === 'outbound') {

@@ -37,8 +37,8 @@ final class LogInboundForm
             DateTimePicker::make('receipt')
                 ->label('Receipt')
                 ->seconds(false)
-                ->timezone(ReplyClock::ZONE)
-                ->default(now(ReplyClock::ZONE))
+                ->timezone(ReplyClock::zoneName())
+                ->default(now(ReplyClock::zoneName()))
                 ->required(),
             Radio::make('receipt_source')
                 ->label('Receipt source')
