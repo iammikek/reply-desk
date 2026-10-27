@@ -4,6 +4,23 @@ Reply desk is the queue for a practice's client email. It shows who is waiting f
 
 Case study: [automica.io/reply-desk](https://automica.io/reply-desk)
 
+## Contents
+
+- [Why](#why)
+- [What the queue shows](#what-the-queue-shows)
+- [Run the desk](#run-the-desk)
+- [Where the panel lives](#where-the-panel-lives)
+- [Local record](#local-record)
+- [Persistent database](#persistent-database)
+- [Live desk](#live-desk)
+- [Commands](#commands)
+- [MCP](#mcp)
+- [Tests](#tests)
+
+## Why
+
+In the mail app, a client message sits among everything else. To keep it with that client's records, it was moved into a file. The due time was calculated when it was stored there, and that figure could stay written after it was wrong. Who to answer next still depended on remembering to look. HubSpot can hold the same message on the client, but it sits deep in that record, a few clicks away, mixed in with everything else. Reply desk puts that queue on a screen.
+
 A client email starts a clock. This practice is due to reply 24 hours after the clock starts. The person using the desk can set a different interval. The practice window is Monday to Friday, 08:00 to 20:00 Europe/London. Inside that window, the clock starts when the email arrives. Mail that arrives in the evening or at the weekend starts at 08:00 on the next working morning, so overnight waiting is not counted as time the practice had to answer. Replied in counts from that clock start, and only while the window is open. The due time is calculated when the queue is opened. It is not stored, so an old reading cannot linger.
 
 The reply is sent from this screen, or sent from Mail and then marked sent here. A draft can sit on the row while the reply is written. The draft does not stop the clock. Sending, or marking sent, takes the row off the queue. What has already been answered stays on History, each message in the order it was sent.
@@ -15,18 +32,6 @@ The client receives the reply within the 24 hours this practice set. A practice 
 Filament is the screen. Companies and contacts are read from HubSpot, or from local tables when HubSpot is not connected. The desk can add a company or a contact. When HubSpot is connected, that write goes to HubSpot. Otherwise it is stored in the local tables. A search that is not exactly one match stops. On the live desk, what arrived and what was sent is stored as a HubSpot note. The seeded copy uses the local tables.
 
 [![Tests](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml/badge.svg)](https://github.com/iammikek/reply-desk/actions/workflows/tests.yml)
-
-## Contents
-
-- [What the queue shows](#what-the-queue-shows)
-- [Run the desk](#run-the-desk)
-- [Where the panel lives](#where-the-panel-lives)
-- [Local record](#local-record)
-- [Persistent database](#persistent-database)
-- [Live desk](#live-desk)
-- [Commands](#commands)
-- [MCP](#mcp)
-- [Tests](#tests)
 
 ## What the queue shows
 
