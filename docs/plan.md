@@ -38,7 +38,7 @@ Due time is calculated when the page or a tool runs. It is not stored.
 
 A filter shows rows whose reply is overdue. Marking a reply sent fills the sent time and the row leaves the queue.
 
-The clock note opens as a timeline: earlier threads oldest first, then this inbound, the clock start when it is later than the receipt, and the reply due. A reply on that timeline, and on History, shows how long it took from the clock start. Only time inside the practice window is counted, so an evening or a weekend is not part of that figure. The reply window still lists those earlier threads above the form. The History page lists closed threads, newest sent time first, ten at a time, including a company that has nothing open. Opening a thread shows a timeline: the client email, then each reply in sent order. The client name on History and the open queue opens that client's page: every inbound and reply for that company and contact, in time order, including a row that is still open. Open queue and History are one Filament resource: `form()`, `table()`, and a relation manager for the replies that close the inbound. The open list is the panel home. Due time is calculated when that list loads. A row that is not overdue is not in the loaded set when the overdue filter is on.
+The clock note opens as a timeline: earlier threads oldest first, then this inbound, the clock start when it is later than the receipt, and the reply due. A reply on that timeline, and on History, shows how long it took from the clock start. Only time inside the open ranges is counted, so time outside those ranges is not part of that figure. When the panel is opened outside those ranges, a banner names the next open. The reply window still lists those earlier threads above the form. The History page lists closed threads, newest sent time first, ten at a time, including a company that has nothing open. Opening a thread shows a timeline: the client email, then each reply in sent order. The client name on History and the open queue opens that client's page: every inbound and reply for that company and contact, in time order, including a row that is still open. Open queue and History are one Filament resource: `form()`, `table()`, and a relation manager for the replies that close the inbound. The open list is the panel home. Due time is calculated when that list loads. A row that is not overdue is not in the loaded set when the overdue filter is on.
 
 ```mermaid
 flowchart LR
@@ -101,7 +101,7 @@ The queue of clock notes is cached for one minute. The company and contact list 
 
 ## 5. Clock
 
-A working day is Monday to Friday, 08:00 to 20:00, Europe/London.
+The default practice hours are Monday to Friday, 08:00 to 20:00, Europe/London, with a 24-hour reply interval. Section 16 is how those values are set.
 
 | Receipt | Clock start | Reply due |
 | --- | --- | --- |
@@ -109,11 +109,9 @@ A working day is Monday to Friday, 08:00 to 20:00, Europe/London.
 | Thursday 21:00 | Friday 08:00 | Saturday 08:00 |
 | Friday 21:00, or Saturday, or Sunday | Monday 08:00 | Tuesday 08:00 |
 
-Received inside the window: the clock starts at receipt. The reply is due 24 hours later.
+Received inside an open range: the clock starts at receipt. The reply is due the configured interval later.
 
-Received after 20:00, or on Saturday or Sunday: the clock starts at 08:00 on the next working day. Friday evening starts on Monday 08:00.
-
-These hours are the default. Section 16 reads per-day ranges from config.
+Received outside those ranges: the clock starts at the next open. Under the default, that is 08:00 on the next weekday. Friday evening starts on Monday 08:00.
 
 ## 6. Clock note shape
 
@@ -230,7 +228,7 @@ A later page may read an open invoice or a DEV parent for the same company. That
 
 Pest covers the clock, the note shape, the actions, the panel, the backfill, and the MCP server. The suite calls the memory store and recorded HubSpot responses. It does not call the live portal or a real mailbox. Tests use SQLite in memory.
 
-The three rows in the clock section are one dataset. Each one checks the clock start and the reply due in Europe/London.
+The three rows in the clock section are one dataset. Each one checks the clock start and the reply due under the default hours. Further cases set Saturday hours, a mid-day gap, or a shorter interval, and refuse a bad setting. The panel shows the outside-hours banner on a Saturday and hides it inside the window.
 
 Note tests parse and write the inbound and sent bodies. A normal progress note is ignored. A sent note whose `Closes` id matches an inbound note removes that row from the open queue. The due time is calculated when the list runs, so it is not present in the fixture. The client email and the reply text round-trip through the correspondence sections.
 
@@ -306,9 +304,9 @@ Tests for this use a stand-in mailbox. No test opens a network mailbox.
 
 ## 16. Practice hours
 
-A practice can set its own hours and its own reply interval in `config/reply-desk.php`. The timezone and the interval can be overridden from the environment. With nothing set, the clock stays section 5: Monday to Friday, 08:00 to 20:00, Europe/London, and the reply is due 24 hours after the clock starts.
+A practice sets its hours and reply interval in `config/reply-desk.php`. `REPLY_DESK_TIMEZONE` and `REPLY_DESK_INTERVAL_HOURS` can override the timezone and the interval from the environment. The day ranges live in that config file. Left at the defaults, the clock matches section 5: Monday to Friday, 08:00 to 20:00, Europe/London, and the reply is due 24 hours after the clock starts.
 
-The settings are the timezone, the reply interval in hours, and a list of open time ranges for each day of the week. One setting supplies the zone used to calculate the clock, to write a note, and to show a time. The note header names that zone. Notes already stored name Europe/London, and the reader still accepts that name.
+The settings are the timezone, the reply interval in hours, and a list of open time ranges for each day of the week. One setting supplies the zone used to calculate the clock, to write a note, and to show a time. The note header names that zone. Notes already stored name Europe/London, and the reader still accepts that name, or any other valid zone name on the line.
 
 Each day has zero or more ranges. A range is an open time and a close time on that day. The close is inside the range, as 20:00 is today. An empty list for a day means the practice is closed that day. A practice that works on Saturday or Sunday puts ranges on those days. More than one range on the same day is allowed, so a mid-day close can leave a gap. Under the default, Monday to Friday each have `08:00` to `20:00`, and Saturday and Sunday have none.
 
@@ -320,7 +318,7 @@ Replied in still counts from the clock start, and only inside the configured ran
 
 When the signed-in user opens the panel outside those ranges, a banner names the next open. It does not block the queue.
 
-The tests for section 5 keep passing when the config is unset. One further case sets Saturday hours and a shorter interval and checks the clock start and the due time. A refused setting is tested. The showable copy uses the default.
+The tests for section 5 keep passing on the defaults. Further cases set Saturday hours and a shorter interval, leave a mid-day gap out of open minutes, and refuse a bad setting. The panel banner is tested inside and outside the window. The showable copy uses the default.
 
 ## 17. Administrator password
 
