@@ -19,6 +19,7 @@ Case study: [automica.io/reply-desk](https://automica.io/reply-desk)
 - [Commands](#commands)
 - [MCP](#mcp)
 - [Tests](#tests)
+- [Design plan](docs/plan.md)
 
 ## Why
 
@@ -40,13 +41,36 @@ Filament is the screen. Companies and contacts are read from HubSpot, or from lo
 
 ### Practice hours
 
-The person using the desk can set a different reply interval, and each day can have its own open ranges in `config/reply-desk.php`, including Saturday or Sunday. `REPLY_DESK_TIMEZONE` and `REPLY_DESK_INTERVAL_HOURS` override the timezone and the interval from the environment. The default is Monday to Friday, 08:00 to 20:00 Europe/London, with a 24-hour interval.
+Day ranges live in `config/reply-desk.php`. Timezone and interval can come from the environment:
 
-Inside an open range, the clock starts when the email arrives. Mail that arrives outside those ranges starts at the next open, so overnight waiting is not counted as time the practice had to answer. Replied in counts from that clock start, and only while a range is open. When the desk is opened outside those ranges, a banner names the next open.
+```
+REPLY_DESK_TIMEZONE=Europe/London
+REPLY_DESK_INTERVAL_HOURS=24
+```
+
+The default is Monday to Friday, 08:00 to 20:00 Europe/London, with a 24-hour interval. Each day is a list of `[open, close]` pairs. An empty list means closed. More than one range on the same day leaves a mid-day gap. Saturday or Sunday open when those days have ranges:
+
+```php
+'hours' => [
+    'monday' => [['08:00', '20:00']],
+    'tuesday' => [['08:00', '20:00']],
+    'wednesday' => [['08:00', '20:00']],
+    'thursday' => [['08:00', '20:00']],
+    'friday' => [['08:00', '20:00']],
+    'saturday' => [],
+    'sunday' => [],
+],
+```
+
+Inside a range, the clock starts at receipt. Outside those ranges, it starts at the next open. Replied in counts only while a range is open. Outside hours, a banner names the next open.
+
+How the clock chooses start and due, the default receipt examples, and the settings the desk refuses: [docs/practice-hours.md](docs/practice-hours.md).
 
 ### Administrator password
 
 There is one administrator. Registration stays off. The seed creates `admin@example.com`; the seed password is in `database/seeders/DatabaseSeeder.php`. The first sign-in asks for a new password before the queue opens. After that, the profile page changes name, email, or password while signed in. A forgotten password is reset through the configured mailer. On the showable copy that mailer is the log, so the link is written there.
+
+Design detail for the timestamp, middleware, and reset path: [docs/plan.md](docs/plan.md) section 17.
 
 ## What the queue shows
 
@@ -106,65 +130,13 @@ History lists closed threads, newest sent time first, ten at a time. A company w
 
 ## Local record
 
-Companies and Contacts are Filament resources. Each reads the store that is plugged in. HubSpot supplies the rows when `REPLY_DESK_STORE` is `hubspot`. The tables below supply them when it is not. The screen is the same either way. New company and New contact write to that same store. A search that is not exactly one match stops.
+Companies and Contacts are Filament resources. Each reads the store that is plugged in. HubSpot supplies the rows when `REPLY_DESK_STORE` is `hubspot`. Local tables supply them when it is not. The screen is the same either way. New company and New contact write to that same store. A search that is not exactly one match stops.
 
-Clock start and reply due are calculated when the page or a command runs. They are not stored, and they are left off this diagram.
+Clock start and reply due are calculated when the page or a command runs. They are not stored.
 
-![A company has contacts. An inbound is one message logged against one company and one contact. A draft sits on that inbound and leaves the row open. A reply closes the inbound.](docs/reply-desk-entities.svg)
+An inbound is one client email against one company and one contact. A draft sits on that inbound and leaves the row open. A reply closes the inbound. The memory store uses those tables; a HubSpot draft keeps the HubSpot note id instead.
 
-```mermaid
-erDiagram
-    companies ||--o{ contacts : has
-    companies ||--o{ emails : has
-    contacts ||--o{ emails : has
-    emails |o--o{ emails : "closed by"
-    emails |o--o| drafts : "draft for"
-    emails ||--o{ attachments : has
-
-    companies {
-        int id PK
-        string name UK
-    }
-    contacts {
-        int id PK
-        int company_id FK
-        string name
-        string email UK
-    }
-    emails {
-        int id PK
-        int company_id FK
-        int contact_id FK
-        string direction
-        string subject
-        string summary
-        string body
-        datetime at
-        string receipt_source
-        int closes_id FK
-    }
-    drafts {
-        int id PK
-        int email_id FK "UK, local inbound"
-        string inbound_note_id UK "HubSpot note"
-        string subject
-        string body
-        datetime created_at "saved"
-        datetime updated_at
-    }
-    attachments {
-        int id PK
-        int email_id FK
-        string name
-        string path
-    }
-```
-
-A company has many contacts and many emails. A contact belongs to one company, and the email is stored in lowercase. An email is one message, inbound or outbound, and it belongs to one company and one contact. `at` is the receipt time or the time the reply was sent. `receipt_source` is `mail client`, `logged`, or `whatsapp` on an inbound, and empty on an outbound. `whatsapp` is a pasted message. The desk does not connect to WhatsApp. `closes_id` points at the inbound an outbound closes. It is empty when Mike wrote first. One inbound may have several replies. The same sent minute on that inbound is refused.
-
-A draft is the unsent reply for one open inbound. `email_id` points at the local email. `inbound_note_id` points at the HubSpot note. A row has one of those, not both. Saving a draft does not close the inbound. Marking the reply sent deletes the draft. An attachment is a file on one email.
-
-The memory store reads and writes these tables. `fake_parties` and `fake_notes` are gone. A draft on that store uses `email_id`. A draft on the HubSpot store uses `inbound_note_id`.
+Entity diagram and field detail: [docs/local-record.md](docs/local-record.md).
 
 ## Persistent database
 
