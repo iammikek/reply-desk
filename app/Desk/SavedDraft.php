@@ -9,7 +9,7 @@ final class SavedDraft
 {
     public static function unchanged(string $inboundId, string $subject, string $body): bool
     {
-        $draft = Draft::query()->where(Draft::forInbound($inboundId))->first();
+        $draft = Draft::findForInbound($inboundId);
 
         if (! $draft instanceof Draft) {
             return false;

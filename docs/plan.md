@@ -4,7 +4,7 @@ The open queue for practice client email. Filament is the screen. Cursor uses th
 
 **Language:** British English in the app, the MCP text, and these docs. No emoji. No em dashes.
 
-**Practice rules:** Automica's own HubSpot portal only. A note is the progress line. The desk invents no CRM properties and no email addresses. A draft is not a reply. Administrator can send the reply from the desk, or send it from Mail and mark it sent. A file on a note is uploaded to HubSpot and stored on that note. Cursor cannot send. FreeAgent and Jira stay the systems they already are. This desk does not read them.
+**Practice rules:** Automica's own HubSpot portal only. A note is the progress line. The desk invents no CRM properties and no email addresses. A draft is not a reply. Administrator can send the reply from the desk, or send it from Mail and mark it sent. A file on a note is uploaded to HubSpot and stored on that note. Cursor can send through `send_reply`. FreeAgent and Jira stay the systems they already are. This desk does not read them.
 
 ---
 
@@ -179,7 +179,7 @@ The panel actions are Log inbound, view, reply, discard draft, and mark sent. Re
 
 ## 9. MCP
 
-Stdio, started by Cursor from this repo with `node mcp-server/index.mjs`. The process shells to `php artisan`. It does not hold the HubSpot token and it does not send mail. The panel on port 8000 does not expose these tools.
+Stdio, started by Cursor from this repo with `node mcp-server/index.mjs`. The process shells to `php artisan`. It does not hold the HubSpot token. The panel on port 8000 does not expose these tools.
 
 Register `reply-desk` inside `mcpServers` in `~/.cursor/mcp.json`, with `cwd` set to this repo and `PHP_BINARY` set so `php artisan` resolves. Cursor starts that process. A terminal copy of `npm run mcp` is not the connection.
 
@@ -195,6 +195,7 @@ In Cursor, **Customize** is in the Agents sidebar, under the chat list. Open **C
 | `log_inbound` | `reply:log-inbound` |
 | `save_draft` | `reply:save-draft` |
 | `discard_draft` | `reply:discard-draft` |
+| `send_reply` | `reply:send` |
 | `mark_reply_sent` | `reply:mark-sent` |
 
 `receipt`, `sent`, and `--now` are `Y-m-d H:i` in Europe/London. After a write, the open queue in the panel changes because both read the same notes.
@@ -259,9 +260,7 @@ James Bakewell's acceptance is inbound note `532726657229`, received 22 Oct 2026
 
 ## 15. Mailbox
 
-This is the design. It is not built.
-
-The desk can be the only screen for the practice, so the inbox and HubSpot do not both have to stay open. A mailbox is optional. With none configured, the current path stays. Log inbound fills the queue. A draft is only the local row. Send uses the Laravel mailer. Mark sent records a reply that already went from Mail. The showable copy and the tests never open a real mailbox.
+The desk can be the only screen for the practice, so the inbox and HubSpot do not both have to stay open. A mailbox is optional. With none configured, the current path stays. Log inbound fills the queue. A draft is only the local row. Send uses the Laravel mailer. Mark sent records a reply that already went from Mail. The showable copy and the tests never open a real mailbox. Poll on/off and interval are controlled in the panel. Connection secrets stay in `.env`. Poll strips quoted trails before storing the client email. Activity is logged in `desk_activity`. MCP can send through `send_reply`.
 
 With a mailbox configured, the desk reads and writes that account over IMAP and SMTP. That is the account the mail client already uses, so a draft appears in Drafts and a sent message appears in Sent. The desk does not drive the Mail application. That application would have to stay open.
 
@@ -293,7 +292,7 @@ Save draft still writes the local row. When a mailbox is configured, it also cre
 
 Send, when a mailbox is configured, goes out through that account, stores the Message-ID, removes the Drafts message, then writes the sent note. If the server refuses, the row stays open and both drafts stay. With no mailbox, Send stays the Laravel mailer.
 
-Mark sent stays for a reply that already left from the mail client. The poll does not read Sent and does not close a row by itself. Cursor still cannot send.
+Mark sent stays for a reply that already left from the mail client. The poll does not read Sent and does not close a row by itself. Cursor can send through `send_reply`.
 
 Tests for this use a stand-in mailbox. No test opens a network mailbox.
 

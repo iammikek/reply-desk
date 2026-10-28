@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Desk\DeskException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -13,6 +14,7 @@ class Draft extends Model
         'inbound_note_id',
         'subject',
         'body',
+        'mailbox_draft_id',
     ];
 
     public static function inboundColumn(): string
@@ -26,6 +28,24 @@ class Draft extends Model
     public static function forInbound(string $inboundId): array
     {
         return [self::inboundColumn() => $inboundId];
+    }
+
+    /**
+     * @return Builder<static>
+     */
+    public static function queryForInbound(string $inboundId)
+    {
+        return static::query()->where(static::forInbound($inboundId));
+    }
+
+    public static function findForInbound(string $inboundId): ?self
+    {
+        return static::queryForInbound($inboundId)->first();
+    }
+
+    public static function deleteForInbound(string $inboundId): void
+    {
+        static::queryForInbound($inboundId)->delete();
     }
 
     public function email(): BelongsTo
