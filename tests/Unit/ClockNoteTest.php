@@ -5,7 +5,7 @@ use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
 use App\Clock\ReceiptSource;
 
-it('parses a recorded inbound note', function () {
+it('parses a recorded inbound note', function (): void {
     $note = clockNoteFixture('inbound-note.json');
     $parsed = ClockNote::parse($note['properties']['hs_note_body']);
 
@@ -15,7 +15,7 @@ it('parses a recorded inbound note', function () {
         ->and($parsed->summary)->toBe('Newer OS, more disk, and which PHP to use');
 });
 
-it('parses the inbound shape when the summary line is absent', function () {
+it('parses the inbound shape when the summary line is absent', function (): void {
     $note = clockNoteFixture('inbound-without-summary.json');
     $parsed = ClockNote::parse($note['properties']['hs_note_body']);
 
@@ -24,7 +24,7 @@ it('parses the inbound shape when the summary line is absent', function () {
         ->and($parsed->summary)->toBe('');
 });
 
-it('parses a recorded sent note', function () {
+it('parses a recorded sent note', function (): void {
     $note = clockNoteFixture('sent-note.json');
     $parsed = ClockNote::parse($note['properties']['hs_note_body']);
 
@@ -34,17 +34,17 @@ it('parses a recorded sent note', function () {
         ->and($parsed->subject)->toBe('PHP on the new server');
 });
 
-it('ignores an ordinary progress note', function () {
+it('ignores an ordinary progress note', function (): void {
     $note = clockNoteFixture('progress-note.json');
 
     expect(ClockNote::parse($note['properties']['hs_note_body']))->toBeNull();
 });
 
-it('ignores a note that only mentions the clock in prose', function () {
+it('ignores a note that only mentions the clock in prose', function (): void {
     expect(ClockNote::parse("The clock starts when the mail arrives.\nCloses: 1"))->toBeNull();
 });
 
-it('writes a pasted WhatsApp message that parses back', function () {
+it('writes a pasted WhatsApp message that parses back', function (): void {
     $receipt = new DateTimeImmutable('2026-10-26 11:15', new DateTimeZone('Europe/London'));
     $body = ClockNote::inbound($receipt, ReceiptSource::WhatsApp, 'The form can come off');
     $parsed = ClockNote::parse($body);
@@ -55,7 +55,7 @@ it('writes a pasted WhatsApp message that parses back', function () {
         ->and($body)->toContain('Receipt source: whatsapp');
 });
 
-it('writes an inbound note that parses back', function () {
+it('writes an inbound note that parses back', function (): void {
     $receipt = new DateTimeImmutable('2026-10-22 10:42', new DateTimeZone('Europe/London'));
     $body = ClockNote::inbound($receipt, ReceiptSource::MailClient, 'Which PHP to use');
     $parsed = ClockNote::parse($body);
@@ -70,7 +70,7 @@ it('writes an inbound note that parses back', function () {
         TXT);
 });
 
-it('writes an inbound subject and body as separate parts', function () {
+it('writes an inbound subject and body as separate parts', function (): void {
     $body = ClockNote::withMail(
         ClockNote::inbound(london('2026-10-22 10:42'), ReceiptSource::MailClient, '', 'The form can come off'),
         "The form can come off the front.\nCan you look today?",
@@ -84,7 +84,7 @@ it('writes an inbound subject and body as separate parts', function () {
         ->and($body)->not->toContain('Summary:');
 });
 
-it('keeps the clock header when the client email is filed on the note', function () {
+it('keeps the clock header when the client email is filed on the note', function (): void {
     $body = ClockNote::withMail(
         ClockNote::inbound(london('2026-10-22 10:42'), ReceiptSource::Logged, 'Which PHP to use'),
         'Which loaf for Friday.',
@@ -98,7 +98,7 @@ it('keeps the clock header when the client email is filed on the note', function
         ->and(ClockNote::correspondence($body)['reply'])->toBe('Use the tin loaf.');
 });
 
-it('keeps a pasted client email and reply', function () {
+it('keeps a pasted client email and reply', function (): void {
     $client = "Hello Ada,\r\n\r\n    The loaf is  wholemeal.";
     $reply = "Thanks.\n\n    I will  bake it.  ";
     $body = ClockNote::withMail(
@@ -112,7 +112,7 @@ it('keeps a pasted client email and reply', function () {
         ->and(ClockNote::parse($body)?->summary)->toBe('The loaf');
 });
 
-it('keeps a pasted reply on a sent note', function () {
+it('keeps a pasted reply on a sent note', function (): void {
     $reply = "Thanks.\n\n    I will  bake it.";
     $body = ClockNote::sent('123456789', london('2026-10-22 16:04'), 'The loaf', $reply);
 
@@ -120,7 +120,7 @@ it('keeps a pasted reply on a sent note', function () {
         ->and(ClockNote::parse($body)?->subject)->toBe('The loaf');
 });
 
-it('omits a blank pasted section', function () {
+it('omits a blank pasted section', function (): void {
     $body = ClockNote::withMail(
         ClockNote::inbound(london('2026-10-22 10:42'), ReceiptSource::MailClient, 'The loaf'),
         "   \n",
@@ -132,11 +132,11 @@ it('omits a blank pasted section', function () {
         ->and(ClockNote::correspondence($body)['reply'])->toBe('Thanks.');
 });
 
-it('rejects a subject that runs over more than one line', function () {
+it('rejects a subject that runs over more than one line', function (): void {
     ClockNote::inbound(london('2026-10-22 10:42'), ReceiptSource::MailClient, '', "The loaf\nToday");
 })->throws(InvalidArgumentException::class, 'Subject must be one line.');
 
-it('parses a sent note that has no subject', function () {
+it('parses a sent note that has no subject', function (): void {
     $body = ClockNote::sent('123456789', london('2026-10-22 16:04'), '');
     $parsed = ClockNote::parse($body);
 
@@ -145,7 +145,7 @@ it('parses a sent note that has no subject', function () {
         ->and($body)->not->toContain('Subject:');
 });
 
-it('writes a sent note that parses back', function () {
+it('writes a sent note that parses back', function (): void {
     $sent = new DateTimeImmutable('2026-10-22 16:04', new DateTimeZone('Europe/London'));
     $body = ClockNote::sent('123456789', $sent, 'PHP on the new server');
     $parsed = ClockNote::parse($body);

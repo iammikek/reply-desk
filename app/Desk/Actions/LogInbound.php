@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Desk\Actions;
 
 use App\Clock\ClockNote;
@@ -9,7 +11,7 @@ use App\Desk\Notes\NoteFile;
 use App\Desk\Notes\NoteStore;
 use DateTimeImmutable;
 
-final class LogInbound
+final readonly class LogInbound
 {
     public function __construct(private NoteStore $notes) {}
 

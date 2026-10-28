@@ -6,7 +6,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 
-final class ReplyClock
+final readonly class ReplyClock
 {
     public const string ZONE = 'Europe/London';
 
@@ -63,8 +63,8 @@ final class ReplyClock
         while ($cursor < $end) {
             $range = $this->hours->rangeContaining($cursor);
 
-            if ($range !== null) {
-                [$hour, $minute] = array_map('intval', explode(':', $range->close));
+            if ($range instanceof DayRange) {
+                [$hour, $minute] = array_map(intval(...), explode(':', $range->close));
                 $close = $cursor->setTime($hour, $minute);
 
                 if ($cursor->format('H:i:s') >= $range->close.':00') {

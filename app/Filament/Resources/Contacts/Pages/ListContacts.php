@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\Contacts\Pages;
 
 use App\Desk\DeskException;
 use App\Desk\Notes\NoteStore;
+use App\Filament\DeskNotify;
 use App\Filament\Resources\Contacts\ContactResource;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -12,7 +15,6 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Filament\Schemas\Components\EmbeddedTable;
 use Filament\Schemas\Schema;
-use Filament\Support\Exceptions\Halt;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
@@ -66,9 +68,7 @@ class ListContacts extends Page implements HasTable
                             (string) $data['email'],
                         );
                     } catch (DeskException $exception) {
-                        Notification::make()->title($exception->getMessage())->danger()->send();
-
-                        throw new Halt;
+                        DeskNotify::halt($exception);
                     }
 
                     $this->flushCachedTableRecords();

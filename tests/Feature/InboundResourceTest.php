@@ -12,7 +12,7 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-it('reads a HubSpot inbound without querying the local emails table', function () {
+it('reads a HubSpot inbound without querying the local emails table', function (): void {
     config([
         'reply-desk.store' => 'hubspot',
         'reply-desk.portal_id' => '100000001',

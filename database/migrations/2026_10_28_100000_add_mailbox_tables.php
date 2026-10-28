@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('mail_message_ids', function (Blueprint $table) {
+        Schema::create('mail_message_ids', function (Blueprint $table): void {
             $table->id();
             $table->string('message_id')->unique();
             $table->string('note_id');
@@ -16,11 +16,11 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::table('drafts', function (Blueprint $table) {
+        Schema::table('drafts', function (Blueprint $table): void {
             $table->string('mailbox_draft_id')->nullable()->after('body');
         });
 
-        Schema::create('mailbox_state', function (Blueprint $table) {
+        Schema::create('mailbox_state', function (Blueprint $table): void {
             $table->id();
             $table->boolean('polling_enabled')->default(true);
             $table->unsignedInteger('poll_interval_minutes')->default(5);
@@ -30,7 +30,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('desk_activity', function (Blueprint $table) {
+        Schema::create('desk_activity', function (Blueprint $table): void {
             $table->id();
             $table->string('action');
             $table->string('summary');
@@ -47,7 +47,7 @@ return new class extends Migration
     {
         Schema::dropIfExists('desk_activity');
         Schema::dropIfExists('mailbox_state');
-        Schema::table('drafts', function (Blueprint $table) {
+        Schema::table('drafts', function (Blueprint $table): void {
             $table->dropColumn('mailbox_draft_id');
         });
         Schema::dropIfExists('mail_message_ids');

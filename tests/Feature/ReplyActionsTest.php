@@ -12,12 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
-});
+beforeEach(fn () => seedReplyDeskDirectory());
 
-it('lists an open inbound with the due time from the clock', function () {
+it('lists an open inbound with the due time from the clock', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -37,7 +34,7 @@ it('lists an open inbound with the due time from the clock', function () {
         ->and($open[0]->overdueAt(london('2026-10-24 08:01')))->toBeTrue();
 });
 
-it('keeps a later reply and refuses the same minute', function () {
+it('keeps a later reply and refuses the same minute', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -61,7 +58,7 @@ it('keeps a later reply and refuses the same minute', function () {
         ->toThrow(DeskException::class, 'already recorded at that minute');
 });
 
-it('stops when more than one company matches and writes no note', function () {
+it('stops when more than one company matches and writes no note', function (): void {
     replyDeskParty('company', '11', 'Northwharf Bakery West');
 
     expect(fn () => app(LogInbound::class)(
@@ -75,7 +72,7 @@ it('stops when more than one company matches and writes no note', function () {
     expect(DB::table('emails')->count())->toBe(0);
 });
 
-it('keeps the pasted reply and shows that thread on the next open note', function () {
+it('keeps the pasted reply and shows that thread on the next open note', function (): void {
     $closed = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -110,7 +107,7 @@ it('keeps the pasted reply and shows that thread on the next open note', functio
         ->and($open[0]->earlier[0]->replies[0]['body'])->toBe("Use 8.3 on the new box.\n\nMike");
 });
 
-it('lists the contacts on each company', function () {
+it('lists the contacts on each company', function (): void {
     replyDeskParty('company', '11', 'Harbour Cafe');
     replyDeskParty('contact', '21', 'Ned Shore', 'ned@harbour.example', '11');
     replyDeskParty('contact', '23', 'No Address', '', '10');
@@ -127,7 +124,7 @@ it('lists the contacts on each company', function () {
         ->and($northwharf['contacts'][0]['email'])->toBe('ada@northwharf.example');
 });
 
-it('stores the pasted client email on the inbound note', function () {
+it('stores the pasted client email on the inbound note', function (): void {
     Artisan::call('reply:log-inbound', [
         'company' => 'Northwharf Bakery',
         'email' => 'ada@northwharf.example',
@@ -143,7 +140,7 @@ it('stores the pasted client email on the inbound note', function () {
         ->toContain('Subject: Friday loaf');
 });
 
-it('adds a company and a contact', function () {
+it('adds a company and a contact', function (): void {
     Artisan::call('reply:create-company', ['name' => 'West Quay']);
     $company = json_decode(Artisan::output(), true);
 
@@ -160,7 +157,7 @@ it('adds a company and a contact', function () {
     expect(Artisan::call('reply:create-company', ['name' => 'West Quay']))->toBe(1);
 });
 
-it('refuses a contact who is not on that company', function () {
+it('refuses a contact who is not on that company', function (): void {
     replyDeskParty('company', '11', 'Harbour Cafe');
     replyDeskParty('contact', '21', 'Ned Shore', 'ned@harbour.example', '11');
 
@@ -175,7 +172,7 @@ it('refuses a contact who is not on that company', function () {
     expect(DB::table('emails')->count())->toBe(0);
 });
 
-it('prints the open queue as json', function () {
+it('prints the open queue as json', function (): void {
     app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',

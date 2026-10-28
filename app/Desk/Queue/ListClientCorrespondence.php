@@ -3,34 +3,19 @@
 namespace App\Desk\Queue;
 
 use App\Clock\ClockNote;
-use App\Clock\ParsedInbound;
-use App\Clock\ParsedSent;
 use App\Clock\ReplyClock;
 use App\Desk\Notes\NoteStore;
 use App\Desk\Notes\StoredNote;
 use DateTimeImmutable;
 use DateTimeZone;
 
-final class ListClientCorrespondence
+final readonly class ListClientCorrespondence
 {
     public function __construct(private NoteStore $notes) {}
 
     public function __invoke(string $companyId, string $contactId): ?ClientCorrespondence
     {
-        $sent = [];
-        $inbound = [];
-
-        foreach ($this->notes->notes() as $note) {
-            $parsed = ClockNote::parse($note->body);
-
-            if ($parsed instanceof ParsedSent) {
-                $sent[$parsed->closes][] = [$note, $parsed];
-            }
-
-            if ($parsed instanceof ParsedInbound && $note->companyId === $companyId && $note->contactId === $contactId) {
-                $inbound[] = [$note, $parsed];
-            }
-        }
+        ['inbound' => $inbound, 'sent' => $sent] = (new IndexClockNotes($this->notes))($companyId, $contactId);
 
         if ($inbound === []) {
             return null;
@@ -43,7 +28,7 @@ final class ListClientCorrespondence
         foreach ($inbound as [$note, $parsed]) {
             $events[] = $this->event($parsed->receipt, 0, 'Client email', $parsed->summary, ClockNote::correspondence($note->body)['client'], $note->attachmentName, $note->id);
 
-            foreach ($this->replies($sent[$note->id] ?? []) as [$reply, $parsedReply]) {
+            foreach (IndexClockNotes::sortReplies($sent[$note->id] ?? []) as [$reply, $parsedReply]) {
                 $events[] = $this->event($parsedReply->sent, 1, 'Reply', $parsedReply->subject, ClockNote::correspondence($reply->body)['reply'], $reply->attachmentName, $reply->id);
             }
         }
@@ -56,10 +41,9 @@ final class ListClientCorrespondence
 
         /** @var StoredNote $first */
         $first = $inbound[0][0];
-        $contact = $first->contactName !== '' ? $first->contactName : $first->contactEmail;
 
         return new ClientCorrespondence(
-            trim($first->companyName.' / '.$contact, ' /'),
+            $first->clientLabel(),
             $first->contactEmail,
             array_map(fn (array $event): array => [
                 'at' => $this->format($event['moment']),
@@ -70,17 +54,6 @@ final class ListClientCorrespondence
                 'note_id' => $event['note_id'],
             ], $events),
         );
-    }
-
-    /**
-     * @param  list<array{0: StoredNote, 1: ParsedSent}>  $replies
-     * @return list<array{0: StoredNote, 1: ParsedSent}>
-     */
-    private function replies(array $replies): array
-    {
-        usort($replies, fn (array $left, array $right): int => $left[1]->sent <=> $right[1]->sent);
-
-        return $replies;
     }
 
     /**

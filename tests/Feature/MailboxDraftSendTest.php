@@ -21,7 +21,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(fn () => useFakeMailbox());
 
-it('creates and replaces one drafts folder message', function () {
+it('creates and replaces one drafts folder message', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -45,7 +45,7 @@ it('creates and replaces one drafts folder message', function () {
         ->and($mailbox->drafts[$draft->mailbox_draft_id]['body'])->toBe('Body two');
 });
 
-it('removes the drafts folder message on discard', function () {
+it('removes the drafts folder message on discard', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -63,7 +63,7 @@ it('removes the drafts folder message on discard', function () {
         ->and(app(FakeMailbox::class)->drafts)->not->toHaveKey($identity);
 });
 
-it('stores a Message-ID and clears drafts on send', function () {
+it('stores a Message-ID and clears drafts on send', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -83,7 +83,7 @@ it('stores a Message-ID and clears drafts on send', function () {
         ->and(DeskActivity::query()->where('action', 'reply.sent')->exists())->toBeTrue();
 });
 
-it('leaves both drafts when send is refused', function () {
+it('leaves both drafts when send is refused', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -104,7 +104,7 @@ it('leaves both drafts when send is refused', function () {
         ->and(DeskActivity::query()->where('action', 'reply.send_failed')->exists())->toBeTrue();
 });
 
-it('sends through reply:send', function () {
+it('sends through reply:send', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -122,7 +122,7 @@ it('sends through reply:send', function () {
     expect(app(ListOpenReplies::class)(london('2026-10-23 15:30')))->toBeEmpty();
 });
 
-it('keeps the laravel mailer path when mailbox is off', function () {
+it('keeps the laravel mailer path when mailbox is off', function (): void {
     config(['reply-desk.mailbox.driver' => '']);
     app()->forgetInstance(Mailbox::class);
     Mail::fake();

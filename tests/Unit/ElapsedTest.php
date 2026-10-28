@@ -5,7 +5,7 @@ use App\Clock\PracticeHours;
 use App\Clock\ReplyClock;
 use App\Filament\Schemas\ReplyInfolist;
 
-it('states how long a reply took from the clock start', function (string $start, string $end, string $elapsed) {
+it('states how long a reply took from the clock start', function (string $start, string $end, string $elapsed): void {
     $zone = new DateTimeZone(ReplyClock::ZONE);
 
     expect(Elapsed::between(new DateTimeImmutable($start, $zone), new DateTimeImmutable($end, $zone)))->toBe($elapsed);
@@ -17,16 +17,16 @@ it('states how long a reply took from the clock start', function (string $start,
     'a day and an hour' => ['2026-10-20 10:00', '2026-10-21 11:00', '1 day 1 hour'],
 ]);
 
-it('counts a reply from the next working morning', function () {
+it('counts a reply from the next working morning', function (): void {
     expect(ReplyInfolist::repliedIn('2026-10-23 21:00', '2026-10-26 09:30'))->toBe('Replied in 1 hour 30 minutes');
 });
 
-it('leaves the weekend and the evening out of replied in', function () {
+it('leaves the weekend and the evening out of replied in', function (): void {
     expect(ReplyInfolist::repliedIn('2026-10-23 09:40', '2026-10-26 19:30'))->toBe('Replied in 21 hours 50 minutes')
         ->and(ReplyInfolist::repliedIn('2026-10-20 10:00', '2026-10-21 10:00'))->toBe('Replied in 12 hours');
 });
 
-it('leaves a mid-day gap out of open minutes', function () {
+it('leaves a mid-day gap out of open minutes', function (): void {
     $hours = PracticeHours::fromConfig([
         'timezone' => ReplyClock::ZONE,
         'interval_hours' => 24,
@@ -49,7 +49,7 @@ it('leaves a mid-day gap out of open minutes', function () {
     ))->toBe(120);
 });
 
-it('places a later clock start after the receipt', function () {
+it('places a later clock start after the receipt', function (): void {
     $kinds = collect(ReplyInfolist::events([
         'inbound' => '2026-10-23 21:00',
         'clock_start' => '2026-10-26 08:00',

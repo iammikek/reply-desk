@@ -54,7 +54,7 @@ final class ClosedThreadsTable
     private static function records(?string $search, ?string $sortColumn, ?string $sortDirection): array
     {
         $records = array_map(
-            fn (ClosedThread $thread): array => self::record($thread),
+            self::record(...),
             app(ListClosedThreads::class)(),
         );
 
@@ -91,12 +91,12 @@ final class ClosedThreadsTable
         $lastPage = max(1, (int) ceil($total / $perPage));
         $page = min(max(1, (int) $page), $lastPage);
 
-        return (new LengthAwarePaginator(
+        return new LengthAwarePaginator(
             array_slice($records, ($page - 1) * $perPage, $perPage),
             $total,
             $perPage,
             $page,
-        ))->onEachSide(0);
+        )->onEachSide(0);
     }
 
     private static function perPage(int|string|null $recordsPerPage, int $total): int

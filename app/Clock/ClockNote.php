@@ -55,8 +55,13 @@ final class ClockNote
 
     public static function subjectOf(string $body): string
     {
+        return self::headerField($body, 'Subject');
+    }
+
+    public static function headerField(string $body, string $label): string
+    {
         foreach (self::header($body) as $line) {
-            if (preg_match('/^Subject: (.+)$/', $line, $matches) === 1) {
+            if (preg_match('/^'.preg_quote($label, '/').': (.+)$/', $line, $matches) === 1) {
                 return $matches[1];
             }
         }
@@ -214,7 +219,7 @@ final class ClockNote
         $receipt = self::moment($lines[1], 'Receipt');
         $source = self::source($lines[2]);
 
-        if ($receipt === null || $source === null) {
+        if (! $receipt instanceof DateTimeImmutable || ! $source instanceof ReceiptSource) {
             return null;
         }
 
@@ -256,7 +261,7 @@ final class ClockNote
         $sent = self::moment($lines[2], 'Sent');
         $subject = '';
 
-        if ($sent === null) {
+        if (! $sent instanceof DateTimeImmutable) {
             return null;
         }
 

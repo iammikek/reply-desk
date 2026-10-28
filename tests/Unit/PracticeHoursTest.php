@@ -28,8 +28,8 @@ function practiceHoursConfig(array $overrides = []): array
     return array_merge($config, $overrides);
 }
 
-it('refuses bad practice hours', function (array $overrides, string $message) {
-    expect(fn () => PracticeHours::fromConfig(practiceHoursConfig($overrides)))
+it('refuses bad practice hours', function (array $overrides, string $message): void {
+    expect(fn (): PracticeHours => PracticeHours::fromConfig(practiceHoursConfig($overrides)))
         ->toThrow(PracticeHoursException::class, $message);
 })->with([
     'empty week' => [[
@@ -69,7 +69,7 @@ it('refuses bad practice hours', function (array $overrides, string $message) {
     'bad timezone' => [['timezone' => 'Not/AZone'], 'That timezone is not known.'],
 ]);
 
-it('opens on saturday when that day has a range', function () {
+it('opens on saturday when that day has a range', function (): void {
     $hours = PracticeHours::fromConfig(practiceHoursConfig([
         'interval_hours' => 12,
         'hours' => [
@@ -91,7 +91,7 @@ it('opens on saturday when that day has a range', function () {
         ->and($schedule->replyDue->format('Y-m-d H:i'))->toBe('2026-10-24 22:00');
 });
 
-it('starts after a mid-day gap at the next open', function () {
+it('starts after a mid-day gap at the next open', function (): void {
     $hours = PracticeHours::fromConfig(practiceHoursConfig([
         'hours' => [
             'monday' => [['08:00', '12:00'], ['14:00', '18:00']],

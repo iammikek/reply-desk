@@ -12,6 +12,7 @@ use App\Desk\LondonTime;
 use App\Desk\Notes\NoteFile;
 use App\Desk\Queue\ListOpenReplies;
 use App\Desk\Queue\OpenReply;
+use App\Filament\DeskNotify;
 use App\Filament\MountedReply;
 use App\Filament\Resources\Inbounds\Pages\ListOpenQueue;
 use App\Filament\Schemas\AttachmentField;
@@ -21,10 +22,10 @@ use App\Filament\Schemas\ReplyInfolist;
 use DateTimeImmutable;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
-use Filament\Support\Exceptions\Halt;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Contracts\View\Factory;
 
 final class OpenRepliesTable
 {
@@ -77,7 +78,7 @@ final class OpenRepliesTable
                             'body' => $record['draft_body'],
                         ])
                         ->extraModalWindowAttributes(['class' => 'reply-compose'])
-                        ->modalContent(fn (array $record) => view('filament.reply-thread', [
+                        ->modalContent(fn (array $record): Factory|\Illuminate\Contracts\View\View => view('filament.reply-thread', [
                             'earlier' => ReplyInfolist::earlierText($record),
                         ]))
                         ->schema([
@@ -119,9 +120,7 @@ final class OpenRepliesTable
                                             (string) ($data['body'] ?? ''),
                                         );
                                     } catch (DeskException $exception) {
-                                        Notification::make()->title($exception->getMessage())->danger()->send();
-
-                                        throw new Halt;
+                                        DeskNotify::halt($exception);
                                     }
 
                                     if ($livewire instanceof ListOpenQueue) {
@@ -140,9 +139,7 @@ final class OpenRepliesTable
                                         NoteFile::fromForm($data['attachment'] ?? null, $data['attachment_name'] ?? null),
                                     );
                                 } catch (DeskException $exception) {
-                                    Notification::make()->title($exception->getMessage())->danger()->send();
-
-                                    throw new Halt;
+                                    DeskNotify::halt($exception);
                                 }
 
                                 $livewire->flushCachedTableRecords();
@@ -173,9 +170,7 @@ final class OpenRepliesTable
                                 NoteFile::fromForm($data['attachment'] ?? null, $data['attachment_name'] ?? null),
                             );
                         } catch (DeskException $exception) {
-                            Notification::make()->title($exception->getMessage())->danger()->send();
-
-                            throw new Halt;
+                            DeskNotify::halt($exception);
                         }
 
                         $livewire->flushCachedTableRecords();

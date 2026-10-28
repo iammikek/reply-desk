@@ -9,13 +9,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('companies', function (Blueprint $table) {
+        Schema::create('companies', function (Blueprint $table): void {
             $table->id();
             $table->string('name')->unique();
             $table->timestamps();
         });
 
-        Schema::create('contacts', function (Blueprint $table) {
+        Schema::create('contacts', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->string('name');
@@ -23,7 +23,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('emails', function (Blueprint $table) {
+        Schema::create('emails', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('contact_id')->constrained()->cascadeOnDelete();
@@ -39,7 +39,7 @@ return new class extends Migration
             $table->unique(['closes_id', 'at']);
         });
 
-        Schema::create('attachments', function (Blueprint $table) {
+        Schema::create('attachments', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('email_id')->constrained()->cascadeOnDelete();
             $table->string('name');
@@ -51,7 +51,7 @@ return new class extends Migration
 
         Schema::drop('drafts');
 
-        Schema::create('drafts', function (Blueprint $table) {
+        Schema::create('drafts', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('email_id')->nullable()->unique()->constrained('emails')->nullOnDelete();
             $table->string('inbound_note_id')->nullable()->unique();
@@ -83,7 +83,7 @@ return new class extends Migration
         Schema::dropIfExists('contacts');
         Schema::dropIfExists('companies');
 
-        Schema::create('drafts', function (Blueprint $table) {
+        Schema::create('drafts', function (Blueprint $table): void {
             $table->id();
             $table->string('inbound_note_id')->unique();
             $table->string('subject');

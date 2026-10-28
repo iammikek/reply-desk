@@ -11,12 +11,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
-});
+beforeEach(fn () => seedReplyDeskDirectory());
 
-it('stores a draft against the local email', function () {
+it('stores a draft against the local email', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -34,7 +31,7 @@ it('stores a draft against the local email', function () {
         ->and($draft->inbound_note_id)->toBeNull();
 });
 
-it('refuses a draft that points at both records', function () {
+it('refuses a draft that points at both records', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -51,7 +48,7 @@ it('refuses a draft that points at both records', function () {
     ]))->toThrow(DeskException::class, 'local email or the HubSpot note');
 });
 
-it('refuses a second reply at the same minute', function () {
+it('refuses a second reply at the same minute', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -67,7 +64,7 @@ it('refuses a second reply at the same minute', function () {
         ->toThrow(DeskException::class, 'already recorded at that minute');
 });
 
-it('keeps a HubSpot draft on the note id', function () {
+it('keeps a HubSpot draft on the note id', function (): void {
     config(['reply-desk.store' => 'hubspot']);
 
     Draft::query()->create([

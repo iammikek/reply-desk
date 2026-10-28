@@ -12,17 +12,15 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    $this->travelTo(london('2026-10-23 12:00'));
+beforeEach(function (): void {
+    seedReplyDeskDirectory('2026-10-23 12:00');
     $this->actingAs(User::factory()->create());
-    replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
     replyDeskParty('contact', '22', 'Bea North', 'bea@northwharf.example', '10');
     replyDeskParty('company', '11', 'Harbour Cafe');
     replyDeskParty('contact', '21', 'Ned Harbour', 'ned@harbour.example', '11');
 });
 
-it('opens one timeline for that company and contact', function () {
+it('opens one timeline for that company and contact', function (): void {
     $first = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -86,12 +84,12 @@ it('opens one timeline for that company and contact', function () {
         ->assertDontSee('The tape jammed.');
 });
 
-it('does not open a client with no correspondence', function () {
+it('does not open a client with no correspondence', function (): void {
     $this->get(Client::urlFor('10', '99'))
         ->assertNotFound();
 });
 
-it('does not open a client page for a signed-out visitor', function () {
+it('does not open a client page for a signed-out visitor', function (): void {
     auth()->logout();
 
     $this->get(Client::urlFor('10', '20'))

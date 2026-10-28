@@ -3,14 +3,12 @@
 namespace App\Desk\Queue;
 
 use App\Clock\ClockNote;
-use App\Clock\ParsedInbound;
-use App\Clock\ParsedSent;
 use App\Clock\ReplyClock;
 use App\Desk\Notes\NoteStore;
 use App\Models\Draft;
 use DateTimeImmutable;
 
-final class ListOpenReplies
+final readonly class ListOpenReplies
 {
     public function __construct(
         private NoteStore $notes,
@@ -23,20 +21,7 @@ final class ListOpenReplies
     public function __invoke(?DateTimeImmutable $now = null, ?bool $overdue = null): array
     {
         $now ??= DateTimeImmutable::createFromInterface(now(ReplyClock::zoneName()));
-        $sent = [];
-        $inbound = [];
-
-        foreach ($this->notes->notes() as $note) {
-            $parsed = ClockNote::parse($note->body);
-
-            if ($parsed instanceof ParsedSent) {
-                $sent[$parsed->closes][] = [$note, $parsed];
-            }
-
-            if ($parsed instanceof ParsedInbound) {
-                $inbound[] = [$note, $parsed];
-            }
-        }
+        ['inbound' => $inbound, 'sent' => $sent] = (new IndexClockNotes($this->notes))();
 
         $earlierByCompany = [];
 
@@ -47,7 +32,7 @@ final class ListOpenReplies
                 continue;
             }
 
-            usort($replies, fn (array $left, array $right): int => $left[1]->sent <=> $right[1]->sent);
+            $replies = IndexClockNotes::sortReplies($replies);
 
             $earlierByCompany[$note->companyId][] = new EarlierThread(
                 $parsed->receipt,
@@ -78,12 +63,11 @@ final class ListOpenReplies
             }
 
             $schedule = $this->clock->schedule($parsed->receipt);
-            $contact = $note->contactName !== '' ? $note->contactName : $note->contactEmail;
             $draft = $drafts->get($note->id);
 
             $open[] = new OpenReply(
                 $note->id,
-                trim($note->companyName.' / '.$contact, ' /'),
+                $note->clientLabel(),
                 $parsed->summary,
                 $note->contactEmail,
                 $note->companyId,

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Artisan;
 
 uses(RefreshDatabase::class);
 
-it('runs every desk command', function () {
+it('runs every desk command', function (): void {
     expect(Artisan::call('reply:backfill', [
         'path' => base_path('tests/Fixtures/open-table.md'),
     ]))->toBe(0)
@@ -66,7 +66,7 @@ it('runs every desk command', function () {
         ->and($closed)->toContain('West Quay / Bea Quay');
 });
 
-it('keeps the previous subject when a reply has none', function () {
+it('keeps the previous subject when a reply has none', function (): void {
     Artisan::call('reply:create-company', ['name' => 'West Quay']);
     Artisan::call('reply:create-contact', [
         'company' => 'West Quay',
@@ -115,7 +115,7 @@ it('keeps the previous subject when a reply has none', function () {
         ->and($replies[2]['subject'])->toBe('Re: Update');
 });
 
-it('records a reply with no subject when the client email has none', function () {
+it('records a reply with no subject when the client email has none', function (): void {
     Artisan::call('reply:create-company', ['name' => 'West Quay']);
     Artisan::call('reply:create-contact', [
         'company' => 'West Quay',

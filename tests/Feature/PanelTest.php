@@ -6,7 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('shows the reply desk login', function () {
+it('shows the reply desk login', function (): void {
     $this->get('/login')
         ->assertSuccessful()
         ->assertSee('The open queue for practice client email.')
@@ -20,11 +20,11 @@ it('shows the reply desk login', function () {
         ->assertSee('Sign in');
 });
 
-it('leaves the in-app case study', function () {
+it('leaves the in-app case study', function (): void {
     $this->get('/case-study')->assertNotFound();
 });
 
-it('shows the seeded user after sign-in', function () {
+it('shows the seeded user after sign-in', function (): void {
     $this->seed();
 
     $administrator = User::query()->where('email', 'admin@example.com')->first();
@@ -38,7 +38,7 @@ it('shows the seeded user after sign-in', function () {
         ->assertRedirect(ChangePassword::getUrl());
 });
 
-it('shows the outside hours banner on saturday', function () {
+it('shows the outside hours banner on saturday', function (): void {
     $this->travelTo(london('2026-10-24 15:00'));
     $this->actingAs(User::factory()->create())
         ->get('/')
@@ -46,7 +46,7 @@ it('shows the outside hours banner on saturday', function () {
         ->assertSee('Outside practice hours. Next open Monday 08:00.');
 });
 
-it('hides the outside hours banner inside the window', function () {
+it('hides the outside hours banner inside the window', function (): void {
     $this->travelTo(london('2026-10-20 10:00'));
     $this->actingAs(User::factory()->create())
         ->get('/')

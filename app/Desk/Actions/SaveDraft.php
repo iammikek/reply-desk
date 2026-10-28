@@ -2,13 +2,11 @@
 
 namespace App\Desk\Actions;
 
-use App\Clock\ClockNote;
-use App\Desk\DeskException;
 use App\Desk\LogDeskActivity;
 use App\Desk\Mailbox\Mailbox;
 use App\Models\Draft;
 
-final class SaveDraft
+final readonly class SaveDraft
 {
     public function __construct(
         private FindInbound $findInbound,
@@ -18,13 +16,7 @@ final class SaveDraft
 
     public function __invoke(string $inboundId, string $subject, string $body): void
     {
-        $subject = trim($subject);
-        $body = ClockNote::pasted($body);
-
-        if ($subject === '' || $body === '' || str_contains($subject, "\n") || str_contains($subject, "\r")) {
-            throw new DeskException('A draft needs a subject and a body.');
-        }
-
+        [$subject, $body] = NormalizeReply::draft($subject, $body);
         $inbound = ($this->findInbound)->open($inboundId);
         $attributes = ['subject' => $subject, 'body' => $body];
 

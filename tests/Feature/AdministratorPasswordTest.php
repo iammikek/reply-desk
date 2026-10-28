@@ -12,7 +12,7 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-it('sends a user who must change password to the change page', function () {
+it('sends a user who must change password to the change page', function (): void {
     $user = User::factory()->mustChangePassword()->create();
 
     $this->actingAs($user)
@@ -20,7 +20,7 @@ it('sends a user who must change password to the change page', function () {
         ->assertRedirect(ChangePassword::getUrl());
 });
 
-it('opens the queue after the password is changed', function () {
+it('opens the queue after the password is changed', function (): void {
     $user = User::factory()->mustChangePassword()->create([
         'password' => 'old-password-1',
     ]);
@@ -43,7 +43,7 @@ it('opens the queue after the password is changed', function () {
     $this->get('/')->assertSuccessful()->assertSee('Open queue');
 });
 
-it('refuses a wrong current password', function () {
+it('refuses a wrong current password', function (): void {
     $user = User::factory()->mustChangePassword()->create([
         'password' => 'old-password-1',
     ]);
@@ -62,7 +62,7 @@ it('refuses a wrong current password', function () {
     expect($user->fresh()->mustChangePassword())->toBeTrue();
 });
 
-it('opens the queue when the password was already changed', function () {
+it('opens the queue when the password was already changed', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
@@ -72,7 +72,7 @@ it('opens the queue when the password was already changed', function () {
         ->assertDontSee('Choose a new password before the queue opens.');
 });
 
-it('sends a password reset link and accepts a new password', function () {
+it('sends a password reset link and accepts a new password', function (): void {
     Notification::fake();
 
     $user = User::factory()->create([

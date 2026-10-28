@@ -9,14 +9,14 @@ use Exception;
 final class PracticeHours
 {
     /** @var list<string> */
-    public const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    public const array DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
     /**
      * @param  array<string, list<DayRange>>  $ranges
      */
     private function __construct(
-        private string $timezone,
-        private int $intervalHours,
+        private readonly string $timezone,
+        private readonly int $intervalHours,
         private array $ranges,
     ) {}
 
@@ -125,7 +125,7 @@ final class PracticeHours
 
     public function contains(DateTimeImmutable $moment): bool
     {
-        return $this->rangeContaining($moment) !== null;
+        return $this->rangeContaining($moment) instanceof DayRange;
     }
 
     public function rangeContaining(DateTimeImmutable $moment): ?DayRange
@@ -150,7 +150,7 @@ final class PracticeHours
             $day = $moment->modify('+'.$offset.' day')->setTime(0, 0);
 
             foreach ($this->rangesFor($day) as $range) {
-                [$hour, $minute] = array_map('intval', explode(':', $range->open));
+                [$hour, $minute] = array_map(intval(...), explode(':', $range->open));
                 $open = $day->setTime($hour, $minute);
 
                 if ($open > $moment) {

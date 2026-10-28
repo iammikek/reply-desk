@@ -27,7 +27,7 @@ final class OpenTable
             throw new DeskException('The Open section has no table.');
         }
 
-        $header = array_map(fn (string $cell): string => strtolower($cell), array_shift($table));
+        $header = array_map(strtolower(...), array_shift($table));
         $columns = array_flip($header);
 
         $this->requireColumns($columns, 'Open');
@@ -67,7 +67,7 @@ final class OpenTable
             return ['rows' => [], 'skipped' => []];
         }
 
-        $header = array_map(fn (string $cell): string => strtolower($cell), array_shift($table));
+        $header = array_map(strtolower(...), array_shift($table));
         $columns = array_flip($header);
 
         $this->requireColumns($columns, 'Sent');
@@ -231,7 +231,7 @@ final class OpenTable
 
             $cells = array_map(trim(...), explode('|', trim($line)));
 
-            if ($cells !== [] && $cells[0] === '') {
+            if ($cells[0] === '') {
                 array_shift($cells);
             }
 
@@ -602,7 +602,7 @@ final class OpenTable
             return $this->oneLine($sentence);
         }
 
-        if ($summary !== '' && $summary !== 'Open reply' && $summary !== self::OUTREACH_SUMMARY) {
+        if (! in_array($summary, ['', 'Open reply', self::OUTREACH_SUMMARY], true)) {
             return $this->oneLine($summary);
         }
 

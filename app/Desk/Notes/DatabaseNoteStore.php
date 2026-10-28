@@ -167,13 +167,13 @@ final class DatabaseNoteStore implements NoteStore
             $email->save();
         } catch (QueryException $exception) {
             if ($this->sameMinute($exception)) {
-                throw new DeskException('That reply was already recorded at that minute.');
+                throw new DeskException('That reply was already recorded at that minute.', $exception->getCode(), $exception);
             }
 
             throw $exception;
         }
 
-        if ($file !== null) {
+        if ($file instanceof NoteFile) {
             $this->keepFile((string) $email->id, $file);
             Attachment::query()->create([
                 'email_id' => $email->id,
@@ -199,7 +199,7 @@ final class DatabaseNoteStore implements NoteStore
             $email->save();
         } catch (QueryException $exception) {
             if ($this->sameMinute($exception)) {
-                throw new DeskException('That reply was already recorded at that minute.');
+                throw new DeskException('That reply was already recorded at that minute.', $exception->getCode(), $exception);
             }
 
             throw $exception;
@@ -216,7 +216,7 @@ final class DatabaseNoteStore implements NoteStore
 
         $name = basename($attachment->name);
 
-        if ($name === '' || $name === '.' || $name === '..') {
+        if (in_array($name, ['', '.', '..'], true)) {
             return null;
         }
 
@@ -274,8 +274,8 @@ final class DatabaseNoteStore implements NoteStore
         $parsed = ClockNote::parse($body);
 
         if ($parsed instanceof ParsedInbound) {
-            $subject = $this->line($body, 'Subject');
-            $summary = $this->line($body, 'Summary');
+            $subject = ClockNote::headerField($body, 'Subject');
+            $summary = ClockNote::headerField($body, 'Summary');
 
             return [
                 'direction' => 'inbound',
@@ -334,21 +334,6 @@ final class DatabaseNoteStore implements NoteStore
             $attachment instanceof Attachment ? $attachment->name : null,
             $attachment instanceof Attachment ? (string) $attachment->id : null,
         );
-    }
-
-    private function line(string $body, string $label): string
-    {
-        foreach (preg_split("/\r\n|\n|\r/", $body) ?: [] as $line) {
-            if (trim($line) === '') {
-                break;
-            }
-
-            if (preg_match('/^'.preg_quote($label, '/').': (.+)$/', $line, $matches) === 1) {
-                return $matches[1];
-            }
-        }
-
-        return '';
     }
 
     private function company(string $id): Company

@@ -14,7 +14,7 @@ use App\Models\Draft;
 use DateTimeImmutable;
 use DateTimeZone;
 
-final class MarkReplySent
+final readonly class MarkReplySent
 {
     public function __construct(
         private NoteStore $notes,

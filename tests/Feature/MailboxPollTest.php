@@ -18,7 +18,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(fn () => useFakeMailbox());
 
-it('logs a known contact from the mailbox', function () {
+it('logs a known contact from the mailbox', function (): void {
     $mailbox = app(FakeMailbox::class);
     $mailbox->seed(FakeMailbox::message(
         'ada@northwharf.example',
@@ -40,7 +40,7 @@ it('logs a known contact from the mailbox', function () {
         ->and($bodies[0])->toContain('Receipt source: mail client');
 });
 
-it('skips unknown from, own from, date-only, and duplicates', function () {
+it('skips unknown from, own from, date-only, and duplicates', function (): void {
     $mailbox = app(FakeMailbox::class);
     $mailbox->seed(FakeMailbox::message('stranger@example.com', 'Hi', 'Hello', london('2026-10-22 10:00'), cursor: '1'));
     $mailbox->seed(FakeMailbox::message('desk@example.com', 'Self', 'Hello', london('2026-10-22 10:01'), cursor: '2'));
@@ -62,7 +62,7 @@ it('skips unknown from, own from, date-only, and duplicates', function () {
         ->and(app(ListOpenReplies::class)(london('2026-10-23 15:30')))->toBeEmpty();
 });
 
-it('logs a reply when In-Reply-To matches a stored sent Message-ID', function () {
+it('logs a reply when In-Reply-To matches a stored sent Message-ID', function (): void {
     Mail::fake();
     config(['reply-desk.mailbox.driver' => '']);
     app()->forgetInstance(Mailbox::class);
@@ -99,7 +99,7 @@ it('logs a reply when In-Reply-To matches a stored sent Message-ID', function ()
         ->and(DeskActivity::query()->where('action', 'inbound.logged')->exists())->toBeTrue();
 });
 
-it('no-ops when polling is disabled unless forced', function () {
+it('no-ops when polling is disabled unless forced', function (): void {
     MailboxState::current()->forceFill([
         'polling_enabled' => false,
         'poll_interval_minutes' => 5,
@@ -119,7 +119,7 @@ it('no-ops when polling is disabled unless forced', function () {
     expect(app(PollMailbox::class)(force: true)['kept'])->toBe(1);
 });
 
-it('skips a scheduled run when the interval has not elapsed', function () {
+it('skips a scheduled run when the interval has not elapsed', function (): void {
     MailboxState::current()->forceFill([
         'polling_enabled' => true,
         'poll_interval_minutes' => 30,
@@ -137,7 +137,7 @@ it('skips a scheduled run when the interval has not elapsed', function () {
     expect(app(PollMailbox::class)(force: false)['noop'])->toBeTrue();
 });
 
-it('shows the activity page', function () {
+it('shows the activity page', function (): void {
     $user = User::factory()->create();
     DeskActivity::query()->create([
         'action' => 'poll.started',

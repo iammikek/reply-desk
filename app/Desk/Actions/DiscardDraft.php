@@ -6,7 +6,7 @@ use App\Desk\LogDeskActivity;
 use App\Desk\Mailbox\Mailbox;
 use App\Models\Draft;
 
-final class DiscardDraft
+final readonly class DiscardDraft
 {
     public function __construct(
         private Mailbox $mailbox,

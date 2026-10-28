@@ -15,7 +15,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Throwable;
 
-final class PollMailbox
+final readonly class PollMailbox
 {
     public function __construct(
         private Mailbox $mailbox,
@@ -112,7 +112,7 @@ final class PollMailbox
 
         $receipt = $this->receipt($message->date);
 
-        if ($receipt === null) {
+        if (! $receipt instanceof DateTimeImmutable) {
             return 'date_only';
         }
 
@@ -209,13 +209,7 @@ final class PollMailbox
             $ids[] = $reference;
         }
 
-        foreach (array_unique($ids) as $messageId) {
-            if (MailMessageId::known($messageId)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(array_unique($ids), fn (string $messageId): bool => MailMessageId::known($messageId));
     }
 
     private function summary(string $subject, string $body): string

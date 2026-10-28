@@ -9,7 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('seeds an overdue row and an open row with a draft', function () {
+it('seeds an overdue row and an open row with a draft', function (): void {
     $this->travelTo(london('2026-10-23 12:00'));
 
     $this->seed(DemoSeeder::class);
@@ -31,7 +31,7 @@ it('seeds an overdue row and an open row with a draft', function () {
         ->and(ReplyInfolist::repliedIn($thread->receipt->setTimezone(new DateTimeZone('Europe/London'))->format('Y-m-d H:i'), $sent))->toBe('Replied in 2 hours 30 minutes');
 });
 
-it('refuses to seed a hubspot store', function () {
+it('refuses to seed a hubspot store', function (): void {
     config([
         'reply-desk.store' => 'hubspot',
         'reply-desk.portal_id' => '100000001',
