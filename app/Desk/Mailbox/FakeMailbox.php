@@ -20,6 +20,8 @@ final class FakeMailbox implements Mailbox
 
     public bool $refuseFetch = false;
 
+    public bool $refuseTest = false;
+
     public ?string $uidValidity = '1';
 
     public int $draftSequence = 0;
@@ -105,6 +107,13 @@ final class FakeMailbox implements Mailbox
         ];
 
         return $messageId;
+    }
+
+    public function testConnection(): void
+    {
+        if ($this->refuseTest) {
+            throw new DeskException('Mailbox connection test failed.');
+        }
     }
 
     public static function message(

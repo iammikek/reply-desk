@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Inbounds\Pages;
 use App\Clock\ReceiptSource;
 use App\Desk\Actions\LogInbound;
 use App\Desk\DeskException;
+use App\Desk\InboundSummary;
 use App\Desk\LondonTime;
 use App\Desk\Notes\NoteFile;
 use App\Filament\DeskNotify;
@@ -42,15 +43,23 @@ class ListOpenQueue extends ListInboundPage
                 ->schema(LogInboundForm::components())
                 ->action(function (array $data): void {
                     try {
+                        $subject = trim((string) ($data['subject'] ?? ''));
+                        $body = (string) $data['body'];
+                        $summary = $subject === '' ? InboundSummary::from('', $body) : '';
+
+                        if ($summary === '' && $subject === '') {
+                            throw new DeskException('Add a subject or a body so the queue has a summary.');
+                        }
+
                         app(LogInbound::class)->record(
                             (string) $data['company_id'],
                             (string) $data['contact_id'],
                             LondonTime::parse($data['receipt']),
                             ReceiptSource::from((string) $data['receipt_source']),
-                            '',
-                            (string) $data['body'],
+                            $summary,
+                            $body,
                             NoteFile::fromForm($data['attachment'] ?? null, $data['attachment_name'] ?? null),
-                            (string) $data['subject'],
+                            $subject,
                         );
                     } catch (DeskException $exception) {
                         DeskNotify::halt($exception);

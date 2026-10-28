@@ -42,6 +42,8 @@ final readonly class SaveDraft
             inboundId: $inboundId,
             company: $inbound->companyName,
             contact: $inbound->contactName,
+            companyId: $inbound->companyId,
+            contactId: $inbound->contactId,
             context: [
                 'mailbox' => $this->mailbox->configured(),
                 'mailbox_draft_id' => $attributes['mailbox_draft_id'] ?? null,

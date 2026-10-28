@@ -19,6 +19,8 @@ final class LogDeskActivity
         ?string $noteId = null,
         ?string $company = null,
         ?string $contact = null,
+        ?string $companyId = null,
+        ?string $contactId = null,
         ?array $context = null,
     ): void {
         try {
@@ -29,6 +31,8 @@ final class LogDeskActivity
                 'note_id' => $noteId,
                 'company' => $company,
                 'contact' => $contact,
+                'company_id' => $companyId,
+                'contact_id' => $contactId,
                 'context' => $context,
                 'created_at' => now(),
             ]);

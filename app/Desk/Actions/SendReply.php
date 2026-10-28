@@ -60,6 +60,8 @@ final readonly class SendReply
                 inboundId: $inboundId,
                 company: $inbound->companyName,
                 contact: $inbound->contactName,
+                companyId: $inbound->companyId,
+                contactId: $inbound->contactId,
             );
 
             throw $exception instanceof DeskException
@@ -90,6 +92,8 @@ final readonly class SendReply
             noteId: $sentId,
             company: $inbound->companyName,
             contact: $inbound->contactName,
+            companyId: $inbound->companyId,
+            contactId: $inbound->contactId,
             context: [
                 'message_id' => $messageId,
                 'mailbox' => $this->mailbox->configured(),

@@ -65,6 +65,8 @@ final readonly class MarkReplySent
             noteId: $id,
             company: $inbound->companyName,
             contact: $inbound->contactName,
+            companyId: $inbound->companyId,
+            contactId: $inbound->contactId,
         );
 
         return $id;

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Resources\Contacts\ContactResource;
 use App\Models\DeskActivity;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\EmbeddedTable;
@@ -48,7 +49,10 @@ class Activity extends Page implements HasTable
                     ->toggleable(),
                 TextColumn::make('contact')
                     ->label('Contact')
-                    ->toggleable(),
+                    ->toggleable()
+                    ->url(fn (DeskActivity $record): ?string => filled($record->contact_id)
+                        ? ContactResource::getUrl('view', ['record' => $record->contact_id])
+                        : null),
                 TextColumn::make('inbound_id')
                     ->label('Inbound')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -61,6 +65,8 @@ class Activity extends Page implements HasTable
                         ->pluck('action', 'action')
                         ->all()),
             ])
+            ->emptyStateHeading('No activity yet')
+            ->emptyStateDescription('Poll, draft, send, and inbound events will appear here.')
             ->paginated([25, 50, 100])
             ->defaultPaginationPageOption(25);
     }

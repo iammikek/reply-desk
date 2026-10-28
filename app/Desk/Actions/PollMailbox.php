@@ -4,6 +4,7 @@ namespace App\Desk\Actions;
 
 use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
+use App\Desk\InboundSummary;
 use App\Desk\LogDeskActivity;
 use App\Desk\Mailbox\ExtractLatestMessage;
 use App\Desk\Mailbox\IncomingMessage;
@@ -146,9 +147,9 @@ final readonly class PollMailbox
             return 'unknown_from';
         }
 
-        [$companyId, $contactId, $companyName, $contactName] = $match;
+        [$companyId, $contactId] = $match;
 
-        $summary = $this->summary($message->subject, $body);
+        $summary = InboundSummary::from($message->subject, $body);
         $inboundId = $this->logInbound->record(
             $companyId,
             $contactId,
@@ -157,25 +158,16 @@ final readonly class PollMailbox
             $summary,
             $body,
             subject: $message->subject,
-        );
-
-        if ($message->messageId !== '') {
-            MailMessageId::remember($message->messageId, $inboundId, 'inbound');
-        }
-
-        ($this->log)(
-            'inbound.logged',
-            'Inbound logged from mailbox.',
-            inboundId: $inboundId,
-            noteId: $inboundId,
-            company: $companyName,
-            contact: $contactName,
-            context: [
+            activityContext: [
                 'message_id' => $message->messageId,
                 'via' => 'poll',
                 'reply_to_stored' => $this->referencesKnown($message),
             ],
         );
+
+        if ($message->messageId !== '') {
+            MailMessageId::remember($message->messageId, $inboundId, 'inbound');
+        }
 
         return 'kept';
     }
@@ -228,18 +220,5 @@ final readonly class PollMailbox
         }
 
         return array_any(array_unique($ids), fn (string $messageId): bool => MailMessageId::known($messageId));
-    }
-
-    private function summary(string $subject, string $body): string
-    {
-        $subject = trim($subject);
-
-        if ($subject !== '') {
-            return $subject;
-        }
-
-        $first = strtok($body, "\n") ?: '';
-
-        return trim($first);
     }
 }

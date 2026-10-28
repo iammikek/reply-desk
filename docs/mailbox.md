@@ -18,7 +18,7 @@ flowchart LR
 
 ## Connection
 
-Set `REPLY_DESK_IMAP_*`, `REPLY_DESK_SMTP_*`, and `REPLY_DESK_MAILBOX_FROM` in `.env`. When those are empty, drafts stay local and send uses the Laravel mailer. Credentials are not edited in the panel.
+Set `REPLY_DESK_IMAP_*`, `REPLY_DESK_SMTP_*`, and `REPLY_DESK_MAILBOX_FROM` in `.env`. When those are empty, drafts stay local and send uses the Laravel mailer. Credentials are not edited in the panel. **Test connection** on the Mailbox page probes IMAP and SMTP without changing the poll cursor.
 
 ## Polling
 

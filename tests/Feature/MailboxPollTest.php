@@ -4,6 +4,7 @@ use App\Clock\ReceiptSource;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\PollMailbox;
 use App\Desk\Actions\SendReply;
+use App\Desk\DeskException;
 use App\Desk\Mailbox\FakeMailbox;
 use App\Desk\Mailbox\Mailbox;
 use App\Desk\Queue\ListOpenReplies;
@@ -214,4 +215,34 @@ it('shows the activity page', function (): void {
         ->get('/activity')
         ->assertSuccessful()
         ->assertSee('Mailbox poll started.');
+});
+
+it('links activity contact names to the contact page', function (): void {
+    $user = User::factory()->create();
+    DeskActivity::query()->create([
+        'action' => 'inbound.logged',
+        'summary' => 'Inbound logged.',
+        'company' => 'Northwharf Bakery',
+        'contact' => 'Ada North',
+        'company_id' => '10',
+        'contact_id' => '20',
+        'created_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get('/activity')
+        ->assertSuccessful()
+        ->assertSee('Ada North')
+        ->assertSee('/contacts/20', false);
+});
+
+it('tests the mailbox connection without polling', function (): void {
+    $mailbox = app(FakeMailbox::class);
+
+    $mailbox->testConnection();
+
+    $mailbox->refuseTest = true;
+
+    expect(fn () => $mailbox->testConnection())
+        ->toThrow(DeskException::class, 'Mailbox connection test failed.');
 });

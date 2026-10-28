@@ -130,6 +130,41 @@ final class ImapSmtpMailbox implements Mailbox
         }
     }
 
+    public function testConnection(): void
+    {
+        try {
+            $client = $this->imapClient();
+            $client->connect();
+            $folder = $client->getFolder($this->config['inbox_folder'] ?: 'INBOX');
+            $folder->select();
+            $client->disconnect();
+        } catch (Throwable $exception) {
+            Log::warning('Mailbox IMAP connection test failed.', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            throw new DeskException('IMAP connection failed.', $exception->getCode(), $exception);
+        }
+
+        try {
+            $transport = Transport::fromDsn($this->smtpDsn());
+
+            if (method_exists($transport, 'start')) {
+                $transport->start();
+            }
+
+            if (method_exists($transport, 'stop')) {
+                $transport->stop();
+            }
+        } catch (Throwable $exception) {
+            Log::warning('Mailbox SMTP connection test failed.', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            throw new DeskException('SMTP connection failed.', $exception->getCode(), $exception);
+        }
+    }
+
     public function send(string $to, string $subject, string $body, ?string $attachmentPath = null, ?string $attachmentName = null): string
     {
         $email = $this->buildMime($to, $subject, $body);
@@ -146,7 +181,7 @@ final class ImapSmtpMailbox implements Mailbox
                 'error' => $exception->getMessage(),
             ]);
 
-            throw new DeskException('The mail server refused the message.');
+            throw new DeskException('The mail server refused the message.', $exception->getCode(), $exception);
         }
 
         $messageId = $sent?->getMessageId() ?: $email->getHeaders()->getHeaderBody('Message-ID');
@@ -192,14 +227,7 @@ final class ImapSmtpMailbox implements Mailbox
         }
 
         $response = $folder->appendMessage($raw, $flags);
-        $accepted = false;
-
-        foreach ($response as $line) {
-            if (is_string($line) && str_starts_with($line, 'OK')) {
-                $accepted = true;
-                break;
-            }
-        }
+        $accepted = array_any($response, fn ($line): bool => is_string($line) && str_starts_with($line, 'OK'));
 
         if (! $accepted) {
             throw new DeskException('The mailbox folder did not accept the message.');

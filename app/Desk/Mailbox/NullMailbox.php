@@ -32,4 +32,9 @@ final class NullMailbox implements Mailbox
     {
         throw new DeskException('No mailbox is configured.');
     }
+
+    public function testConnection(): void
+    {
+        throw new DeskException('No mailbox is configured.');
+    }
 }
