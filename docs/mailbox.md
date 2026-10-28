@@ -27,15 +27,17 @@ Set `REPLY_DESK_IMAP_*`, `REPLY_DESK_SMTP_*`, and `REPLY_DESK_MAILBOX_FROM` in `
 Rules:
 
 - Read Inbox since the last cursor; do not delete or move mail
+- When inbox UIDVALIDITY changes, the cursor resets and the inbox is read from the start
 - From must be exactly one known contact; unknown and own From are skipped
 - Duplicate Message-ID skipped
 - Date missing or unusable skipped (no invented midnight)
 - Body is the latest message only (`ExtractLatestMessage`); quoted trails are not stored
 - Receipt source is `mail client`
+- Failed polls do not advance `last_polled_at`, so the schedule retries on the next tick
 
 ## Message-IDs
 
-`mail_message_ids` maps a Message-ID to a note id (inbound or sent). Send through the practice mailbox stores the sent Message-ID. Poll uses that for dedupe and to recognise replies via In-Reply-To / References.
+`mail_message_ids` maps a Message-ID to a note id (inbound or sent). Send through the practice mailbox stores the sent Message-ID and appends a copy to the Sent folder. Poll uses that for dedupe and to recognise replies via In-Reply-To / References.
 
 ## Activity
 

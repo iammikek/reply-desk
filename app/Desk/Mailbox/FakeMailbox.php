@@ -18,6 +18,10 @@ final class FakeMailbox implements Mailbox
 
     public bool $refuseSend = false;
 
+    public bool $refuseFetch = false;
+
+    public ?string $uidValidity = '1';
+
     public int $draftSequence = 0;
 
     public int $messageSequence = 0;
@@ -32,8 +36,20 @@ final class FakeMailbox implements Mailbox
         $this->inbox[] = $message;
     }
 
-    public function fetchSince(?string $cursor): array
+    public function fetchSince(?string $cursor, ?string $expectedUidValidity = null): InboxFetch
     {
+        if ($this->refuseFetch) {
+            throw new DeskException('Mailbox fetch failed.');
+        }
+
+        if (
+            $expectedUidValidity !== null
+            && $this->uidValidity !== null
+            && $expectedUidValidity !== $this->uidValidity
+        ) {
+            $cursor = null;
+        }
+
         $kept = [];
 
         foreach ($this->inbox as $message) {
@@ -44,7 +60,7 @@ final class FakeMailbox implements Mailbox
             $kept[] = $message;
         }
 
-        return $kept;
+        return new InboxFetch($kept, $this->uidValidity);
     }
 
     public function upsertDraft(string $identity, string $to, string $subject, string $body): string

@@ -13,9 +13,9 @@ final class NullMailbox implements Mailbox
         return false;
     }
 
-    public function fetchSince(?string $cursor): array
+    public function fetchSince(?string $cursor, ?string $expectedUidValidity = null): InboxFetch
     {
-        return [];
+        return new InboxFetch([]);
     }
 
     public function upsertDraft(string $identity, string $to, string $subject, string $body): string
