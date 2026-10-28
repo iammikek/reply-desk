@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Contacts\Pages;
 
+use App\Desk\DeskException;
 use App\Desk\Queue\ListClientCorrespondence;
 use App\Filament\Concerns\ResolvesExternalRecord;
 use App\Filament\DirectoryRecords;
@@ -41,9 +42,14 @@ class ViewContact extends ViewRecord
 
         $companyId = (string) $this->getRecord()->getAttribute('company_id');
         $contactId = (string) $this->getRecord()->getKey();
-        $found = app(ListClientCorrespondence::class)($companyId, $contactId);
 
-        $this->events = $found?->events ?? [];
+        try {
+            $found = app(ListClientCorrespondence::class)($companyId, $contactId);
+            $this->events = $found?->events ?? [];
+        } catch (DeskException) {
+            // Directory can render without a live note store (for example HubSpot token missing).
+            $this->events = [];
+        }
     }
 
     public function content(Schema $schema): Schema

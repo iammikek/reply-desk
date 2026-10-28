@@ -5,6 +5,7 @@ use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
 use App\Desk\Actions\LogInbound;
 use App\Desk\DeskException;
+use App\Desk\LogDeskActivity;
 use App\Desk\Notes\HubSpotNoteStore;
 use App\Desk\Notes\NoteFile;
 use App\Desk\Notes\StoredNote;
@@ -32,7 +33,7 @@ it('stops before writing when the portal id does not match', function (): void {
         'https://api.hubapi.com/account-info/v3/details' => Http::response(['portalId' => 999]),
     ]);
 
-    expect(fn (): string => (new LogInbound(app(HubSpotNoteStore::class)))(
+    expect(fn (): string => (new LogInbound(app(HubSpotNoteStore::class), app(LogDeskActivity::class)))(
         'Northwharf Bakery',
         'ada@northwharf.example',
         london('2026-10-20 10:00'),
@@ -90,7 +91,7 @@ it('writes an inbound note when the portal matches one company and one contact',
         return Http::response('unexpected '.$url, 500);
     });
 
-    $id = (new LogInbound(app(HubSpotNoteStore::class)))(
+    $id = (new LogInbound(app(HubSpotNoteStore::class), app(LogDeskActivity::class)))(
         'Northwharf Bakery',
         'ada@northwharf.example',
         london('2026-10-20 10:00'),
@@ -166,7 +167,7 @@ it('uploads an attachment and stores its id on the note', function (): void {
         return Http::response('unexpected '.$url, 500);
     });
 
-    $id = (new LogInbound(app(HubSpotNoteStore::class)))(
+    $id = (new LogInbound(app(HubSpotNoteStore::class), app(LogDeskActivity::class)))(
         'Northwharf Bakery',
         'ada@northwharf.example',
         london('2026-10-20 10:00'),
@@ -306,7 +307,7 @@ it('uses the one company whose name contains every word', function (): void {
         return Http::response('unexpected '.$url, 500);
     });
 
-    $id = (new LogInbound(app(HubSpotNoteStore::class)))(
+    $id = (new LogInbound(app(HubSpotNoteStore::class), app(LogDeskActivity::class)))(
         'V8 Hosting',
         'lawrence@v8hosting.uk',
         london('2026-10-22 10:42'),
@@ -336,7 +337,7 @@ it('stops when more than one company matches on the portal', function (): void {
         return Http::response('unexpected', 500);
     });
 
-    expect(fn (): string => (new LogInbound(app(HubSpotNoteStore::class)))(
+    expect(fn (): string => (new LogInbound(app(HubSpotNoteStore::class), app(LogDeskActivity::class)))(
         'Northwharf Bakery',
         'ada@northwharf.example',
         london('2026-10-20 10:00'),
