@@ -70,6 +70,7 @@ test('lists the desk tools and returns the same open row', async () => {
         const names = listed.tools.map((tool) => tool.name).sort();
 
         assert.deepEqual(names, [
+            'close_inbound',
             'create_company',
             'create_contact',
             'discard_draft',

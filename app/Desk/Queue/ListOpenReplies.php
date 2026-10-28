@@ -21,18 +21,19 @@ final readonly class ListOpenReplies
     public function __invoke(?DateTimeImmutable $now = null, ?bool $overdue = null): array
     {
         $now ??= DateTimeImmutable::createFromInterface(now(ReplyClock::zoneName()));
-        ['inbound' => $inbound, 'sent' => $sent] = (new IndexClockNotes($this->notes))();
+        ['inbound' => $inbound, 'sent' => $sent, 'closed' => $closed] = (new IndexClockNotes($this->notes))();
 
         $earlierByCompany = [];
 
         foreach ($inbound as [$note, $parsed]) {
             $replies = $sent[$note->id] ?? null;
+            $closure = $closed[$note->id] ?? null;
 
-            if ($replies === null) {
+            if ($replies === null && $closure === null) {
                 continue;
             }
 
-            $replies = IndexClockNotes::sortReplies($replies);
+            $sorted = $replies === null ? [] : IndexClockNotes::sortReplies($replies);
 
             $earlierByCompany[$note->companyId][] = new EarlierThread(
                 $parsed->receipt,
@@ -42,7 +43,7 @@ final readonly class ListOpenReplies
                     'sent' => $reply[1]->sent,
                     'subject' => $reply[1]->subject,
                     'body' => ClockNote::correspondence($reply[0]->body)['reply'],
-                ], $replies),
+                ], $sorted),
             );
         }
 
@@ -58,7 +59,7 @@ final readonly class ListOpenReplies
             ->keyBy(Draft::inboundColumn());
 
         foreach ($inbound as [$note, $parsed]) {
-            if (isset($sent[$note->id])) {
+            if (isset($sent[$note->id]) || isset($closed[$note->id])) {
                 continue;
             }
 
