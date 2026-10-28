@@ -5,11 +5,13 @@ namespace App\Desk\Mailbox;
 use App\Desk\DeskException;
 use DateTimeImmutable;
 use DateTimeZone;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mime\Email;
 use Throwable;
 use Webklex\PHPIMAP\ClientManager;
+use Webklex\PHPIMAP\Folder;
 use Webklex\PHPIMAP\Message;
 
 final class ImapSmtpMailbox implements Mailbox
@@ -24,26 +26,33 @@ final class ImapSmtpMailbox implements Mailbox
         return $this->imapReady() && $this->smtpReady();
     }
 
-    public function fetchSince(?string $cursor): array
+    public function fetchSince(?string $cursor, ?string $expectedUidValidity = null): InboxFetch
     {
         $client = $this->imapClient();
         $client->connect();
         $folder = $client->getFolder($this->config['inbox_folder'] ?: 'INBOX');
+        $status = $folder->select();
+        $uidValidity = isset($status['uidvalidity']) ? (string) $status['uidvalidity'] : null;
+
+        if (
+            $expectedUidValidity !== null
+            && $uidValidity !== null
+            && $expectedUidValidity !== $uidValidity
+        ) {
+            $cursor = null;
+        }
+
         $query = $folder->messages()->all()->setFetchOrder('asc');
 
-        if ($cursor !== null && $cursor !== '' && ctype_digit($cursor)) {
-            $query->where([['UID', (int) $cursor]]);
-        }
+        $collection = $cursor !== null && $cursor !== '' && ctype_digit($cursor)
+            ? $query->getByUidGreater((int) $cursor)
+            : $query->get();
 
         $messages = [];
 
         /** @var Message $message */
-        foreach ($query->get() as $message) {
+        foreach ($collection as $message) {
             $uid = (string) $message->getUid();
-
-            if ($cursor !== null && $cursor !== '' && strcmp($uid, $cursor) <= 0) {
-                continue;
-            }
 
             $date = null;
             $rawDate = (string) $message->getDate();
@@ -79,7 +88,7 @@ final class ImapSmtpMailbox implements Mailbox
 
         $client->disconnect();
 
-        return $messages;
+        return new InboxFetch($messages, $uidValidity);
     }
 
     public function upsertDraft(string $identity, string $to, string $subject, string $body): string
@@ -97,14 +106,8 @@ final class ImapSmtpMailbox implements Mailbox
             }
         }
 
-        $raw = $this->buildMime($to, $subject, $body)->toString();
-        $message = $folder->appendMessage($raw);
-        $uid = (string) ($message?->getUid() ?? '');
+        $uid = $this->appendRaw($folder, $this->buildMime($to, $subject, $body)->toString());
         $client->disconnect();
-
-        if ($uid === '') {
-            throw new DeskException('The Drafts folder did not accept the message.');
-        }
 
         return $uid;
     }
@@ -138,7 +141,11 @@ final class ImapSmtpMailbox implements Mailbox
         try {
             $mailer = new Mailer(Transport::fromDsn($this->smtpDsn()));
             $sent = $mailer->send($email);
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            Log::warning('Mailbox SMTP send failed.', [
+                'error' => $exception->getMessage(),
+            ]);
+
             throw new DeskException('The mail server refused the message.');
         }
 
@@ -148,7 +155,57 @@ final class ImapSmtpMailbox implements Mailbox
             $messageId = '<'.bin2hex(random_bytes(12)).'@reply-desk>';
         }
 
-        return trim($messageId);
+        $messageId = trim($messageId);
+
+        try {
+            $raw = ($sent?->getOriginalMessage() ?? $email)->toString();
+            $this->appendSentCopy($raw);
+        } catch (Throwable $exception) {
+            Log::warning('Mailbox Sent folder append failed.', [
+                'error' => $exception->getMessage(),
+                'message_id' => $messageId,
+            ]);
+        }
+
+        return $messageId;
+    }
+
+    private function appendSentCopy(string $raw): void
+    {
+        $client = $this->imapClient();
+        $client->connect();
+        $folder = $client->getFolder($this->config['sent_folder'] ?: 'Sent');
+        $this->appendRaw($folder, $raw, ['\\Seen']);
+        $client->disconnect();
+    }
+
+    /**
+     * @param  list<string>|null  $flags
+     */
+    private function appendRaw(Folder $folder, string $raw, ?array $flags = null): string
+    {
+        $status = $folder->select();
+        $uidNext = isset($status['uidnext']) ? (int) $status['uidnext'] : 0;
+
+        if ($uidNext < 1) {
+            throw new DeskException('The mailbox folder did not accept the message.');
+        }
+
+        $response = $folder->appendMessage($raw, $flags);
+        $accepted = false;
+
+        foreach ($response as $line) {
+            if (is_string($line) && str_starts_with($line, 'OK')) {
+                $accepted = true;
+                break;
+            }
+        }
+
+        if (! $accepted) {
+            throw new DeskException('The mailbox folder did not accept the message.');
+        }
+
+        return (string) $folder->messages()->getMessageByUid($uidNext)->getUid();
     }
 
     private function buildMime(string $to, string $subject, string $body): Email

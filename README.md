@@ -77,7 +77,7 @@ Design detail for the timestamp, middleware, and reset path: [docs/plan.md](docs
 
 IMAP and SMTP for the practice account are optional. Connection secrets stay in `.env` (`REPLY_DESK_IMAP_*`, `REPLY_DESK_SMTP_*`, `REPLY_DESK_MAILBOX_FROM`). When they are empty, drafts stay local and send uses the Laravel mailer.
 
-With a mailbox configured, save draft also writes the Drafts folder, send goes through that SMTP account and stores the Message-ID, and `reply:poll-mailbox` (scheduled every minute) can log known contacts from Inbox. Poll on/off, interval, and **Poll now** are on the Mailbox page. Activity lists poll and send events. Mark sent stays for mail that already left from the client.
+With a mailbox configured, save draft also writes the Drafts folder, send goes through that SMTP account, stores the Message-ID, and appends a copy to Sent. `reply:poll-mailbox` (scheduled every minute) can log known contacts from Inbox and resets its cursor if inbox UIDVALIDITY changes. Poll on/off, interval, and **Poll now** are on the Mailbox page. Activity lists poll and send events. Mark sent stays for mail that already left from the client.
 
 Poll rules, quote stripping, and Message-IDs: [docs/mailbox.md](docs/mailbox.md).
 

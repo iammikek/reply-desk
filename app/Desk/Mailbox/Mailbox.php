@@ -9,9 +9,11 @@ interface Mailbox
     public function configured(): bool;
 
     /**
-     * @return list<IncomingMessage>
+     * Fetch inbox messages after $cursor. When $expectedUidValidity is set and
+     * the folder's UIDVALIDITY no longer matches, the cursor is ignored and the
+     * inbox is read from the start.
      */
-    public function fetchSince(?string $cursor): array;
+    public function fetchSince(?string $cursor, ?string $expectedUidValidity = null): InboxFetch;
 
     public function upsertDraft(string $identity, string $to, string $subject, string $body): string;
 

@@ -72,6 +72,7 @@ return [
         'imap_password' => env('REPLY_DESK_IMAP_PASSWORD', ''),
         'inbox_folder' => env('REPLY_DESK_IMAP_INBOX', 'INBOX'),
         'drafts_folder' => env('REPLY_DESK_IMAP_DRAFTS', 'Drafts'),
+        'sent_folder' => env('REPLY_DESK_IMAP_SENT', 'Sent'),
         'smtp_host' => env('REPLY_DESK_SMTP_HOST', ''),
         'smtp_port' => (int) env('REPLY_DESK_SMTP_PORT', 587),
         'smtp_encryption' => env('REPLY_DESK_SMTP_ENCRYPTION', 'tls'),

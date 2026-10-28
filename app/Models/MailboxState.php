@@ -12,6 +12,7 @@ class MailboxState extends Model
         'polling_enabled',
         'poll_interval_minutes',
         'inbox_cursor',
+        'inbox_uidvalidity',
         'last_polled_at',
         'last_poll_error',
     ];

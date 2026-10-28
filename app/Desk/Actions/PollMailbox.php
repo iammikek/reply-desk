@@ -13,6 +13,7 @@ use App\Models\MailboxState;
 use App\Models\MailMessageId;
 use DateTimeImmutable;
 use DateTimeZone;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 final readonly class PollMailbox
@@ -26,43 +27,59 @@ final readonly class PollMailbox
     ) {}
 
     /**
-     * @return array{kept: int, skipped: int, noop: bool}
+     * @return array{kept: int, skipped: int, noop: bool, failed: bool}
      */
     public function __invoke(bool $force = false): array
     {
         if (! $this->mailbox->configured()) {
-            return ['kept' => 0, 'skipped' => 0, 'noop' => true];
+            return ['kept' => 0, 'skipped' => 0, 'noop' => true, 'failed' => false];
         }
 
         $state = MailboxState::current();
 
         if (! $force && ! $state->dueForScheduledPoll()) {
-            return ['kept' => 0, 'skipped' => 0, 'noop' => true];
+            return ['kept' => 0, 'skipped' => 0, 'noop' => true, 'failed' => false];
         }
 
         ($this->log)('poll.started', 'Mailbox poll started.');
 
         try {
-            $messages = $this->mailbox->fetchSince($state->inbox_cursor);
-        } catch (Throwable) {
+            $fetch = $this->mailbox->fetchSince($state->inbox_cursor, $state->inbox_uidvalidity);
+        } catch (Throwable $exception) {
+            Log::warning('Mailbox poll failed.', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            // Keep last_polled_at unchanged so the schedule retries promptly.
             $state->forceFill([
-                'last_polled_at' => now(),
                 'last_poll_error' => 'Poll failed.',
             ])->save();
 
             ($this->log)('poll.failed', 'Mailbox poll failed.', context: [
                 'error' => 'connection',
+                'detail' => $exception->getMessage(),
             ]);
 
-            return ['kept' => 0, 'skipped' => 0, 'noop' => false];
+            return ['kept' => 0, 'skipped' => 0, 'noop' => false, 'failed' => true];
+        }
+
+        $uidValidityChanged = $fetch->uidValidity !== null
+            && $state->inbox_uidvalidity !== null
+            && $fetch->uidValidity !== $state->inbox_uidvalidity;
+
+        if ($uidValidityChanged) {
+            ($this->log)('poll.uidvalidity_reset', 'Inbox UIDVALIDITY changed; cursor reset.', context: [
+                'previous' => $state->inbox_uidvalidity,
+                'current' => $fetch->uidValidity,
+            ]);
         }
 
         $kept = 0;
         $skipped = 0;
-        $latestCursor = $state->inbox_cursor;
+        $latestCursor = $uidValidityChanged ? null : $state->inbox_cursor;
         $own = strtolower(trim((string) config('reply-desk.mailbox.from_address')));
 
-        foreach ($messages as $message) {
+        foreach ($fetch->messages as $message) {
             $latestCursor = $message->cursor;
             $result = $this->ingest($message, $own);
 
@@ -80,6 +97,7 @@ final readonly class PollMailbox
 
         $state->forceFill([
             'inbox_cursor' => $latestCursor,
+            'inbox_uidvalidity' => $fetch->uidValidity ?? $state->inbox_uidvalidity,
             'last_polled_at' => now(),
             'last_poll_error' => null,
         ])->save();
@@ -91,7 +109,7 @@ final readonly class PollMailbox
             ]);
         }
 
-        return ['kept' => $kept, 'skipped' => $skipped, 'noop' => false];
+        return ['kept' => $kept, 'skipped' => $skipped, 'noop' => false, 'failed' => false];
     }
 
     private function ingest(IncomingMessage $message, string $ownFrom): string

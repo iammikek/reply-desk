@@ -137,6 +137,71 @@ it('skips a scheduled run when the interval has not elapsed', function (): void 
     expect(app(PollMailbox::class)(force: false)['noop'])->toBeTrue();
 });
 
+it('records a poll failure without advancing the schedule cursor', function (): void {
+    $lastPolled = now()->subHour();
+
+    MailboxState::current()->forceFill([
+        'polling_enabled' => true,
+        'poll_interval_minutes' => 5,
+        'last_polled_at' => $lastPolled,
+        'inbox_cursor' => '42',
+        'last_poll_error' => null,
+    ])->save();
+
+    $mailbox = app(FakeMailbox::class);
+    $mailbox->refuseFetch = true;
+
+    $result = app(PollMailbox::class)(force: true);
+    $state = MailboxState::current()->fresh();
+
+    expect($result['failed'])->toBeTrue()
+        ->and($result['noop'])->toBeFalse()
+        ->and($state->last_poll_error)->toBe('Poll failed.')
+        ->and($state->inbox_cursor)->toBe('42')
+        ->and($state->last_polled_at?->equalTo($lastPolled))->toBeTrue()
+        ->and(DeskActivity::query()->where('action', 'poll.failed')->exists())->toBeTrue();
+});
+
+it('resets the inbox cursor when UIDVALIDITY changes', function (): void {
+    MailboxState::current()->forceFill([
+        'polling_enabled' => true,
+        'inbox_cursor' => '5',
+        'inbox_uidvalidity' => '1',
+    ])->save();
+
+    $mailbox = app(FakeMailbox::class);
+    $mailbox->uidValidity = '2';
+    $mailbox->seed(FakeMailbox::message(
+        'ada@northwharf.example',
+        'Old uid reused',
+        'Please look today',
+        london('2026-10-22 10:00'),
+        cursor: '3',
+    ));
+
+    $result = app(PollMailbox::class)(force: true);
+    $state = MailboxState::current()->fresh();
+
+    expect($result['kept'])->toBe(1)
+        ->and($state->inbox_cursor)->toBe('3')
+        ->and($state->inbox_uidvalidity)->toBe('2')
+        ->and(DeskActivity::query()->where('action', 'poll.uidvalidity_reset')->exists())->toBeTrue();
+});
+
+it('stores inbox UIDVALIDITY on a successful poll', function (): void {
+    app(FakeMailbox::class)->seed(FakeMailbox::message(
+        'ada@northwharf.example',
+        'Hi',
+        'Body',
+        london('2026-10-22 10:00'),
+        cursor: '9',
+    ));
+
+    app(PollMailbox::class)(force: true);
+
+    expect(MailboxState::current()->fresh()->inbox_uidvalidity)->toBe('1');
+});
+
 it('shows the activity page', function (): void {
     $user = User::factory()->create();
     DeskActivity::query()->create([

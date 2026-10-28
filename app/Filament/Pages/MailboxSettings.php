@@ -152,6 +152,13 @@ class MailboxSettings extends Page
             return;
         }
 
+        if ($result['failed']) {
+            $error = MailboxState::current()->last_poll_error ?: 'Poll failed.';
+            Notification::make()->title($error)->danger()->send();
+
+            return;
+        }
+
         Notification::make()
             ->title("Poll finished. Kept {$result['kept']}, skipped {$result['skipped']}.")
             ->success()
