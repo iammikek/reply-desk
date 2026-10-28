@@ -7,6 +7,7 @@ use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
 use App\Clock\ReplyClock;
 use App\Desk\DeskException;
+use App\Desk\LogDeskActivity;
 use App\Desk\Notes\NoteFile;
 use App\Desk\Notes\NoteStore;
 use App\Desk\Notes\StoredNote;
@@ -16,7 +17,10 @@ use DateTimeZone;
 
 final class MarkReplySent
 {
-    public function __construct(private NoteStore $notes) {}
+    public function __construct(
+        private NoteStore $notes,
+        private LogDeskActivity $log,
+    ) {}
 
     public function subject(string $inboundId, string $subject): string
     {
@@ -61,6 +65,15 @@ final class MarkReplySent
         );
 
         Draft::query()->where(Draft::forInbound($inboundId))->delete();
+
+        ($this->log)(
+            'reply.marked_sent',
+            'Reply marked sent.',
+            inboundId: $inboundId,
+            noteId: $id,
+            company: $inbound->companyName,
+            contact: $inbound->contactName,
+        );
 
         return $id;
     }

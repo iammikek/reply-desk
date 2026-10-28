@@ -2,7 +2,7 @@
 /**
  * Local MCP server for Reply desk.
  * Cursor: command "node", args ["mcp-server/index.mjs"], cwd = this repo.
- * The process shells to php artisan. It does not send mail and it does not hold the HubSpot token.
+ * The process shells to php artisan. It does not hold the HubSpot token.
  */
 import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
@@ -210,6 +210,22 @@ server.registerTool(
 
         return run(args);
     },
+);
+
+server.registerTool(
+    'send_reply',
+    {
+        description:
+            'Send a reply for an open inbound through the desk mailer or practice mailbox, then mark it sent. Deletes any draft. A blank subject keeps the subject of the previous message. Requires approval.',
+        inputSchema: {
+            inbound: z.string().describe('Inbound note id.'),
+            subject: z
+                .string()
+                .describe('Subject of the reply, one line. Pass an empty string to keep the subject of the previous message.'),
+            body: z.string().describe('The reply body to send.'),
+        },
+    },
+    async ({ inbound, subject, body }) => run(['reply:send', inbound, subject, body]),
 );
 
 const transport = new StdioServerTransport();

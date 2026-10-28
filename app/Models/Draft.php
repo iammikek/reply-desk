@@ -13,6 +13,7 @@ class Draft extends Model
         'inbound_note_id',
         'subject',
         'body',
+        'mailbox_draft_id',
     ];
 
     public static function inboundColumn(): string

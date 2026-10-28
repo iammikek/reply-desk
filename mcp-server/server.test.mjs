@@ -79,6 +79,7 @@ test('lists the desk tools and returns the same open row', async () => {
             'log_inbound',
             'mark_reply_sent',
             'save_draft',
+            'send_reply',
         ]);
 
         const companies = await client.callTool({ name: 'list_companies', arguments: {} });

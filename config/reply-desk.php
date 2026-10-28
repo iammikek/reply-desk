@@ -48,4 +48,33 @@ return [
         'sunday' => [],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Practice mailbox
+    |--------------------------------------------------------------------------
+    |
+    | Optional IMAP + SMTP for the practice account. When host and credentials
+    | are empty, the desk keeps local drafts and the Laravel mailer for send.
+    | Poll on/off and interval are controlled in the panel, not here.
+    |
+    */
+
+    'mailbox' => [
+        'driver' => env('REPLY_DESK_MAILBOX_DRIVER', ''),
+        'from_address' => env('REPLY_DESK_MAILBOX_FROM', env('MAIL_FROM_ADDRESS', '')),
+        'from_name' => env('REPLY_DESK_MAILBOX_FROM_NAME', env('MAIL_FROM_NAME', 'Reply desk')),
+        'imap_host' => env('REPLY_DESK_IMAP_HOST', ''),
+        'imap_port' => (int) env('REPLY_DESK_IMAP_PORT', 993),
+        'imap_encryption' => env('REPLY_DESK_IMAP_ENCRYPTION', 'ssl'),
+        'imap_username' => env('REPLY_DESK_IMAP_USERNAME', ''),
+        'imap_password' => env('REPLY_DESK_IMAP_PASSWORD', ''),
+        'inbox_folder' => env('REPLY_DESK_IMAP_INBOX', 'INBOX'),
+        'drafts_folder' => env('REPLY_DESK_IMAP_DRAFTS', 'Drafts'),
+        'smtp_host' => env('REPLY_DESK_SMTP_HOST', ''),
+        'smtp_port' => (int) env('REPLY_DESK_SMTP_PORT', 587),
+        'smtp_encryption' => env('REPLY_DESK_SMTP_ENCRYPTION', 'tls'),
+        'smtp_username' => env('REPLY_DESK_SMTP_USERNAME', ''),
+        'smtp_password' => env('REPLY_DESK_SMTP_PASSWORD', ''),
+    ],
+
 ];
