@@ -147,7 +147,9 @@ Closes: 123456789
 Closed: 2026-10-28 13:15 Europe/London
 ```
 
-`Closes` is the inbound note id. There is no reply body and no Subject line. Use this when the client mail needs no response (thanks, FYI, “I’ll keep you updated”). It removes the row from the open queue. History and the contact timeline show **Closed — no reply**. It is not a sent note.
+`Closes` is the inbound note id. There is no reply body and no Subject line. Use this when the client mail needs no response (thanks, FYI, “I’ll keep you updated”).
+
+The panel confirm is **Close without sending a reply?** with the copy **The inbound leaves the open queue. No reply is recorded.** That means: the row leaves Open (no reply-due clock on it); History and the contact timeline get **Closed — No reply**, not a sent reply; nothing is sent from the desk and nothing is marked as sent from Mail. It is not a sent note. Use Send or Mark sent when a reply actually went out.
 
 After a blank line, the note may carry the correspondence. A section is filled only when that section is empty.
 
@@ -186,7 +188,7 @@ The Artisan command and the MCP tool take the company name and the contact email
 
 `save_draft` and `discard_draft` write no clock note. A row leaves the open queue when a **sent** note or a **closed** note points at it. One draft per open inbound. The draft stores the subject, the body, and the time it was saved. On the memory store it points at the local email. On HubSpot it points at the inbound note id. It is not itself a note. A draft does not stop the clock.
 
-The panel actions are Log inbound, view, reply, discard draft, mark sent, and close. Reply opens the compose window, with the earlier thread and any saved draft. That thread is oldest first and scrolls. The subject, body, and attachment stay at the bottom of the window. Send delivers the reply through the configured mailbox and then writes the sent note. Cancel with a message that differs from the saved draft asks whether to save a draft, and saving one leaves the row open. Closing an unchanged draft does not ask. Mark sent records a reply that already went from Mail. Close confirms and ends the inbound without a reply. A file chosen on reply or mark sent is uploaded to HubSpot and stored on the note.
+The panel actions are Log inbound, view, reply, discard draft, mark sent, and close. Reply opens the compose window, with the earlier thread and any saved draft. That thread is oldest first and scrolls. The subject, body, and attachment stay at the bottom of the window. Send delivers the reply through the configured mailbox and then writes the sent note. Cancel with a message that differs from the saved draft asks whether to save a draft, and saving one leaves the row open. Closing an unchanged draft does not ask. Mark sent records a reply that already went from Mail. Close confirms with “Close without sending a reply?” — the inbound leaves the open queue and no reply is recorded (see the closed note shape above). A file chosen on reply or mark sent is uploaded to HubSpot and stored on the note.
 
 ## 9. MCP
 

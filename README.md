@@ -94,7 +94,11 @@ Each open row is one client email, stored as an inbound clock note, with no repl
 
 Due time is calculated when the page or a command runs. It is not stored. The clock and open ranges are under [Practice hours](#practice-hours).
 
-The desk can send a reply. Mark sent records a reply that already went from Mail. Close ends the inbound without a reply when none is warranted (thanks, FYI, “I’ll keep you updated”). A draft does not stop the clock.
+The desk can send a reply. Mark sent records a reply that already went from Mail.
+
+**Close** is for inbound that needs no response (thanks, FYI, “I’ll keep you updated”). The confirm asks “Close without sending a reply?” That means: the row leaves the open queue (no reply-due clock), and no reply is recorded — History and the contact timeline show **Closed — No reply**, not a sent message. Nothing is sent from the desk, and nothing is marked as sent from Mail. Use **Send** or **Mark sent** when you actually replied.
+
+A draft does not stop the clock.
 
 Seed the desk with `./vendor/bin/sail artisan db:seed` while `REPLY_DESK_STORE` is `memory`. The command refuses to run when the store is HubSpot. The seed loads three stand-in companies: one overdue row, one open row, a draft on the overdue row, and one closed thread.
 
