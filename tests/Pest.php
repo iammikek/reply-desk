@@ -1,5 +1,7 @@
 <?php
 
+use App\Desk\Mailbox\FakeMailbox;
+use App\Desk\Mailbox\Mailbox;
 use App\Desk\Notes\NoteStore;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -49,4 +51,18 @@ function replyDeskNoteBodies(): array
         fn ($note): string => $note->body,
         app(NoteStore::class)->notes(),
     );
+}
+
+function useFakeMailbox(): void
+{
+    config([
+        'reply-desk.mailbox.driver' => 'fake',
+        'reply-desk.mailbox.from_address' => 'desk@example.com',
+    ]);
+    app()->forgetInstance(Mailbox::class);
+    app()->forgetInstance(FakeMailbox::class);
+
+    test()->travelTo(london('2026-10-23 15:30'));
+    replyDeskParty('company', '10', 'Northwharf Bakery');
+    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
 }

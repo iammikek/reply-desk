@@ -249,7 +249,7 @@ class BackfillOpenCommand extends ReplyDeskCommand
             return;
         }
 
-        if (Draft::query()->where(Draft::forInbound($inboundId))->exists()) {
+        if (Draft::queryForInbound($inboundId)->exists()) {
             return;
         }
 

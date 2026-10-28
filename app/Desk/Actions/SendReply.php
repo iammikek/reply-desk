@@ -3,15 +3,11 @@
 namespace App\Desk\Actions;
 
 use App\Clock\ClockNote;
-use App\Clock\ParsedInbound;
-use App\Clock\ParsedSent;
 use App\Clock\ReplyClock;
 use App\Desk\DeskException;
 use App\Desk\LogDeskActivity;
 use App\Desk\Mailbox\Mailbox;
 use App\Desk\Notes\NoteFile;
-use App\Desk\Notes\NoteStore;
-use App\Desk\Notes\StoredNote;
 use App\Mail\ClientReply;
 use App\Models\Draft;
 use App\Models\MailMessageId;
@@ -22,7 +18,7 @@ use Throwable;
 final class SendReply
 {
     public function __construct(
-        private NoteStore $notes,
+        private FindInbound $findInbound,
         private MarkReplySent $markReplySent,
         private Mailbox $mailbox,
         private LogDeskActivity $log,
@@ -41,7 +37,7 @@ final class SendReply
             throw new DeskException('Subject must be one line.');
         }
 
-        $inbound = $this->openInbound($inboundId);
+        $inbound = ($this->findInbound)->open($inboundId);
         $subject = $this->markReplySent->subject($inboundId, $subject);
 
         if (filter_var($inbound->contactEmail, FILTER_VALIDATE_EMAIL) === false) {
@@ -67,7 +63,7 @@ final class SendReply
                 Mail::to($inbound->contactEmail)->send(new ClientReply($subject, $body, $file));
                 $messageId = null;
             }
-        } catch (DeskException $exception) {
+        } catch (Throwable $exception) {
             ($this->log)(
                 'reply.send_failed',
                 'Send refused.',
@@ -76,22 +72,13 @@ final class SendReply
                 contact: $inbound->contactName,
             );
 
-            throw $exception;
-        } catch (Throwable) {
-            ($this->log)(
-                'reply.send_failed',
-                'Send refused.',
-                inboundId: $inboundId,
-                company: $inbound->companyName,
-                contact: $inbound->contactName,
-            );
-
-            throw new DeskException('The mail server refused the message.');
+            throw $exception instanceof DeskException
+                ? $exception
+                : new DeskException('The mail server refused the message.');
         }
 
         if ($this->mailbox->configured()) {
-            $draft = Draft::query()->where(Draft::forInbound($inboundId))->first();
-            $this->mailbox->deleteDraft($draft?->mailbox_draft_id);
+            $this->mailbox->deleteDraft(Draft::findForInbound($inboundId)?->mailbox_draft_id);
         }
 
         $sentId = ($this->markReplySent)(
@@ -120,28 +107,5 @@ final class SendReply
         );
 
         return $sentId;
-    }
-
-    private function openInbound(string $inboundId): StoredNote
-    {
-        $inbound = null;
-
-        foreach ($this->notes->notes() as $note) {
-            $parsed = ClockNote::parse($note->body);
-
-            if ($parsed instanceof ParsedSent && $parsed->closes === $inboundId) {
-                throw new DeskException("Inbound {$inboundId} is already closed.");
-            }
-
-            if ($note->id === $inboundId && $parsed instanceof ParsedInbound) {
-                $inbound = $note;
-            }
-        }
-
-        if (! $inbound instanceof StoredNote) {
-            throw new DeskException("No open inbound {$inboundId}.");
-        }
-
-        return $inbound;
     }
 }

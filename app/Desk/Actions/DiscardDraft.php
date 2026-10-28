@@ -15,14 +15,14 @@ final class DiscardDraft
 
     public function __invoke(string $inboundId): void
     {
-        $draft = Draft::query()->where(Draft::forInbound($inboundId))->first();
+        $draft = Draft::findForInbound($inboundId);
         $mailboxDraftId = $draft?->mailbox_draft_id;
 
         if ($this->mailbox->configured() && filled($mailboxDraftId)) {
             $this->mailbox->deleteDraft((string) $mailboxDraftId);
         }
 
-        Draft::query()->where(Draft::forInbound($inboundId))->delete();
+        Draft::deleteForInbound($inboundId);
 
         ($this->log)(
             'draft.discarded',

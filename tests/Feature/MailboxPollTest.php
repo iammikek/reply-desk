@@ -16,18 +16,7 @@ use Illuminate\Support\Facades\Mail;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    config([
-        'reply-desk.mailbox.driver' => 'fake',
-        'reply-desk.mailbox.from_address' => 'desk@example.com',
-    ]);
-    app()->forgetInstance(Mailbox::class);
-    app()->forgetInstance(FakeMailbox::class);
-
-    $this->travelTo(london('2026-10-23 15:30'));
-    replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
-});
+beforeEach(fn () => useFakeMailbox());
 
 it('logs a known contact from the mailbox', function () {
     $mailbox = app(FakeMailbox::class);
