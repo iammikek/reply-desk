@@ -209,13 +209,7 @@ final readonly class PollMailbox
             $ids[] = $reference;
         }
 
-        foreach (array_unique($ids) as $messageId) {
-            if (MailMessageId::known($messageId)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(array_unique($ids), fn (string $messageId): bool => MailMessageId::known($messageId));
     }
 
     private function summary(string $subject, string $body): string

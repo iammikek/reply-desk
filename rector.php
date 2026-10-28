@@ -16,7 +16,7 @@ return RectorConfig::configure()
     ->withSkip([
         __DIR__.'/bootstrap/cache',
     ])
-    ->withPhpSets(php83: true)
+    ->withPhpSets(php84: true)
     ->withPreparedSets(
         deadCode: true,
         codeQuality: true,
