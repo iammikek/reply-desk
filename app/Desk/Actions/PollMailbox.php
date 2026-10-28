@@ -28,18 +28,18 @@ final readonly class PollMailbox
     ) {}
 
     /**
-     * @return array{kept: int, skipped: int, noop: bool, failed: bool}
+     * @return array{kept: int, skipped: int, noop: bool, failed: bool, skipped_reasons: array<string, int>}
      */
     public function __invoke(bool $force = false): array
     {
         if (! $this->mailbox->configured()) {
-            return ['kept' => 0, 'skipped' => 0, 'noop' => true, 'failed' => false];
+            return ['kept' => 0, 'skipped' => 0, 'noop' => true, 'failed' => false, 'skipped_reasons' => []];
         }
 
         $state = MailboxState::current();
 
         if (! $force && ! $state->dueForScheduledPoll()) {
-            return ['kept' => 0, 'skipped' => 0, 'noop' => true, 'failed' => false];
+            return ['kept' => 0, 'skipped' => 0, 'noop' => true, 'failed' => false, 'skipped_reasons' => []];
         }
 
         ($this->log)('poll.started', 'Mailbox poll started.');
@@ -61,7 +61,7 @@ final readonly class PollMailbox
                 'detail' => $exception->getMessage(),
             ]);
 
-            return ['kept' => 0, 'skipped' => 0, 'noop' => false, 'failed' => true];
+            return ['kept' => 0, 'skipped' => 0, 'noop' => false, 'failed' => true, 'skipped_reasons' => []];
         }
 
         $uidValidityChanged = $fetch->uidValidity !== null
@@ -77,6 +77,8 @@ final readonly class PollMailbox
 
         $kept = 0;
         $skipped = 0;
+        /** @var array<string, int> $skippedReasons */
+        $skippedReasons = [];
         $latestCursor = $uidValidityChanged ? null : $state->inbox_cursor;
         $own = strtolower(trim((string) config('reply-desk.mailbox.from_address')));
 
@@ -88,6 +90,7 @@ final readonly class PollMailbox
                 $kept++;
             } else {
                 $skipped++;
+                $skippedReasons[$result] = ($skippedReasons[$result] ?? 0) + 1;
                 ($this->log)(
                     'poll.skipped',
                     'Mailbox message skipped.',
@@ -107,10 +110,44 @@ final readonly class PollMailbox
             ($this->log)('poll.kept', "Logged {$kept} inbound message(s).", context: [
                 'kept' => $kept,
                 'skipped' => $skipped,
+                'skipped_reasons' => $skippedReasons,
             ]);
         }
 
-        return ['kept' => $kept, 'skipped' => $skipped, 'noop' => false, 'failed' => false];
+        return [
+            'kept' => $kept,
+            'skipped' => $skipped,
+            'noop' => false,
+            'failed' => false,
+            'skipped_reasons' => $skippedReasons,
+        ];
+    }
+
+    /**
+     * @param  array<string, int>  $reasons
+     */
+    public static function describeSkippedReasons(array $reasons): string
+    {
+        if ($reasons === []) {
+            return '';
+        }
+
+        $labels = [
+            'duplicate_message_id' => 'duplicate Message-ID',
+            'own_from' => 'own From',
+            'date_only' => 'missing or unusable date',
+            'empty_after_extract' => 'empty after quote strip',
+            'unknown_from' => 'unknown From',
+        ];
+
+        $parts = [];
+
+        foreach ($reasons as $reason => $count) {
+            $label = $labels[$reason] ?? $reason;
+            $parts[] = $count.' '.$label;
+        }
+
+        return implode(', ', $parts);
     }
 
     private function ingest(IncomingMessage $message, string $ownFrom): string

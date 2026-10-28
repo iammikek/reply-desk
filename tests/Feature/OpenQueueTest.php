@@ -24,6 +24,23 @@ beforeEach(function (): void {
     replyDeskParty('contact', '21', 'Ned Harbour', 'ned@harbour.example', '11');
 });
 
+it('shows Reply as the primary action with Open and More', function (): void {
+    app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        london('2026-10-20 10:00'),
+        ReceiptSource::MailClient,
+        'Which PHP to use',
+    );
+
+    Livewire::test(ListOpenQueue::class)
+        ->assertSuccessful()
+        ->assertSee('Reply')
+        ->assertSee('Open')
+        ->assertSee('More')
+        ->assertSee('—');
+});
+
 it('shows an open reply on the queue', function (): void {
     app(LogInbound::class)(
         'Northwharf Bakery',

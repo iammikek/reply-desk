@@ -69,6 +69,16 @@ it('refuses bad practice hours', function (array $overrides, string $message): v
     'bad timezone' => [['timezone' => 'Not/AZone'], 'That timezone is not known.'],
 ]);
 
+it('summarises the open ranges for the panel', function (): void {
+    $hours = PracticeHours::fromConfig(practiceHoursConfig());
+
+    expect($hours->summary())
+        ->toContain('Europe/London')
+        ->toContain('reply interval 24 hours')
+        ->toContain('Monday 08:00–20:00')
+        ->toContain('closed Saturday, Sunday');
+});
+
 it('opens on saturday when that day has a range', function (): void {
     $hours = PracticeHours::fromConfig(practiceHoursConfig([
         'interval_hours' => 12,
