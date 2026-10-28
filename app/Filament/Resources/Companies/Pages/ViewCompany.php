@@ -5,13 +5,14 @@ namespace App\Filament\Resources\Companies\Pages;
 use App\Desk\DeskException;
 use App\Desk\Notes\NoteStore;
 use App\Filament\Concerns\ResolvesExternalRecord;
+use App\Filament\DeskNotify;
 use App\Filament\DirectoryRecords;
 use App\Filament\Resources\Companies\CompanyResource;
+use App\Models\Company;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
-use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
 
 class ViewCompany extends ViewRecord
@@ -24,7 +25,7 @@ class ViewCompany extends ViewRecord
     {
         $company = DirectoryRecords::companyModel((string) $key);
 
-        abort_if($company === null, 404);
+        abort_if(! $company instanceof Company, 404);
 
         return $company;
     }
@@ -47,9 +48,7 @@ class ViewCompany extends ViewRecord
                             (string) $data['email'],
                         );
                     } catch (DeskException $exception) {
-                        Notification::make()->title($exception->getMessage())->danger()->send();
-
-                        throw new Halt;
+                        DeskNotify::halt($exception);
                     }
 
                     Notification::make()->title('Contact added')->success()->send();

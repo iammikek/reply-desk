@@ -25,13 +25,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(PracticeHours::class, function (): PracticeHours {
-            return PracticeHours::fromConfig(config('reply-desk'));
-        });
+        $this->app->singleton(PracticeHours::class, fn (): PracticeHours => PracticeHours::fromConfig(config('reply-desk')));
 
-        $this->app->singleton(ReplyClock::class, function ($app): ReplyClock {
-            return new ReplyClock($app->make(PracticeHours::class));
-        });
+        $this->app->singleton(ReplyClock::class, fn ($app): ReplyClock => new ReplyClock($app->make(PracticeHours::class)));
 
         $this->app->singleton(NoteStore::class, function ($app): NoteStore {
             if (config('reply-desk.store') === 'hubspot') {

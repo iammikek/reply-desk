@@ -34,7 +34,7 @@ final class InboundRecords
             return [
                 'id' => $note->id,
                 'summary' => $parsed->summary,
-                'subject' => self::line($note->body, 'Subject'),
+                'subject' => ClockNote::subjectOf($note->body),
                 'body' => ClockNote::correspondence($note->body)['client'],
                 'at' => $parsed->receipt->setTimezone(new DateTimeZone(ReplyClock::zoneName()))->format('Y-m-d H:i:s'),
                 'company_id' => $note->companyId,
@@ -109,16 +109,5 @@ final class InboundRecords
         usort($replies, fn (array $left, array $right): int => $left['sent'] <=> $right['sent']);
 
         return $replies;
-    }
-
-    private static function line(string $body, string $label): string
-    {
-        foreach (preg_split('/\R/', $body) ?: [] as $line) {
-            if (str_starts_with($line, $label.': ')) {
-                return trim(substr($line, strlen($label) + 2));
-            }
-        }
-
-        return '';
     }
 }

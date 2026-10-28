@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('fake_parties', function (Blueprint $table) {
+        Schema::create('fake_parties', function (Blueprint $table): void {
             $table->string('id');
             $table->string('kind');
             $table->string('name');
@@ -18,7 +18,7 @@ return new class extends Migration
             $table->primary(['kind', 'id']);
         });
 
-        Schema::create('fake_notes', function (Blueprint $table) {
+        Schema::create('fake_notes', function (Blueprint $table): void {
             $table->string('id')->primary();
             $table->text('body');
             $table->string('company_id');

@@ -9,7 +9,7 @@ use App\Desk\DeskException;
 use App\Desk\Notes\NoteStore;
 use App\Desk\Notes\StoredNote;
 
-final class FindInbound
+final readonly class FindInbound
 {
     public function __construct(private NoteStore $notes) {}
 

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Inbounds;
 
 use App\Clock\ReplyClock;
+use App\Desk\Notes\StoredNote;
 use App\Filament\Resources\Inbounds\Pages\ListHistory;
 use App\Filament\Resources\Inbounds\Pages\ListOpenQueue;
 use App\Filament\Resources\Inbounds\Pages\ViewInbound;
@@ -59,14 +60,11 @@ class InboundResource extends Resource
         return $schema->components([
             TextEntry::make('client')
                 ->label('Client')
-                ->state(function (Email $record): string {
-                    $company = $record->company?->name ?? '';
-                    $contact = $record->contact?->name !== null && $record->contact->name !== ''
-                        ? $record->contact->name
-                        : ($record->contact?->email ?? '');
-
-                    return trim($company.' / '.$contact, ' /');
-                }),
+                ->state(fn (Email $record): string => StoredNote::label(
+                    $record->company?->name ?? '',
+                    $record->contact?->name ?? '',
+                    $record->contact?->email ?? '',
+                )),
             TextEntry::make('summary')->label('Summary'),
             TextEntry::make('at')
                 ->label('Inbound')
@@ -112,7 +110,7 @@ class InboundResource extends Resource
      */
     public static function registerRoutes(Panel $panel, ?Closure $registerPageRoutes = null, ?ResourceConfiguration $configuration = null): void
     {
-        if ($registerPageRoutes !== null || $configuration !== null) {
+        if ($registerPageRoutes instanceof Closure || $configuration instanceof ResourceConfiguration) {
             parent::registerRoutes($panel, $registerPageRoutes, $configuration);
 
             return;

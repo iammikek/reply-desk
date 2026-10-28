@@ -42,17 +42,17 @@ final class HubSpotNoteStore implements NoteStore
     /**
      * Shared across requests so opening the queue does not spend the ten-second HubSpot limit.
      */
-    private const NOTE_CACHE_SECONDS = 60;
+    private const int NOTE_CACHE_SECONDS = 60;
 
     /**
      * HubSpot search can miss a note after it is written. Keep it here until a fresh search returns the same body.
      */
-    private const PENDING_SECONDS = 900;
+    private const int PENDING_SECONDS = 900;
 
     /**
      * Companies and their contacts change rarely. The log form and the MCP read this list.
      */
-    private const DIRECTORY_CACHE_SECONDS = 3600;
+    private const int DIRECTORY_CACHE_SECONDS = 3600;
 
     public function assertPortal(): void
     {
@@ -153,7 +153,7 @@ final class HubSpotNoteStore implements NoteStore
 
         return new Party(
             (string) $match['id'],
-            trim(((string) ($properties['firstname'] ?? '')).' '.((string) ($properties['lastname'] ?? ''))),
+            trim((($properties['firstname'] ?? '')).' '.(($properties['lastname'] ?? ''))),
             (string) ($properties['email'] ?? $email),
         );
     }
@@ -277,7 +277,7 @@ final class HubSpotNoteStore implements NoteStore
 
         $fileId = null;
 
-        if ($file !== null) {
+        if ($file instanceof NoteFile) {
             $fileId = $this->upload($file);
             $properties['hs_attachment_ids'] = $fileId;
         }
@@ -485,7 +485,7 @@ final class HubSpotNoteStore implements NoteStore
         foreach ($cached as $row) {
             $note = is_array($row) ? $this->noteFromRow($row) : null;
 
-            if ($note === null) {
+            if (! $note instanceof StoredNote) {
                 Cache::forget($this->cacheKey());
 
                 return null;
@@ -722,7 +722,7 @@ final class HubSpotNoteStore implements NoteStore
         foreach ($this->pendingRows() as $id => $row) {
             $note = $this->noteFromRow($row);
 
-            if ($note !== null) {
+            if ($note instanceof StoredNote) {
                 $notes[$id] = $note;
             }
         }
@@ -749,13 +749,13 @@ final class HubSpotNoteStore implements NoteStore
         $rows = [];
 
         foreach ($cached as $row) {
-            if (! is_array($row) || $this->noteFromRow($row) === null) {
+            if (! is_array($row) || ! $this->noteFromRow($row) instanceof StoredNote) {
                 continue;
             }
 
             $expires = $row['expiresAt'] ?? null;
 
-            if (! is_int($expires) && ! (is_string($expires) && ctype_digit($expires))) {
+            if (! is_int($expires) && (! is_string($expires) || ! ctype_digit($expires))) {
                 continue;
             }
 
@@ -804,7 +804,7 @@ final class HubSpotNoteStore implements NoteStore
 
     private function pendingKey(): string
     {
-        return 'reply-desk.pending.'.((string) config('reply-desk.portal_id'));
+        return 'reply-desk.pending.'.(config('reply-desk.portal_id'));
     }
 
     private function pendingLockKey(): string
@@ -814,7 +814,7 @@ final class HubSpotNoteStore implements NoteStore
 
     private function cacheKey(): string
     {
-        return 'reply-desk.notes.'.((string) config('reply-desk.portal_id'));
+        return 'reply-desk.notes.'.(config('reply-desk.portal_id'));
     }
 
     public function directory(): array
@@ -947,7 +947,7 @@ final class HubSpotNoteStore implements NoteStore
 
     private function directoryCacheKey(): string
     {
-        return 'reply-desk.directory.'.((string) config('reply-desk.portal_id'));
+        return 'reply-desk.directory.'.(config('reply-desk.portal_id'));
     }
 
     /**
@@ -1061,7 +1061,7 @@ final class HubSpotNoteStore implements NoteStore
         }
 
         return array_map(
-            fn (array $ids): array => array_values($ids),
+            array_values(...),
             $linked,
         );
     }
@@ -1119,7 +1119,7 @@ final class HubSpotNoteStore implements NoteStore
         foreach ($found['results'] ?? [] as $row) {
             $properties = $row['properties'] ?? [];
             $contacts[(string) $row['id']] = [
-                'name' => trim(((string) ($properties['firstname'] ?? '')).' '.((string) ($properties['lastname'] ?? ''))),
+                'name' => trim((($properties['firstname'] ?? '')).' '.(($properties['lastname'] ?? ''))),
                 'email' => (string) ($properties['email'] ?? ''),
             ];
         }

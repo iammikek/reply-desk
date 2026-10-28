@@ -13,16 +13,14 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    $this->travelTo(london('2026-10-23 12:00'));
+beforeEach(function (): void {
+    seedReplyDeskDirectory('2026-10-23 12:00');
     $this->actingAs(User::factory()->create());
-    replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
     replyDeskParty('company', '11', 'Harbour Cafe');
     replyDeskParty('contact', '21', 'Ned Harbour', 'ned@harbour.example', '11');
 });
 
-it('lists a closed thread when that company has nothing open', function () {
+it('lists a closed thread when that company has nothing open', function (): void {
     $closed = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -72,7 +70,7 @@ it('lists a closed thread when that company has nothing open', function () {
         ]);
 });
 
-it('orders closed threads by the latest sent time', function () {
+it('orders closed threads by the latest sent time', function (): void {
     $older = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -97,7 +95,7 @@ it('orders closed threads by the latest sent time', function () {
         ->and($threads[1]->id)->toBe($older);
 });
 
-it('shows the newest closed threads on the first page', function () {
+it('shows the newest closed threads on the first page', function (): void {
     $oldest = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -141,7 +139,7 @@ it('shows the newest closed threads on the first page', function () {
         ->assertDontSee('The newest loaf');
 });
 
-it('shows a pasted client email and reply on the thread', function () {
+it('shows a pasted client email and reply on the thread', function (): void {
     $client = "Hello Ada,\n\n    The loaf is  wholemeal.";
     $reply = "Thanks.\n\n    I will  bake it.";
 
@@ -198,7 +196,7 @@ it('shows a pasted client email and reply on the thread', function () {
         ->assertMountedActionModalSee('white-space: pre-wrap');
 });
 
-it('shows an attachment on the inbound note and the reply', function () {
+it('shows an attachment on the inbound note and the reply', function (): void {
     $brief = storage_path('framework/testing/brief.txt');
     $answer = storage_path('framework/testing/answer.txt');
 
@@ -252,7 +250,7 @@ it('shows an attachment on the inbound note and the reply', function () {
         ->assertStreamedContent('the answer');
 });
 
-it('does not open an attachment for a signed-out visitor', function () {
+it('does not open an attachment for a signed-out visitor', function (): void {
     auth()->logout();
 
     $this->get(route('reply-desk.notes.attachment', '1'))

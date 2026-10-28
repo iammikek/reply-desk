@@ -2,7 +2,7 @@
 
 use App\Clock\ReplyClock;
 
-it('schedules a reply from the working window', function (string $receipt, string $clockStart, string $replyDue) {
+it('schedules a reply from the working window', function (string $receipt, string $clockStart, string $replyDue): void {
     $zone = new DateTimeZone(ReplyClock::ZONE);
     $schedule = app(ReplyClock::class)->schedule(new DateTimeImmutable($receipt, $zone));
 

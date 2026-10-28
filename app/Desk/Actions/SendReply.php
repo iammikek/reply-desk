@@ -2,7 +2,6 @@
 
 namespace App\Desk\Actions;
 
-use App\Clock\ClockNote;
 use App\Clock\ReplyClock;
 use App\Desk\DeskException;
 use App\Desk\LogDeskActivity;
@@ -15,7 +14,7 @@ use DateTimeImmutable;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
-final class SendReply
+final readonly class SendReply
 {
     public function __construct(
         private FindInbound $findInbound,
@@ -26,17 +25,8 @@ final class SendReply
 
     public function __invoke(string $inboundId, string $subject, string $body, ?NoteFile $file = null): string
     {
-        $subject = trim($subject);
-        $body = ClockNote::pasted($body);
-
-        if ($body === '') {
-            throw new DeskException('A reply needs a body.');
-        }
-
-        if (str_contains($subject, "\n") || str_contains($subject, "\r")) {
-            throw new DeskException('Subject must be one line.');
-        }
-
+        $subject = NormalizeReply::subject($subject);
+        $body = NormalizeReply::body($body);
         $inbound = ($this->findInbound)->open($inboundId);
         $subject = $this->markReplySent->subject($inboundId, $subject);
 

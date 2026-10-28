@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
+beforeEach(function (): void {
     config([
         'reply-desk.portal_id' => '100000001',
         'reply-desk.token' => 'pat-test-token',
@@ -27,12 +27,12 @@ beforeEach(function () {
     Http::preventStrayRequests();
 });
 
-it('stops before writing when the portal id does not match', function () {
+it('stops before writing when the portal id does not match', function (): void {
     Http::fake([
         'https://api.hubapi.com/account-info/v3/details' => Http::response(['portalId' => 999]),
     ]);
 
-    expect(fn () => (new LogInbound(app(HubSpotNoteStore::class)))(
+    expect(fn (): string => (new LogInbound(app(HubSpotNoteStore::class)))(
         'Northwharf Bakery',
         'ada@northwharf.example',
         london('2026-10-20 10:00'),
@@ -43,7 +43,7 @@ it('stops before writing when the portal id does not match', function () {
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/crm/'));
 });
 
-it('writes an inbound note when the portal matches one company and one contact', function () {
+it('writes an inbound note when the portal matches one company and one contact', function (): void {
     Http::fake(function (Request $request) {
         $url = $request->url();
 
@@ -106,7 +106,7 @@ it('writes an inbound note when the portal matches one company and one contact',
         && str_contains($request->url(), '/note/55/associations/default/contact/20'));
 });
 
-it('uploads an attachment and stores its id on the note', function () {
+it('uploads an attachment and stores its id on the note', function (): void {
     $path = storage_path('framework/testing/audit.txt');
 
     if (! is_dir(dirname($path))) {
@@ -186,7 +186,7 @@ it('uploads an attachment and stores its id on the note', function () {
     });
 });
 
-it('reads an attachment name from the file stored on a note', function () {
+it('reads an attachment name from the file stored on a note', function (): void {
     $body = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::MailClient, 'Which PHP to use');
 
     Http::fake(function (Request $request) use ($body) {
@@ -253,7 +253,7 @@ it('reads an attachment name from the file stored on a note', function () {
         ->and($store->attachmentFor('55')?->url)->toBe('https://files.example/audit.txt');
 });
 
-it('uses the one company whose name contains every word', function () {
+it('uses the one company whose name contains every word', function (): void {
     Http::fake(function (Request $request) {
         $url = $request->url();
 
@@ -320,7 +320,7 @@ it('uses the one company whose name contains every word', function () {
         && str_contains($request->url(), '/note/55/associations/default/company/10'));
 });
 
-it('stops when more than one company matches on the portal', function () {
+it('stops when more than one company matches on the portal', function (): void {
     Http::fake(function (Request $request) {
         if (str_contains($request->url(), 'account-info')) {
             return Http::response(['portalId' => 100000001]);
@@ -336,7 +336,7 @@ it('stops when more than one company matches on the portal', function () {
         return Http::response('unexpected', 500);
     });
 
-    expect(fn () => (new LogInbound(app(HubSpotNoteStore::class)))(
+    expect(fn (): string => (new LogInbound(app(HubSpotNoteStore::class)))(
         'Northwharf Bakery',
         'ada@northwharf.example',
         london('2026-10-20 10:00'),
@@ -348,7 +348,7 @@ it('stops when more than one company matches on the portal', function () {
         && str_ends_with(parse_url($request->url(), PHP_URL_PATH) ?: '', '/notes'));
 });
 
-it('lists an open clock note from recorded HubSpot responses', function () {
+it('lists an open clock note from recorded HubSpot responses', function (): void {
     $body = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::Logged, 'Which PHP to use');
 
     Http::fake(function (Request $request) use ($body) {
@@ -406,7 +406,7 @@ it('lists an open clock note from recorded HubSpot responses', function () {
         && str_contains($request->url(), '/notes/'));
 });
 
-it('serves the queue from cache for the next minute', function () {
+it('serves the queue from cache for the next minute', function (): void {
     $body = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::Logged, 'Which PHP to use');
 
     Http::fake(function (Request $request) use ($body) {
@@ -495,7 +495,7 @@ it('serves the queue from cache for the next minute', function () {
         ->and(collect(Cache::get('reply-desk.pending.100000001'))->pluck('id')->all())->toContain('56');
 });
 
-it('retries once the ten second limit has cleared', function () {
+it('retries once the ten second limit has cleared', function (): void {
     $calls = 0;
 
     Http::fake(function (Request $request) use (&$calls) {
@@ -520,7 +520,7 @@ it('retries once the ten second limit has cleared', function () {
     expect($calls)->toBe(2);
 });
 
-it('reads associations for every note in two batches', function () {
+it('reads associations for every note in two batches', function (): void {
     $first = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::Logged, 'Which PHP to use');
     $second = ClockNote::inbound(london('2026-10-21 09:00'), ReceiptSource::MailClient, 'The form can come off');
 
@@ -548,7 +548,7 @@ it('reads associations for every note in two batches', function () {
     });
 });
 
-it('retries the note search when HubSpot is rate limited', function () {
+it('retries the note search when HubSpot is rate limited', function (): void {
     $body = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::Logged, 'Which PHP to use');
     $searches = 0;
 
@@ -613,7 +613,7 @@ it('retries the note search when HubSpot is rate limited', function () {
         ->and($open[0]->summary)->toBe('Which PHP to use');
 });
 
-it('lists the queue from a serialized cache', function () {
+it('lists the queue from a serialized cache', function (): void {
     config([
         'cache.default' => 'note-cache',
         'cache.stores.note-cache' => [
@@ -648,7 +648,7 @@ it('lists the queue from a serialized cache', function () {
         ->and($searches())->toBe(1);
 });
 
-it('caches companies and the contacts on them', function () {
+it('caches companies and the contacts on them', function (): void {
     config([
         'cache.default' => 'note-cache',
         'cache.stores.note-cache' => [
@@ -709,7 +709,7 @@ it('caches companies and the contacts on them', function () {
         ->and($reads())->toBe(1);
 });
 
-it('redacts the access token from a HubSpot error', function () {
+it('redacts the access token from a HubSpot error', function (): void {
     Http::fake([
         'https://api.hubapi.com/account-info/v3/details' => Http::response('token pat-test-token was rejected', 401),
     ]);
@@ -724,7 +724,7 @@ it('redacts the access token from a HubSpot error', function () {
     }
 });
 
-it('keeps a written note on the next read until search returns it', function () {
+it('keeps a written note on the next read until search returns it', function (): void {
     $inbound = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::Logged, 'Which PHP to use');
     $sent = ClockNote::sent('55', london('2026-10-20 11:00'), 'Re: Which PHP to use', 'Use 8.3.');
     $results = [[
@@ -774,7 +774,7 @@ it('keeps a written note on the next read until search returns it', function () 
         ->and(Cache::get('reply-desk.pending.100000001'))->toBeNull();
 });
 
-it('keeps a replaced body until search returns that body', function () {
+it('keeps a replaced body until search returns that body', function (): void {
     $original = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::Logged, 'Which PHP to use');
     $replaced = ClockNote::withMail($original, 'Which loaf for Friday.');
     $results = [[
@@ -807,7 +807,7 @@ it('keeps a replaced body until search returns that body', function () {
         ->and(Cache::get('reply-desk.pending.100000001'))->toBeNull();
 });
 
-it('drops a pending note after fifteen minutes', function () {
+it('drops a pending note after fifteen minutes', function (): void {
     $inbound = ClockNote::inbound(london('2026-10-20 10:00'), ReceiptSource::Logged, 'Which PHP to use');
     $sent = ClockNote::sent('55', london('2026-10-20 11:00'), 'Re: Which PHP to use');
     $results = [[
@@ -826,7 +826,7 @@ it('drops a pending note after fifteen minutes', function () {
     expect(collect(app(HubSpotNoteStore::class)->notes())->pluck('id')->all())->toBe(['55']);
 });
 
-it('does not create a company when the portal does not match', function () {
+it('does not create a company when the portal does not match', function (): void {
     Http::fake([
         'https://api.hubapi.com/account-info/v3/details' => Http::response(['portalId' => 999]),
     ]);
@@ -837,7 +837,7 @@ it('does not create a company when the portal does not match', function () {
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/crm/'));
 });
 
-it('creates a company and a contact on HubSpot and not in the local tables', function () {
+it('creates a company and a contact on HubSpot and not in the local tables', function (): void {
     Http::fake(function (Request $request) {
         $path = parse_url($request->url(), PHP_URL_PATH) ?: '';
         $method = $request->method();

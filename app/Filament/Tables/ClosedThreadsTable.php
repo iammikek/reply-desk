@@ -54,7 +54,7 @@ final class ClosedThreadsTable
     private static function records(?string $search, ?string $sortColumn, ?string $sortDirection): array
     {
         $records = array_map(
-            fn (ClosedThread $thread): array => self::record($thread),
+            self::record(...),
             app(ListClosedThreads::class)(),
         );
 

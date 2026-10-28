@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('drafts', function (Blueprint $table) {
+        Schema::create('drafts', function (Blueprint $table): void {
             $table->id();
             $table->string('inbound_note_id')->unique();
             $table->string('subject');

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Inbounds\Pages;
 use App\Filament\Concerns\ResolvesExternalRecord;
 use App\Filament\InboundRecords;
 use App\Filament\Resources\Inbounds\InboundResource;
+use App\Models\Email;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Database\Eloquent\Model;
 
@@ -18,7 +19,7 @@ class ViewInbound extends ViewRecord
     {
         $email = InboundRecords::model((string) $key);
 
-        abort_if($email === null, 404);
+        abort_if(! $email instanceof Email, 404);
 
         return $email;
     }

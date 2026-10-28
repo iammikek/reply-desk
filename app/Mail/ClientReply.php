@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Mail;
 
 use App\Desk\Notes\NoteFile;
@@ -40,7 +42,7 @@ class ClientReply extends Mailable
      */
     public function attachments(): array
     {
-        if ($this->file === null) {
+        if (! $this->file instanceof NoteFile) {
             return [];
         }
 

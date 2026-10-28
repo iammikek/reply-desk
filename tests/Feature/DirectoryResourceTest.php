@@ -18,19 +18,18 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
+beforeEach(function (): void {
+    seedReplyDeskDirectory();
     replyDeskParty('company', '11', 'Harbour Cafe');
     replyDeskParty('contact', '21', 'Ned Harbour', 'ned@harbour.example', '11');
 });
 
-it('keeps a signed-out visitor off the company and contact resources', function () {
+it('keeps a signed-out visitor off the company and contact resources', function (): void {
     $this->get(CompanyResource::getUrl())->assertRedirect('/login');
     $this->get(ContactResource::getUrl())->assertRedirect('/login');
 });
 
-it('lists companies and only the contacts on the open company', function () {
+it('lists companies and only the contacts on the open company', function (): void {
     $this->actingAs(User::factory()->create());
 
     Livewire::test(ListCompanies::class)
@@ -50,7 +49,7 @@ it('lists companies and only the contacts on the open company', function () {
         ->assertSee('Harbour Cafe');
 });
 
-it('reads HubSpot companies without writing a local company', function () {
+it('reads HubSpot companies without writing a local company', function (): void {
     config([
         'reply-desk.store' => 'hubspot',
         'reply-desk.portal_id' => '999',
@@ -96,7 +95,7 @@ it('reads HubSpot companies without writing a local company', function () {
         ->and(Company::query()->where('name', 'Spectra Stand-in')->exists())->toBeFalse();
 });
 
-it('adds a company and a contact on the local directory', function () {
+it('adds a company and a contact on the local directory', function (): void {
     $this->actingAs(User::factory()->create());
 
     Livewire::test(ListCompanies::class)
@@ -130,7 +129,7 @@ it('adds a company and a contact on the local directory', function () {
     expect(Contact::query()->where('email', 'bea@west.example')->value('name'))->toBe('Bea Quay');
 });
 
-it('refuses a company name that is already there', function () {
+it('refuses a company name that is already there', function (): void {
     $this->actingAs(User::factory()->create());
 
     Livewire::test(ListCompanies::class)

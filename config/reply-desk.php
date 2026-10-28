@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 $weekday = [['08:00', '20:00']];
 
 return [

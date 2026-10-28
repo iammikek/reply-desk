@@ -28,7 +28,7 @@ final class LogInboundForm
                 ->searchable()
                 ->live()
                 ->required()
-                ->afterStateUpdated(fn (Set $set) => $set('contact_id', null)),
+                ->afterStateUpdated(fn (Set $set): mixed => $set('contact_id', null)),
             Select::make('contact_id')
                 ->label('Contact')
                 ->options(fn (Get $get): array => self::contactOptions((string) $get('company_id')))

@@ -3,11 +3,9 @@
 namespace App\Desk\Queue;
 
 use App\Clock\ClockNote;
-use App\Clock\ParsedInbound;
-use App\Clock\ParsedSent;
 use App\Desk\Notes\NoteStore;
 
-final class ListClosedThreads
+final readonly class ListClosedThreads
 {
     public function __construct(private NoteStore $notes) {}
 
@@ -16,21 +14,7 @@ final class ListClosedThreads
      */
     public function __invoke(): array
     {
-        $sent = [];
-        $inbound = [];
-
-        foreach ($this->notes->notes() as $note) {
-            $parsed = ClockNote::parse($note->body);
-
-            if ($parsed instanceof ParsedSent) {
-                $sent[$parsed->closes][] = [$note, $parsed];
-            }
-
-            if ($parsed instanceof ParsedInbound) {
-                $inbound[] = [$note, $parsed];
-            }
-        }
-
+        ['inbound' => $inbound, 'sent' => $sent] = (new IndexClockNotes($this->notes))();
         $closed = [];
 
         foreach ($inbound as [$note, $parsed]) {
@@ -40,13 +24,11 @@ final class ListClosedThreads
                 continue;
             }
 
-            usort($replies, fn (array $left, array $right): int => $left[1]->sent <=> $right[1]->sent);
-
-            $contact = $note->contactName !== '' ? $note->contactName : $note->contactEmail;
+            $replies = IndexClockNotes::sortReplies($replies);
 
             $closed[] = new ClosedThread(
                 $note->id,
-                trim($note->companyName.' / '.$contact, ' /'),
+                $note->clientLabel(),
                 $note->contactEmail,
                 $parsed->receipt,
                 $parsed->summary,

@@ -7,12 +7,12 @@ use App\Desk\Actions\LogInbound;
 use App\Desk\DeskException;
 use App\Desk\LondonTime;
 use App\Desk\Notes\NoteFile;
+use App\Filament\DeskNotify;
 use App\Filament\Resources\Inbounds\InboundResource;
 use App\Filament\Schemas\LogInboundForm;
 use App\Filament\Widgets\OpenQueueOverview;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
-use Filament\Support\Exceptions\Halt;
 use Filament\Tables\Table;
 
 class ListOpenQueue extends ListInboundPage
@@ -53,9 +53,7 @@ class ListOpenQueue extends ListInboundPage
                             (string) $data['subject'],
                         );
                     } catch (DeskException $exception) {
-                        Notification::make()->title($exception->getMessage())->danger()->send();
-
-                        throw new Halt;
+                        DeskNotify::halt($exception);
                     }
 
                     $this->flushCachedTableRecords();

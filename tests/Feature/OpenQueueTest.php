@@ -17,16 +17,14 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    $this->travelTo(london('2026-10-23 12:00'));
+beforeEach(function (): void {
+    seedReplyDeskDirectory('2026-10-23 12:00');
     $this->actingAs(User::factory()->create());
-    replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
     replyDeskParty('company', '11', 'Harbour Cafe');
     replyDeskParty('contact', '21', 'Ned Harbour', 'ned@harbour.example', '11');
 });
 
-it('shows an open reply on the queue', function () {
+it('shows an open reply on the queue', function (): void {
     app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -43,7 +41,7 @@ it('shows an open reply on the queue', function () {
         ->assertSee('2026-10-21 10:00');
 });
 
-it('hides a reply that is not overdue', function () {
+it('hides a reply that is not overdue', function (): void {
     app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -69,7 +67,7 @@ it('hides a reply that is not overdue', function () {
         ->toBe(['1']);
 });
 
-it('opens the clock note', function () {
+it('opens the clock note', function (): void {
     app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -100,7 +98,7 @@ it('opens the clock note', function () {
         ->and(collect($events)->where('kind', 'Clock start'))->toBeEmpty();
 });
 
-it('shows the filed client email in the note', function () {
+it('shows the filed client email in the note', function (): void {
     $events = ReplyInfolist::events([
         'client' => 'Northwharf Bakery / Ada North',
         'contact_email' => 'ada@northwharf.example',
@@ -116,7 +114,7 @@ it('shows the filed client email in the note', function () {
     expect(collect($events)->pluck('body'))->toContain('Which loaf for Friday.');
 });
 
-it('marks a reply sent from the queue', function () {
+it('marks a reply sent from the queue', function (): void {
     app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -138,7 +136,7 @@ it('marks a reply sent from the queue', function () {
         ->toContain("Use 8.3 on the new box.\n\nMike");
 });
 
-it('counts open and overdue replies', function () {
+it('counts open and overdue replies', function (): void {
     app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -154,13 +152,13 @@ it('counts open and overdue replies', function () {
         ->assertSee('Wed 21 Oct 10:00');
 });
 
-it('shows none due when the queue is empty', function () {
+it('shows none due when the queue is empty', function (): void {
     Livewire::test(OpenQueueOverview::class)
         ->assertSee('0')
         ->assertSee('None');
 });
 
-it('offers only the contacts on the chosen company', function () {
+it('offers only the contacts on the chosen company', function (): void {
     Livewire::test(ListOpenQueue::class)
         ->mountAction('logInbound')
         ->assertFormFieldExists('company_id')
@@ -175,7 +173,7 @@ it('offers only the contacts on the chosen company', function () {
         ->assertMountedActionModalDontSee('ned@harbour.example');
 });
 
-it('logs an inbound from the queue', function () {
+it('logs an inbound from the queue', function (): void {
     Livewire::test(ListOpenQueue::class)
         ->callAction('logInbound', [
             'company_id' => '10',
@@ -196,7 +194,7 @@ it('logs an inbound from the queue', function () {
         ->and($note)->not->toContain('Summary:');
 });
 
-it('keeps a pasted body on the logged email', function () {
+it('keeps a pasted body on the logged email', function (): void {
     $body = "Hello Ada,\n\n    The loaf is  wholemeal.";
 
     Livewire::test(ListOpenQueue::class)
@@ -218,7 +216,7 @@ it('keeps a pasted body on the logged email', function () {
         ->assertMountedActionModalSee('white-space: pre-wrap');
 });
 
-it('shows the earlier thread on the note and the draft', function () {
+it('shows the earlier thread on the note and the draft', function (): void {
     $closed = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -259,7 +257,7 @@ it('shows the earlier thread on the note and the draft', function () {
         ->assertFormFieldExists('body');
 });
 
-it('lists earlier threads oldest first', function () {
+it('lists earlier threads oldest first', function (): void {
     $older = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -305,7 +303,7 @@ it('lists earlier threads oldest first', function () {
     expect(strpos($html, 'Wholemeal on Monday.'))->toBeLessThan(strpos($html, 'Rye on Wednesday.'));
 });
 
-it('requires the pasted reply before marking sent', function () {
+it('requires the pasted reply before marking sent', function (): void {
     app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -329,7 +327,7 @@ it('requires the pasted reply before marking sent', function () {
     expect(collect(replyDeskNoteBodies())->filter(fn (string $body): bool => str_contains($body, 'Clock: sent')))->toHaveCount(0);
 });
 
-it('keeps a signed-out visitor off an inbound', function () {
+it('keeps a signed-out visitor off an inbound', function (): void {
     auth()->logout();
 
     $this->get('/')->assertRedirect('/login');
@@ -337,7 +335,7 @@ it('keeps a signed-out visitor off an inbound', function () {
     $this->get(InboundResource::getUrl('view', ['record' => '1']))->assertRedirect('/login');
 });
 
-it('sends the reply from the queue', function () {
+it('sends the reply from the queue', function (): void {
     Mail::fake();
 
     app(LogInbound::class)(

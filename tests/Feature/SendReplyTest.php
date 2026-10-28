@@ -21,13 +21,9 @@ use Symfony\Component\Mime\RawMessage;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    $this->travelTo(london('2026-10-23 15:30'));
-    replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
-});
+beforeEach(fn () => seedReplyDeskDirectory());
 
-it('sends a reply with the subject of the client email when none is given', function () {
+it('sends a reply with the subject of the client email when none is given', function (): void {
     Mail::fake();
 
     $id = app(LogInbound::class)(
@@ -48,7 +44,7 @@ it('sends a reply with the subject of the client email when none is given', func
     expect($sent)->toContain('Subject: Friday loaf');
 });
 
-it('closes the row after the mail server accepts', function () {
+it('closes the row after the mail server accepts', function (): void {
     Mail::fake();
 
     $id = app(LogInbound::class)(
@@ -63,12 +59,10 @@ it('closes the row after the mail server accepts', function () {
 
     app(SendReply::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');
 
-    Mail::assertSent(ClientReply::class, function (ClientReply $mail): bool {
-        return $mail->hasTo('ada@northwharf.example')
-            && $mail->hasFrom('desk@example.com')
-            && $mail->subjectLine === 'PHP on the new server'
-            && $mail->replyBody === 'Use 8.3 on the new box.';
-    });
+    Mail::assertSent(ClientReply::class, fn (ClientReply $mail): bool => $mail->hasTo('ada@northwharf.example')
+        && $mail->hasFrom('desk@example.com')
+        && $mail->subjectLine === 'PHP on the new server'
+        && $mail->replyBody === 'Use 8.3 on the new box.');
 
     $sent = (string) collect(replyDeskNoteBodies())->first(fn (string $body): bool => str_contains($body, 'Clock: sent'));
 
@@ -77,7 +71,7 @@ it('closes the row after the mail server accepts', function () {
         ->and($sent)->toContain('Use 8.3 on the new box.');
 });
 
-it('sends the attachment with the reply and stores it on the note', function () {
+it('sends the attachment with the reply and stores it on the note', function (): void {
     Mail::fake();
 
     $path = storage_path('framework/testing/audit.txt');
@@ -108,7 +102,7 @@ it('sends the attachment with the reply and stores it on the note', function () 
         ->and(Storage::disk('local')->exists('note-files/'.$sentId.'/audit.txt'))->toBeTrue();
 });
 
-it('sends a pasted reply without flattening it', function () {
+it('sends a pasted reply without flattening it', function (): void {
     Mail::fake();
 
     $body = "Thanks.\n\n    I will  bake it.";
@@ -129,20 +123,18 @@ it('sends a pasted reply without flattening it', function () {
         ->toContain("Reply:\n".$body);
 });
 
-it('leaves the row and the draft when the mail server refuses', function () {
-    Mail::extend('refused', function () {
-        return new class implements TransportInterface
+it('leaves the row and the draft when the mail server refuses', function (): void {
+    Mail::extend('refused', fn (): TransportInterface => new class implements TransportInterface
+    {
+        public function send(RawMessage $message, ?Envelope $envelope = null): ?SentMessage
         {
-            public function send(RawMessage $message, ?Envelope $envelope = null): ?SentMessage
-            {
-                throw new TransportException('refused');
-            }
+            throw new TransportException('refused');
+        }
 
-            public function __toString(): string
-            {
-                return 'refused';
-            }
-        };
+        public function __toString(): string
+        {
+            return 'refused';
+        }
     });
 
     config([

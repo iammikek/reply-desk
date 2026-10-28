@@ -16,13 +16,9 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    $this->travelTo(london('2026-10-23 12:00'));
-    replyDeskParty('company', '10', 'Northwharf Bakery');
-    replyDeskParty('contact', '20', 'Ada North', 'ada@northwharf.example', '10');
-});
+beforeEach(fn () => seedReplyDeskDirectory('2026-10-23 12:00'));
 
-it('keeps the row open when a draft is saved', function () {
+it('keeps the row open when a draft is saved', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -48,7 +44,7 @@ it('keeps the row open when a draft is saved', function () {
         ->and(Draft::query()->count())->toBe(0);
 });
 
-it('deletes the draft when the reply is marked sent', function () {
+it('deletes the draft when the reply is marked sent', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -63,7 +59,7 @@ it('deletes the draft when the reply is marked sent', function () {
     expect(Draft::query()->count())->toBe(0);
 });
 
-it('returns the same draft from the command', function () {
+it('returns the same draft from the command', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -85,7 +81,7 @@ it('returns the same draft from the command', function () {
         ->and($output)->toContain('2026-10-21 10:00');
 });
 
-it('keeps a pasted draft', function () {
+it('keeps a pasted draft', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -101,7 +97,7 @@ it('keeps a pasted draft', function () {
     expect(app(ListOpenReplies::class)(london('2026-10-23 12:00'))[0]->draftBody)->toBe($body);
 });
 
-it('shows a saved draft on the queue', function () {
+it('shows a saved draft on the queue', function (): void {
     $this->actingAs(User::factory()->create());
 
     $id = app(LogInbound::class)(
@@ -130,7 +126,7 @@ it('shows a saved draft on the queue', function () {
         ->and($draft->body)->toBe('Use 8.3 on the new box.');
 });
 
-it('closes an unchanged draft without asking to save it', function () {
+it('closes an unchanged draft without asking to save it', function (): void {
     $this->actingAs(User::factory()->create());
 
     $id = app(LogInbound::class)(
@@ -163,7 +159,7 @@ it('closes an unchanged draft without asking to save it', function () {
         ->and($draft->updated_at->equalTo($savedAt))->toBeTrue();
 });
 
-it('asks to save when a saved draft was edited', function () {
+it('asks to save when a saved draft was edited', function (): void {
     $this->actingAs(User::factory()->create());
 
     $id = app(LogInbound::class)(
@@ -203,7 +199,7 @@ it('asks to save when a saved draft was edited', function () {
         ->and(Draft::query()->first()->body)->toBe('Use 8.3 on the new box.');
 });
 
-it('closes reply without a draft when cancel has no message', function () {
+it('closes reply without a draft when cancel has no message', function (): void {
     $this->actingAs(User::factory()->create());
 
     $id = app(LogInbound::class)(
@@ -222,7 +218,7 @@ it('closes reply without a draft when cancel has no message', function () {
     expect(Draft::query()->count())->toBe(0);
 });
 
-it('discards the message when cancel declines the draft', function () {
+it('discards the message when cancel declines the draft', function (): void {
     $this->actingAs(User::factory()->create());
 
     $id = app(LogInbound::class)(
@@ -246,7 +242,7 @@ it('discards the message when cancel declines the draft', function () {
     expect(Draft::query()->count())->toBe(0);
 });
 
-it('discards a draft from the queue and leaves the row open', function () {
+it('discards a draft from the queue and leaves the row open', function (): void {
     $this->actingAs(User::factory()->create());
 
     $id = app(LogInbound::class)(

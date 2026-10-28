@@ -66,14 +66,14 @@ final class ReplyInfolist
                 }
 
                 $lines[] = '';
-                $lines[] = 'Reply '.(string) ($reply['sent'] ?? '');
+                $lines[] = 'Reply '.($reply['sent'] ?? '');
                 $repliedIn = self::repliedIn((string) ($thread['receipt'] ?? ''), (string) ($reply['sent'] ?? ''));
 
                 if ($repliedIn !== '') {
                     $lines[] = $repliedIn;
                 }
 
-                $lines[] = 'Subject: '.(string) ($reply['subject'] ?? '');
+                $lines[] = 'Subject: '.($reply['subject'] ?? '');
                 $body = (string) ($reply['body'] ?? '');
 
                 if (trim($body) !== '') {
