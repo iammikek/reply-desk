@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Desk\Actions\PollMailbox;
+use App\Desk\DeskException;
 use App\Desk\Mailbox\Mailbox;
 use App\Desk\Mailbox\MailboxConfigured;
 use App\Models\MailboxState;
@@ -74,11 +75,13 @@ class MailboxSettings extends Page
                     ? 'Mailbox credentials are set in the environment. Polling uses that account.'
                     : 'No mailbox credentials in the environment. Set REPLY_DESK_IMAP_* and REPLY_DESK_SMTP_* in .env. Until then, drafts stay local and send uses the Laravel mailer.'),
                 Text::make($mailbox->configured() ? 'Connection ready.' : 'Connection not ready.'),
+                Text::make('Test connection checks IMAP and SMTP without changing the poll cursor.'),
             ]),
             Section::make('Polling')->schema([
                 Toggle::make('polling_enabled')
                     ->label('Polling enabled')
-                    ->disabled(! $connected),
+                    ->disabled(! $connected)
+                    ->helperText('When enabled, the scheduler runs reply:poll-mailbox on the interval below.'),
                 TextInput::make('poll_interval_minutes')
                     ->label('Poll interval (minutes)')
                     ->numeric()
@@ -116,6 +119,10 @@ class MailboxSettings extends Page
                 ->label('Save')
                 ->submit('save')
                 ->disabled(! $connected),
+            Action::make('testConnection')
+                ->label('Test connection')
+                ->action('testConnection')
+                ->disabled(! app(Mailbox::class)->configured()),
             Action::make('pollNow')
                 ->label('Poll now')
                 ->action('pollNow')
@@ -140,6 +147,19 @@ class MailboxSettings extends Page
         ])->save();
 
         Notification::make()->title('Mailbox settings saved.')->success()->send();
+    }
+
+    public function testConnection(): void
+    {
+        try {
+            app(Mailbox::class)->testConnection();
+        } catch (DeskException $exception) {
+            Notification::make()->title($exception->getMessage())->danger()->send();
+
+            return;
+        }
+
+        Notification::make()->title('IMAP and SMTP connection succeeded.')->success()->send();
     }
 
     public function pollNow(): void

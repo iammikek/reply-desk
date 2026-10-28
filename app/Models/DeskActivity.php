@@ -19,6 +19,8 @@ class DeskActivity extends Model
         'note_id',
         'company',
         'contact',
+        'company_id',
+        'contact_id',
         'context',
         'created_at',
     ];

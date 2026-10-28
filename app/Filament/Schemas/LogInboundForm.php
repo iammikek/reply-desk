@@ -21,6 +21,8 @@ final class LogInboundForm
      */
     public static function components(): array
     {
+        $zone = ReplyClock::zoneName();
+
         return [
             Select::make('company_id')
                 ->label('Company')
@@ -28,27 +30,31 @@ final class LogInboundForm
                 ->searchable()
                 ->live()
                 ->required()
+                ->helperText('Create the company under Companies first if it is not listed.')
                 ->afterStateUpdated(fn (Set $set): mixed => $set('contact_id', null)),
             Select::make('contact_id')
                 ->label('Contact')
                 ->options(fn (Get $get): array => self::contactOptions((string) $get('company_id')))
                 ->searchable()
-                ->required(),
+                ->required()
+                ->helperText('Create the contact under Contacts first if it is not listed.'),
             DateTimePicker::make('receipt')
                 ->label('Receipt')
                 ->seconds(false)
-                ->timezone(ReplyClock::zoneName())
-                ->default(now(ReplyClock::zoneName()))
-                ->required(),
+                ->timezone($zone)
+                ->default(now($zone))
+                ->required()
+                ->helperText('When the message arrived, in '.$zone.'.'),
             Radio::make('receipt_source')
                 ->label('Receipt source')
                 ->options(ReceiptSource::options())
                 ->inline()
-                ->required(),
+                ->required()
+                ->helperText('Mail client: read in Mail. Logged: noted without the original mail. WhatsApp: arrived there.'),
             TextInput::make('subject')
                 ->label('Subject')
-                ->required()
-                ->maxLength(255),
+                ->maxLength(255)
+                ->helperText('Optional. The queue summary uses the subject, or the first line of the body if subject is blank.'),
             Textarea::make('body')
                 ->label('Body')
                 ->required()

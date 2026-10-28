@@ -17,13 +17,16 @@ final class MarkSentForm
      */
     public static function components(): array
     {
+        $zone = ReplyClock::zoneName();
+
         return [
             DateTimePicker::make('sent')
                 ->label('Sent')
                 ->seconds(false)
-                ->timezone(ReplyClock::zoneName())
-                ->default(now(ReplyClock::zoneName()))
-                ->required(),
+                ->timezone($zone)
+                ->default(now($zone))
+                ->required()
+                ->helperText('When the reply left Mail (or another client), in '.$zone.'. Use Send on the row when the desk should send it.'),
             TextInput::make('subject')
                 ->label('Subject')
                 ->maxLength(255),

@@ -194,6 +194,25 @@ it('logs an inbound from the queue', function (): void {
         ->and($note)->not->toContain('Summary:');
 });
 
+it('generates a summary from the body when subject is omitted', function (): void {
+    Livewire::test(ListOpenQueue::class)
+        ->callAction('logInbound', [
+            'company_id' => '10',
+            'contact_id' => '20',
+            'receipt' => '2026-10-23 11:00:00',
+            'receipt_source' => 'mail client',
+            'subject' => '',
+            'body' => "Can you look today?\nMore detail.",
+        ])
+        ->assertNotified('Inbound logged')
+        ->assertSee('Can you look today?');
+
+    $note = replyDeskNoteBodies()[0];
+
+    expect($note)->toContain('Summary: Can you look today?')
+        ->and($note)->not->toContain('Subject:');
+});
+
 it('keeps a pasted body on the logged email', function (): void {
     $body = "Hello Ada,\n\n    The loaf is  wholemeal.";
 
