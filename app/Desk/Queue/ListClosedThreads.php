@@ -4,6 +4,7 @@ namespace App\Desk\Queue;
 
 use App\Clock\ClockNote;
 use App\Desk\Notes\NoteStore;
+use DateTimeImmutable;
 
 final readonly class ListClosedThreads
 {
@@ -14,19 +15,20 @@ final readonly class ListClosedThreads
      */
     public function __invoke(): array
     {
-        ['inbound' => $inbound, 'sent' => $sent] = (new IndexClockNotes($this->notes))();
-        $closed = [];
+        ['inbound' => $inbound, 'sent' => $sent, 'closed' => $closed] = (new IndexClockNotes($this->notes))();
+        $threads = [];
 
         foreach ($inbound as [$note, $parsed]) {
             $replies = $sent[$note->id] ?? null;
+            $closure = $closed[$note->id] ?? null;
 
-            if ($replies === null) {
+            if ($replies === null && $closure === null) {
                 continue;
             }
 
-            $replies = IndexClockNotes::sortReplies($replies);
+            $sorted = $replies === null ? [] : IndexClockNotes::sortReplies($replies);
 
-            $closed[] = new ClosedThread(
+            $threads[] = new ClosedThread(
                 $note->id,
                 $note->clientLabel(),
                 $note->contactEmail,
@@ -39,20 +41,31 @@ final readonly class ListClosedThreads
                     'body' => ClockNote::correspondence($reply[0]->body)['reply'],
                     'attachment' => $reply[0]->attachmentName,
                     'note_id' => $reply[0]->id,
-                ], $replies),
+                ], $sorted),
                 $note->attachmentName,
                 $note->companyId,
                 $note->contactId,
+                $closure === null ? null : $closure[1]->closed,
             );
         }
 
-        usort($closed, function (ClosedThread $left, ClosedThread $right): int {
-            $leftSent = $left->replies[array_key_last($left->replies)]['sent'];
-            $rightSent = $right->replies[array_key_last($right->replies)]['sent'];
-
-            return $rightSent <=> $leftSent;
+        usort($threads, function (ClosedThread $left, ClosedThread $right): int {
+            return $this->endedAt($right) <=> $this->endedAt($left);
         });
 
-        return $closed;
+        return $threads;
+    }
+
+    private function endedAt(ClosedThread $thread): DateTimeImmutable
+    {
+        if ($thread->replies !== []) {
+            return $thread->replies[array_key_last($thread->replies)]['sent'];
+        }
+
+        if ($thread->closedAt instanceof DateTimeImmutable) {
+            return $thread->closedAt;
+        }
+
+        return $thread->receipt;
     }
 }

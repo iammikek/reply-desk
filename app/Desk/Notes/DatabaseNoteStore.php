@@ -3,6 +3,7 @@
 namespace App\Desk\Notes;
 
 use App\Clock\ClockNote;
+use App\Clock\ParsedClosed;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
 use App\Clock\ReceiptSource;
@@ -300,6 +301,18 @@ final class DatabaseNoteStore implements NoteStore
             ];
         }
 
+        if ($parsed instanceof ParsedClosed) {
+            return [
+                'direction' => 'closed',
+                'subject' => null,
+                'summary' => null,
+                'body' => '',
+                'at' => $parsed->closed->format('Y-m-d H:i:00'),
+                'receipt_source' => null,
+                'closes_id' => $parsed->closes,
+            ];
+        }
+
         throw new DeskException('That note is not a clock note.');
     }
 
@@ -315,6 +328,8 @@ final class DatabaseNoteStore implements NoteStore
                 (string) $email->subject,
                 $email->body,
             );
+        } elseif ($email->direction === 'closed') {
+            $body = ClockNote::closed((string) $email->closes_id, $at);
         } else {
             $source = ReceiptSource::tryFrom((string) $email->receipt_source) ?? ReceiptSource::Logged;
             $body = ClockNote::withMail(

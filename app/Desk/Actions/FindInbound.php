@@ -3,6 +3,7 @@
 namespace App\Desk\Actions;
 
 use App\Clock\ClockNote;
+use App\Clock\ParsedClosed;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
 use App\Desk\DeskException;
@@ -32,6 +33,10 @@ final readonly class FindInbound
             $parsed = ClockNote::parse($note->body);
 
             if ($parsed instanceof ParsedSent && $parsed->closes === $inboundId) {
+                $closed = true;
+            }
+
+            if ($parsed instanceof ParsedClosed && $parsed->closes === $inboundId) {
                 $closed = true;
             }
 

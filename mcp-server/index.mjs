@@ -213,6 +213,30 @@ server.registerTool(
 );
 
 server.registerTool(
+    'close_inbound',
+    {
+        description:
+            'Close an open inbound without sending a reply. Use for thanks, FYI, or other mail that needs no response. Writes a closed clock note, deletes any draft, and removes the row from the open queue. Refuses if the inbound is already closed or replied. This does not send mail.',
+        inputSchema: {
+            inbound: z.string().describe('Inbound note id.'),
+            at: z
+                .string()
+                .optional()
+                .describe('When it was closed, Y-m-d H:i Europe/London. Defaults to now.'),
+        },
+    },
+    async ({ inbound, at } = {}) => {
+        const args = ['reply:close', inbound];
+
+        if (at) {
+            args.push(`--at=${at}`);
+        }
+
+        return run(args);
+    },
+);
+
+server.registerTool(
     'send_reply',
     {
         description:

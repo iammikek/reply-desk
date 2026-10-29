@@ -53,6 +53,19 @@ final class ClockNote
         return self::withMail($body, reply: $reply);
     }
 
+    public static function closed(string $closes, DateTimeImmutable $closed): string
+    {
+        if (preg_match('/^\d+$/', $closes) !== 1) {
+            throw new InvalidArgumentException('A closed note must name the inbound note id.');
+        }
+
+        return implode("\n", [
+            'Clock: closed',
+            'Closes: '.$closes,
+            'Closed: '.$closed->setTimezone(self::zone())->format('Y-m-d H:i').' '.ReplyClock::zoneName(),
+        ]);
+    }
+
     public static function subjectOf(string $body): string
     {
         return self::headerField($body, 'Subject');
@@ -69,13 +82,14 @@ final class ClockNote
         return '';
     }
 
-    public static function parse(string $body): ParsedInbound|ParsedSent|null
+    public static function parse(string $body): ParsedInbound|ParsedSent|ParsedClosed|null
     {
         $lines = self::header($body);
 
         return match ($lines[0] ?? '') {
             'Clock: inbound' => self::parseInbound($lines),
             'Clock: sent' => self::parseSent($lines),
+            'Clock: closed' => self::parseClosed($lines),
             default => null,
         };
     }
@@ -274,6 +288,28 @@ final class ClockNote
         }
 
         return new ParsedSent($closes[1], $sent, $subject);
+    }
+
+    /**
+     * @param  list<string>  $lines
+     */
+    private static function parseClosed(array $lines): ?ParsedClosed
+    {
+        if (count($lines) !== 3) {
+            return null;
+        }
+
+        if (preg_match('/^Closes: (\d+)$/', $lines[1], $closes) !== 1) {
+            return null;
+        }
+
+        $closed = self::moment($lines[2], 'Closed');
+
+        if (! $closed instanceof DateTimeImmutable) {
+            return null;
+        }
+
+        return new ParsedClosed($closes[1], $closed);
     }
 
     private static function moment(string $line, string $label): ?DateTimeImmutable

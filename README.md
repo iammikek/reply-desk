@@ -85,7 +85,7 @@ Poll rules, quote stripping, and Message-IDs: [docs/mailbox.md](docs/mailbox.md)
 
 ## What the queue shows
 
-Each open row is one client email, stored as an inbound clock note, with no reply sent yet.
+Each open row is one client email, stored as an inbound clock note, with no reply sent and not closed without a reply.
 
 - Client, shown as company and contact
 - Summary
@@ -96,7 +96,11 @@ Each open row is one client email, stored as an inbound clock note, with no repl
 
 Due time is calculated when the page or a command runs. It is not stored. The clock and open ranges are under [Practice hours](#practice-hours).
 
-The desk can send a reply. Mark sent records a reply that already went from Mail. A draft does not stop the clock.
+The desk can send a reply. Mark sent records a reply that already went from Mail.
+
+**Close** is for inbound that needs no response (thanks, FYI, “I’ll keep you updated”). The confirm asks “Close without sending a reply?” That means: the row leaves the open queue (no reply-due clock), and no reply is recorded — History and the contact timeline show **Closed — No reply**, not a sent message. Nothing is sent from the desk, and nothing is marked as sent from Mail. Use **Send** or **Mark sent** when you actually replied.
+
+A draft does not stop the clock.
 
 Seed the desk with `./vendor/bin/sail artisan db:seed` while `REPLY_DESK_STORE` is `memory`. The command refuses to run when the store is HubSpot. The seed loads three stand-in companies: one overdue row, one open row, a draft on the overdue row, and one closed thread.
 
@@ -225,10 +229,11 @@ The same actions the panel uses:
 ./vendor/bin/sail artisan reply:discard-draft {inbound}
 ./vendor/bin/sail artisan reply:send {inbound} {subject} {body}
 ./vendor/bin/sail artisan reply:mark-sent {inbound} {sent} {reply?} {--subject=}
+./vendor/bin/sail artisan reply:close {inbound} {--at=}
 ./vendor/bin/sail artisan reply:poll-mailbox {--force}
 ```
 
-`receipt`, `sent`, and `--now` are `Y-m-d H:i` in Europe/London. `source` is `mail client`, `logged`, or `whatsapp`. `--subject` on an inbound is the client email subject, one line, and it is omitted when the paste has none. `--subject` on a reply is omitted when the reply has none. The desk then keeps the subject of the previous message. A later reply at a different minute is another sent note on that inbound. The same minute is refused.
+`receipt`, `sent`, `--at`, and `--now` are `Y-m-d H:i` in Europe/London. `source` is `mail client`, `logged`, or `whatsapp`. `--subject` on an inbound is the client email subject, one line, and it is omitted when the paste has none. `--subject` on a reply is omitted when the reply has none. The desk then keeps the subject of the previous message. A later reply at a different minute is another sent note on that inbound. The same minute is refused. `reply:close` ends an open inbound without a reply (thanks, FYI, or other mail that needs no response).
 
 ## MCP
 
@@ -250,7 +255,7 @@ Cursor and Claude load the same `reply-desk` entry inside `mcpServers`. Each cli
 
 The panel runs in Docker. These tools call `php artisan` on the machine that starts the client. Set `PHP_BINARY` when that binary is not on `PATH`. The process reads the HubSpot token from this project's `.env`. The token does not go in the MCP configuration.
 
-Ask in plain language, for example "list the open replies". The client calls the tool and asks for approval. The tools are `list_companies`, `create_company`, `create_contact`, `list_open_replies`, `list_closed_replies`, `log_inbound`, `save_draft`, `discard_draft`, `send_reply`, and `mark_reply_sent`. `list_companies` is the cached company and contact list. `create_company` and `create_contact` add a row on that list. A company or contact already there is refused. `log_inbound` records a client email against one of those contacts, and it can keep the subject. `send_reply` sends through the desk mailer or practice mailbox and marks the row sent. `mark_reply_sent` records a reply that already went from Mail. A reply with no subject keeps the subject of the previous message. A later reply at a different minute is another message on that inbound. The same minute is refused. The process shells to the Artisan commands. It does not talk to HubSpot itself.
+Ask in plain language, for example "list the open replies". The client calls the tool and asks for approval. The tool list in `mcp-server/index.mjs` is the source of truth. Today that is: `list_open_replies`, `list_closed_replies`, `list_companies`, `create_company`, `create_contact`, `log_inbound`, `save_draft`, `discard_draft`, `send_reply`, `mark_reply_sent`, and `close_inbound`. `list_companies` is the cached company and contact list. `create_company` and `create_contact` add a row on that list. A company or contact already there is refused. `log_inbound` records a client email against one of those contacts, and it can keep the subject. `send_reply` sends through the desk mailer or practice mailbox and marks the row sent. `mark_reply_sent` records a reply that already went from Mail. `close_inbound` ends an open inbound without a reply. A reply with no subject keeps the subject of the previous message. A later reply at a different minute is another message on that inbound. The same minute is refused. The process shells to host `php artisan` (or `PHP_BINARY`), not the Sail container, so the host PHP must see the same `.env` database as the panel.
 
 ## Tests
 

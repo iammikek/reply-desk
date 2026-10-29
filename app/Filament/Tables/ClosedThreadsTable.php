@@ -43,7 +43,7 @@ final class ClosedThreadsTable
             ])
             ->defaultSort('sent', 'desc')
             ->emptyStateHeading('No closed replies')
-            ->emptyStateDescription('A thread appears here after the reply is marked sent.')
+            ->emptyStateDescription('A thread appears here after a reply is marked sent, or after Close without a reply.')
             ->modelLabel('thread')
             ->pluralModelLabel('threads');
     }

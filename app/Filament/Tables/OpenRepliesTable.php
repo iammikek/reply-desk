@@ -3,6 +3,7 @@
 namespace App\Filament\Tables;
 
 use App\Clock\ReplyClock;
+use App\Desk\Actions\CloseInbound;
 use App\Desk\Actions\DiscardDraft;
 use App\Desk\Actions\MarkReplySent;
 use App\Desk\Actions\SaveDraft;
@@ -175,6 +176,23 @@ final class OpenRepliesTable
 
                         $livewire->flushCachedTableRecords();
                         Notification::make()->title('Reply marked sent')->success()->send();
+                    }),
+                Action::make('close')
+                    ->label('Close')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->modalHeading('Close without sending a reply?')
+                    ->modalDescription('The inbound leaves the open queue. No reply is recorded.')
+                    ->modalSubmitActionLabel('Close')
+                    ->action(function (array $record, ListOpenQueue $livewire): void {
+                        try {
+                            app(CloseInbound::class)((string) $record['id']);
+                        } catch (DeskException $exception) {
+                            DeskNotify::halt($exception);
+                        }
+
+                        $livewire->flushCachedTableRecords();
+                        Notification::make()->title('Inbound closed')->success()->send();
                     }),
             ])
             ->defaultSort('reply_due')
