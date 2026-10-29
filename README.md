@@ -17,10 +17,12 @@ Case study: [automica.io/reply-desk](https://automica.io/reply-desk)
 - [Local record](#local-record)
 - [Persistent database](#persistent-database)
 - [Live desk](#live-desk)
+- [Deploy](#deploy)
 - [Commands](#commands)
 - [MCP](#mcp)
 - [Tests](#tests)
 - [Design plan](docs/plan.md)
+- [Deploy](docs/deploy.md)
 
 ## Why
 
@@ -204,6 +206,10 @@ A linked reply names the subject, then the body:
 The Saturday menu can go out on Friday.
 ```
 
+## Deploy
+
+Production host is **Railway Hobby** (web + cron), with the existing Supabase EU session pooler and HubSpot. Recipe, env list, and bring-up: [docs/deploy.md](docs/deploy.md). Do not put this app on Krystal cPanel.
+
 ## Commands
 
 The same actions the panel uses:
@@ -254,4 +260,4 @@ Ask in plain language, for example "list the open replies". The client calls the
 
 That runs the Pest suite inside the app container. One test starts the MCP server and checks the tool list. The suite uses the memory store and recorded HubSpot responses. It does not call a live portal.
 
-GitHub Actions runs the same command on every push and pull request: [`.github/workflows/tests.yml`](.github/workflows/tests.yml). The job uses PHP 8.4 and Node 22.
+GitHub Actions runs the same command on every push and pull request: [`.github/workflows/tests.yml`](.github/workflows/tests.yml). The job uses PHP 8.4 and Node 22. On a successful run on `master`, Railway Wait for CI deploys a new build to production (see [docs/deploy.md](docs/deploy.md)).
