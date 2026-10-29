@@ -1,6 +1,7 @@
 <?php
 
 use App\Clock\ClockNote;
+use App\Clock\ParsedClosed;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
 use App\Clock\ReceiptSource;
@@ -32,6 +33,20 @@ it('parses a recorded sent note', function (): void {
         ->and($parsed->closes)->toBe('524192418041')
         ->and($parsed->sent->format('Y-m-d H:i'))->toBe('2026-10-22 16:04')
         ->and($parsed->subject)->toBe('PHP on the new server');
+});
+
+it('writes a closed note that parses back', function (): void {
+    $body = ClockNote::closed('123456789', london('2026-10-28 13:15'));
+    $parsed = ClockNote::parse($body);
+
+    expect($parsed)->toBeInstanceOf(ParsedClosed::class)
+        ->and($parsed->closes)->toBe('123456789')
+        ->and($parsed->closed->format('Y-m-d H:i'))->toBe('2026-10-28 13:15')
+        ->and($body)->toBe(<<<'TXT'
+        Clock: closed
+        Closes: 123456789
+        Closed: 2026-10-28 13:15 Europe/London
+        TXT);
 });
 
 it('ignores an ordinary progress note', function (): void {

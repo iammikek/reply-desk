@@ -15,7 +15,7 @@ final readonly class ListClientCorrespondence
 
     public function __invoke(string $companyId, string $contactId): ?ClientCorrespondence
     {
-        ['inbound' => $inbound, 'sent' => $sent] = (new IndexClockNotes($this->notes))($companyId, $contactId);
+        ['inbound' => $inbound, 'sent' => $sent, 'closed' => $closed] = (new IndexClockNotes($this->notes))($companyId, $contactId);
 
         if ($inbound === []) {
             return null;
@@ -30,6 +30,12 @@ final readonly class ListClientCorrespondence
 
             foreach (IndexClockNotes::sortReplies($sent[$note->id] ?? []) as [$reply, $parsedReply]) {
                 $events[] = $this->event($parsedReply->sent, 1, 'Reply', $parsedReply->subject, ClockNote::correspondence($reply->body)['reply'], $reply->attachmentName, $reply->id);
+            }
+
+            $closure = $closed[$note->id] ?? null;
+
+            if ($closure !== null && ($sent[$note->id] ?? []) === []) {
+                $events[] = $this->event($closure[1]->closed, 2, 'Closed', 'No reply', '', $closure[0]->attachmentName, $closure[0]->id);
             }
         }
 

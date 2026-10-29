@@ -36,7 +36,7 @@ Each open row is an inbound clock note with no sent note pointing at it.
 
 Due time is calculated when the page or a tool runs. It is not stored.
 
-A filter shows rows whose reply is overdue. Marking a reply sent fills the sent time and the row leaves the queue.
+A filter shows rows whose reply is overdue. Marking a reply sent fills the sent time and the row leaves the queue. Closing without a reply also removes the row when the mail needs no response.
 
 The clock note opens as a timeline: earlier threads oldest first, then this inbound, the clock start when it is later than the receipt, and the reply due. A reply on that timeline, and on History, shows how long it took from the clock start. Only time inside the open ranges is counted, so time outside those ranges is not part of that figure. When the panel is opened outside those ranges, a banner names the next open. The reply window still lists those earlier threads above the form. The History page lists closed threads, newest sent time first, ten at a time, including a company that has nothing open. Opening a thread shows a timeline: the client email, then each reply in sent order. The client name on History and the open queue opens that client's page: every inbound and reply for that company and contact, in time order, including a row that is still open. Open queue and History are one Filament resource: `form()`, `table()`, and a relation manager for the replies that close the inbound. The open list is the panel home. Due time is calculated when that list loads. A row that is not overdue is not in the loaded set when the overdue filter is on.
 
@@ -139,6 +139,18 @@ Subject: PHP on the new server
 
 `Closes` is the HubSpot id of the inbound note, digits only. `Subject` is one line, and it may be absent. A reply that arrives without one keeps the subject of the previous message: the latest reply on that inbound, or the client email when this is the first reply. When that message has no subject either, the sent note has no Subject line. A second sent note at a different minute can close the same inbound. The same sent minute is not written twice.
 
+Closed without a reply:
+
+```
+Clock: closed
+Closes: 123456789
+Closed: 2026-10-28 13:15 Europe/London
+```
+
+`Closes` is the inbound note id. There is no reply body and no Subject line. Use this when the client mail needs no response (thanks, FYI, “I’ll keep you updated”).
+
+The panel confirm is **Close without sending a reply?** with the copy **The inbound leaves the open queue. No reply is recorded.** That means: the row leaves Open (no reply-due clock on it); History and the contact timeline get **Closed — No reply**, not a sent reply; nothing is sent from the desk and nothing is marked as sent from Mail. It is not a sent note. Use Send or Mark sent when a reply actually went out.
+
 After a blank line, the note may carry the correspondence. A section is filled only when that section is empty.
 
 ```
@@ -163,8 +175,8 @@ The Artisan command and the MCP tool take the company name and the contact email
 
 | Action | Does |
 | --- | --- |
-| `list_open_replies` | Reads clock notes. Returns inbound rows with no sent note, including clock start and reply due calculated at call time. Includes the saved draft when one exists. The draft does not change the due time. Includes earlier closed threads for the same company. |
-| `list_closed_replies` | Returns inbound rows that have a sent note, newest sent time first. Includes the client email and each pasted reply. A company with nothing open is included. |
+| `list_open_replies` | Reads clock notes. Returns inbound rows with no sent note and no closed note, including clock start and reply due calculated at call time. Includes the saved draft when one exists. The draft does not change the due time. Includes earlier closed threads for the same company. |
+| `list_closed_replies` | Returns inbound rows that have a sent note or a closed-without-reply note, newest end time first. Includes the client email and each pasted reply, or **No reply** when closed without sending. A company with nothing open is included. |
 | `list_companies` | Lists companies and the contacts on each company. The list is cached for one hour. |
 | `create_company` | Adds a company on the store in use. A blank name is refused. A company already there is refused. |
 | `create_contact` | Adds a contact on one company. The email is stored in lowercase. A contact already there is refused. The company match is one match or it stops. |
@@ -172,10 +184,11 @@ The Artisan command and the MCP tool take the company name and the contact email
 | `save_draft` | Creates or replaces the draft for an open inbound id. Arguments: subject, body. Refuses if that inbound is already closed. Writes no HubSpot note. |
 | `discard_draft` | Deletes the draft for an inbound id. Writes no HubSpot note. |
 | `mark_reply_sent` | Writes a sent clock note. Arguments: sent time, an optional subject, and the reply text pasted from Mail. A reply with no subject keeps the subject of the previous message. The first note closes the row. A later reply at a different minute is another sent note on that inbound. The same minute is refused. Deletes any draft for that id. |
+| `close_inbound` | Writes a closed clock note with no reply. Arguments: inbound id, optional closed time. Removes the row from the open queue. Refuses if already closed or replied. Deletes any draft. Does not send mail. |
 
-`save_draft` and `discard_draft` write no clock note. The only note that closes a row is the sent note from `mark_reply_sent`. One draft per open inbound. The draft stores the subject, the body, and the time it was saved. On the memory store it points at the local email. On HubSpot it points at the inbound note id. It is not itself a note. A draft does not stop the clock.
+`save_draft` and `discard_draft` write no clock note. A row leaves the open queue when a **sent** note or a **closed** note points at it. One draft per open inbound. The draft stores the subject, the body, and the time it was saved. On the memory store it points at the local email. On HubSpot it points at the inbound note id. It is not itself a note. A draft does not stop the clock.
 
-The panel actions are Log inbound, view, reply, discard draft, and mark sent. Reply opens the compose window, with the earlier thread and any saved draft. That thread is oldest first and scrolls. The subject, body, and attachment stay at the bottom of the window. Send delivers the reply through the configured mailbox and then writes the sent note. Cancel with a message that differs from the saved draft asks whether to save a draft, and saving one leaves the row open. Closing an unchanged draft does not ask. Mark sent records a reply that already went from Mail. A file chosen on reply or mark sent is uploaded to HubSpot and stored on the note.
+The panel actions are Log inbound, view, reply, discard draft, mark sent, and close. Reply opens the compose window, with the earlier thread and any saved draft. That thread is oldest first and scrolls. The subject, body, and attachment stay at the bottom of the window. Send delivers the reply through the configured mailbox and then writes the sent note. Cancel with a message that differs from the saved draft asks whether to save a draft, and saving one leaves the row open. Closing an unchanged draft does not ask. Mark sent records a reply that already went from Mail. Close confirms with “Close without sending a reply?” — the inbound leaves the open queue and no reply is recorded (see the closed note shape above). A file chosen on reply or mark sent is uploaded to HubSpot and stored on the note.
 
 ## 9. MCP
 
@@ -197,8 +210,9 @@ In Cursor, **Customize** is in the Agents sidebar, under the chat list. Open **C
 | `discard_draft` | `reply:discard-draft` |
 | `send_reply` | `reply:send` |
 | `mark_reply_sent` | `reply:mark-sent` |
+| `close_inbound` | `reply:close` |
 
-`receipt`, `sent`, and `--now` are `Y-m-d H:i` in Europe/London. After a write, the open queue in the panel changes because both read the same notes.
+`receipt`, `sent`, `--at`, and `--now` are `Y-m-d H:i` in Europe/London. After a write, the open queue in the panel changes because both read the same notes.
 
 ## 10. Cutover
 
@@ -231,13 +245,14 @@ Pest covers the clock, the note shape, the actions, the panel, the backfill, and
 
 The three rows in the clock section are one dataset. Each one checks the clock start and the reply due under the default hours. Further cases set Saturday hours, a mid-day gap, or a shorter interval, and refuse a bad setting. The panel shows the outside-hours banner on a Saturday and hides it inside the window.
 
-Note tests parse and write the inbound and sent bodies. A normal progress note is ignored. A sent note whose `Closes` id matches an inbound note removes that row from the open queue. The due time is calculated when the list runs, so it is not present in the fixture. The client email and the reply text round-trip through the correspondence sections.
+Note tests parse and write the inbound, sent, and closed bodies. A normal progress note is ignored. A sent or closed note whose `Closes` id matches an inbound note removes that row from the open queue. The due time is calculated when the list runs, so it is not present in the fixture. The client email and the reply text round-trip through the correspondence sections.
 
 Action tests use the memory note store and the draft table:
 
-- An open list contains only inbound notes with no sent note, and the due time matches the clock.
+- An open list contains only inbound notes with no sent note and no closed note, and the due time matches the clock.
 - A saved draft is returned with that row, and the due time stays the same. Discarding it removes the text and leaves the row open.
 - Mark sent closes the row, stores the pasted reply, and deletes the draft. A later reply at a different minute is kept. The same minute is refused.
+- Close without a reply removes the row, shows on History as **No reply**, and refuses when the inbound is already closed.
 - A company or contact search that is not exactly one match stops, and no note is written.
 - A contact who is not on the chosen company is refused.
 - A portal id that does not match the env value stops before any write.

@@ -5,6 +5,7 @@ namespace App\Desk\Queue;
 use App\Clock\ReplyClock;
 use DateTimeImmutable;
 use DateTimeZone;
+use LogicException;
 
 final readonly class ClosedThread
 {
@@ -22,6 +23,7 @@ final readonly class ClosedThread
         public ?string $attachment = null,
         public string $companyId = '',
         public string $contactId = '',
+        public ?DateTimeImmutable $closedAt = null,
     ) {}
 
     /**
@@ -29,7 +31,16 @@ final readonly class ClosedThread
      */
     public function toArray(): array
     {
-        $latest = $this->replies[array_key_last($this->replies)];
+        if ($this->replies !== []) {
+            $latest = $this->replies[array_key_last($this->replies)];
+            $ended = $latest['sent'];
+            $subject = $latest['subject'];
+        } elseif ($this->closedAt instanceof DateTimeImmutable) {
+            $ended = $this->closedAt;
+            $subject = 'No reply';
+        } else {
+            throw new LogicException('A closed thread needs a reply or a closed time.');
+        }
 
         return [
             'id' => $this->id,
@@ -39,10 +50,12 @@ final readonly class ClosedThread
             'contact_email' => $this->contactEmail,
             'summary' => $this->summary,
             'inbound' => $this->format($this->receipt),
-            'sent' => $this->format($latest['sent']),
-            'subject' => $latest['subject'],
+            'sent' => $this->format($ended),
+            'subject' => $subject,
             'client_email' => $this->clientEmail,
             'attachment' => $this->attachment ?? '',
+            'closed_without_reply' => $this->replies === [] && $this->closedAt instanceof DateTimeImmutable,
+            'closed_at' => $this->closedAt instanceof DateTimeImmutable ? $this->format($this->closedAt) : '',
             'replies' => array_map(fn (array $reply): array => [
                 'sent' => $this->format($reply['sent']),
                 'subject' => $reply['subject'],

@@ -58,6 +58,17 @@ final class ClosedThreadInfolist
             ];
         }
 
+        if (($record['closed_without_reply'] ?? false) === true) {
+            $events[] = [
+                'at' => (string) ($record['closed_at'] ?? $record['sent'] ?? ''),
+                'kind' => 'Closed',
+                'title' => 'No reply',
+                'body' => '',
+                'attachment' => '',
+                'note_id' => '',
+            ];
+        }
+
         return $events;
     }
 }

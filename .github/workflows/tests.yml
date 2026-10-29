@@ -37,11 +37,31 @@ jobs:
       - name: Discover packages
         run: composer dump-autoload --no-interaction
 
+      - name: Publish Filament assets
+        run: php artisan filament:assets --no-interaction
+
       - name: Install Node dependencies
         run: npm ci
+
+      - name: Build assets
+        run: npm run build
 
       - name: Check formatting
         run: vendor/bin/pint --test
 
       - name: Run tests
         run: composer test
+
+  # After this workflow succeeds on master, Railway Wait for CI deploys a new
+  # filesystem to web + cron from the same commit (see docs/deploy.md).
+  # Railway's own build also runs `npm run build` into that image.
+  railway:
+    name: Railway will deploy
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gate passed
+        run: |
+          echo "Tests and asset build passed on master."
+          echo "Railway Wait for CI will build (including Vite assets) and deploy web + cron."

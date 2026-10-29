@@ -3,6 +3,7 @@
 namespace App\Desk\Queue;
 
 use App\Clock\ClockNote;
+use App\Clock\ParsedClosed;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
 use App\Desk\Notes\NoteStore;
@@ -15,12 +16,14 @@ final readonly class IndexClockNotes
     /**
      * @return array{
      *     inbound: list<array{0: StoredNote, 1: ParsedInbound}>,
-     *     sent: array<string, list<array{0: StoredNote, 1: ParsedSent}>>
+     *     sent: array<string, list<array{0: StoredNote, 1: ParsedSent}>>,
+     *     closed: array<string, array{0: StoredNote, 1: ParsedClosed}>
      * }
      */
     public function __invoke(?string $companyId = null, ?string $contactId = null): array
     {
         $sent = [];
+        $closed = [];
         $inbound = [];
 
         foreach ($this->notes->notes() as $note) {
@@ -28,6 +31,10 @@ final readonly class IndexClockNotes
 
             if ($parsed instanceof ParsedSent) {
                 $sent[$parsed->closes][] = [$note, $parsed];
+            }
+
+            if ($parsed instanceof ParsedClosed) {
+                $closed[$parsed->closes] = [$note, $parsed];
             }
 
             if (! $parsed instanceof ParsedInbound) {
@@ -41,7 +48,7 @@ final readonly class IndexClockNotes
             $inbound[] = [$note, $parsed];
         }
 
-        return ['inbound' => $inbound, 'sent' => $sent];
+        return ['inbound' => $inbound, 'sent' => $sent, 'closed' => $closed];
     }
 
     /**
