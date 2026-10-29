@@ -22,7 +22,9 @@ use App\Filament\Schemas\MarkSentForm;
 use App\Filament\Schemas\ReplyInfolist;
 use DateTimeImmutable;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
@@ -47,13 +49,13 @@ final class OpenRepliesTable
                     ->badge()
                     ->color(fn (array $record): string => $record['overdue'] ? 'danger' : 'gray'),
                 TextColumn::make('id')
-                    ->label('Note')
-                    ->toggleable(),
+                    ->label('Note id')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('has_draft')
                     ->label('Draft')
                     ->badge()
-                    ->formatStateUsing(fn (bool $state): string => $state ? 'Draft' : '')
-                    ->color('info'),
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Draft' : '—')
+                    ->color(fn (bool $state): string => $state ? 'info' : 'gray'),
             ])
             ->filters([
                 TernaryFilter::make('overdue')
@@ -64,13 +66,6 @@ final class OpenRepliesTable
             ->recordUrl(InboundTable::viewUrl())
             ->modifyUngroupedRecordActionsUsing(fn (Action $action): Action => $action->button())
             ->recordActions([
-                Action::make('view')
-                    ->label('Note')
-                    ->slideOver()
-                    ->modalHeading('Clock note')
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Close')
-                    ->schema(fn (array $record): array => ReplyInfolist::forRecord($record)),
                 tap(
                     Action::make('reply')
                         ->label('Reply')
@@ -148,52 +143,64 @@ final class OpenRepliesTable
                             });
                     },
                 ),
-                Action::make('discardDraft')
-                    ->label('Discard draft')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->visible(fn (array $record): bool => $record['has_draft'] === true)
-                    ->action(function (array $record, ListOpenQueue $livewire): void {
-                        app(DiscardDraft::class)((string) $record['id']);
-                        $livewire->flushCachedTableRecords();
-                        Notification::make()->title('Draft discarded')->success()->send();
-                    }),
-                Action::make('markSent')
-                    ->label('Mark sent')
-                    ->schema(MarkSentForm::components())
-                    ->action(function (array $record, array $data, ListOpenQueue $livewire): void {
-                        try {
-                            app(MarkReplySent::class)(
-                                (string) $record['id'],
-                                LondonTime::parse($data['sent']),
-                                (string) $data['subject'],
-                                (string) $data['reply'],
-                                NoteFile::fromForm($data['attachment'] ?? null, $data['attachment_name'] ?? null),
-                            );
-                        } catch (DeskException $exception) {
-                            DeskNotify::halt($exception);
-                        }
+                Action::make('view')
+                    ->label('Open')
+                    ->slideOver()
+                    ->modalHeading('Clock note')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Close')
+                    ->schema(fn (array $record): array => ReplyInfolist::forRecord($record)),
+                ActionGroup::make([
+                    Action::make('markSent')
+                        ->label('Mark sent')
+                        ->schema(MarkSentForm::components())
+                        ->action(function (array $record, array $data, ListOpenQueue $livewire): void {
+                            try {
+                                app(MarkReplySent::class)(
+                                    (string) $record['id'],
+                                    LondonTime::parse($data['sent']),
+                                    (string) $data['subject'],
+                                    (string) $data['reply'],
+                                    NoteFile::fromForm($data['attachment'] ?? null, $data['attachment_name'] ?? null),
+                                );
+                            } catch (DeskException $exception) {
+                                DeskNotify::halt($exception);
+                            }
 
-                        $livewire->flushCachedTableRecords();
-                        Notification::make()->title('Reply marked sent')->success()->send();
-                    }),
-                Action::make('close')
-                    ->label('Close')
-                    ->color('gray')
-                    ->requiresConfirmation()
-                    ->modalHeading('Close without sending a reply?')
-                    ->modalDescription('The inbound leaves the open queue. No reply is recorded.')
-                    ->modalSubmitActionLabel('Close')
-                    ->action(function (array $record, ListOpenQueue $livewire): void {
-                        try {
-                            app(CloseInbound::class)((string) $record['id']);
-                        } catch (DeskException $exception) {
-                            DeskNotify::halt($exception);
-                        }
+                            $livewire->flushCachedTableRecords();
+                            Notification::make()->title('Reply marked sent')->success()->send();
+                        }),
+                    Action::make('close')
+                        ->label('Close')
+                        ->color('gray')
+                        ->requiresConfirmation()
+                        ->modalHeading('Close without sending a reply?')
+                        ->modalDescription('The inbound leaves the open queue. No reply is recorded.')
+                        ->modalSubmitActionLabel('Close')
+                        ->action(function (array $record, ListOpenQueue $livewire): void {
+                            try {
+                                app(CloseInbound::class)((string) $record['id']);
+                            } catch (DeskException $exception) {
+                                DeskNotify::halt($exception);
+                            }
 
-                        $livewire->flushCachedTableRecords();
-                        Notification::make()->title('Inbound closed')->success()->send();
-                    }),
+                            $livewire->flushCachedTableRecords();
+                            Notification::make()->title('Inbound closed')->success()->send();
+                        }),
+                    Action::make('discardDraft')
+                        ->label('Discard draft')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->visible(fn (array $record): bool => $record['has_draft'] === true)
+                        ->action(function (array $record, ListOpenQueue $livewire): void {
+                            app(DiscardDraft::class)((string) $record['id']);
+                            $livewire->flushCachedTableRecords();
+                            Notification::make()->title('Draft discarded')->success()->send();
+                        }),
+                ])
+                    ->label('More')
+                    ->icon(Heroicon::EllipsisVertical)
+                    ->button(),
             ])
             ->defaultSort('reply_due')
             ->emptyStateHeading('No open replies')

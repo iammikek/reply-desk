@@ -118,6 +118,43 @@ final class PracticeHours
         return $this->intervalHours;
     }
 
+    /**
+     * Short read-only description for the panel.
+     */
+    public function summary(): string
+    {
+        $open = [];
+        $closed = [];
+
+        foreach (self::DAYS as $day) {
+            $ranges = $this->ranges[$day] ?? [];
+            $label = ucfirst($day);
+
+            if ($ranges === []) {
+                $closed[] = $label;
+
+                continue;
+            }
+
+            $open[] = $label.' '.implode(', ', array_map(
+                fn (DayRange $range): string => $range->open.'–'.$range->close,
+                $ranges,
+            ));
+        }
+
+        $parts = [
+            $this->timezone,
+            'reply interval '.$this->intervalHours.' hours',
+            implode('; ', $open),
+        ];
+
+        if ($closed !== []) {
+            $parts[] = 'closed '.implode(', ', $closed);
+        }
+
+        return implode('. ', $parts).'.';
+    }
+
     public function zone(): DateTimeZone
     {
         return new DateTimeZone($this->timezone);

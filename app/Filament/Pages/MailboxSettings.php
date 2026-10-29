@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Clock\ReplyClock;
 use App\Desk\Actions\PollMailbox;
 use App\Desk\DeskException;
 use App\Desk\Mailbox\Mailbox;
@@ -92,6 +93,10 @@ class MailboxSettings extends Page
                 Text::make($lastPolled),
                 Text::make($lastError),
             ]),
+            Section::make('Practice hours')->schema([
+                Text::make(app(ReplyClock::class)->hours()->summary()),
+                Text::make('Receipts outside these ranges start the clock at the next open. Configure ranges in config/reply-desk.php.'),
+            ]),
         ]);
     }
 
@@ -179,9 +184,21 @@ class MailboxSettings extends Page
             return;
         }
 
-        Notification::make()
-            ->title("Poll finished. Kept {$result['kept']}, skipped {$result['skipped']}.")
-            ->success()
+        $title = "Poll finished. Kept {$result['kept']}, skipped {$result['skipped']}.";
+        $reasons = PollMailbox::describeSkippedReasons($result['skipped_reasons'] ?? []);
+        $notification = Notification::make()->title($title)->success();
+
+        if ($reasons !== '') {
+            $notification->body('Skipped: '.$reasons.'.');
+        }
+
+        $notification
+            ->actions([
+                Action::make('activity')
+                    ->label('View Activity')
+                    ->url(Activity::getUrl())
+                    ->markAsRead(),
+            ])
             ->send();
     }
 }

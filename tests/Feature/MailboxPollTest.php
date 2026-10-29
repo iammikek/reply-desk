@@ -60,6 +60,14 @@ it('skips unknown from, own from, date-only, and duplicates', function (): void 
 
     expect($result['kept'])->toBe(0)
         ->and($result['skipped'])->toBe(4)
+        ->and($result['skipped_reasons'])->toBe([
+            'unknown_from' => 1,
+            'own_from' => 1,
+            'date_only' => 1,
+            'duplicate_message_id' => 1,
+        ])
+        ->and(PollMailbox::describeSkippedReasons($result['skipped_reasons']))
+        ->toContain('unknown From')
         ->and(app(ListOpenReplies::class)(london('2026-10-23 15:30')))->toBeEmpty();
 });
 

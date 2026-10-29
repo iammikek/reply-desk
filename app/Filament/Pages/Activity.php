@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Resources\Companies\CompanyResource;
 use App\Filament\Resources\Contacts\ContactResource;
 use App\Models\DeskActivity;
 use Filament\Pages\Page;
@@ -46,17 +47,21 @@ class Activity extends Page implements HasTable
                     ->wrap(),
                 TextColumn::make('company')
                     ->label('Company')
-                    ->toggleable(),
+                    ->toggleable()
+                    ->color(fn (DeskActivity $record): ?string => filled($record->company_id) ? 'primary' : null)
+                    ->url(fn (DeskActivity $record): ?string => filled($record->company_id)
+                        ? CompanyResource::getUrl('view', ['record' => $record->company_id])
+                        : null),
                 TextColumn::make('contact')
                     ->label('Contact')
                     ->toggleable()
-                    ->url(fn (DeskActivity $record): ?string => filled($record->contact_id)
-                        ? ContactResource::getUrl('view', ['record' => $record->contact_id])
-                        : null),
+                    ->color(fn (DeskActivity $record): ?string => filled($record->contact_id) ? 'primary' : null)
+                    ->url(fn (DeskActivity $record): ?string => self::contactUrl($record)),
                 TextColumn::make('inbound_id')
                     ->label('Inbound')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->recordUrl(fn (DeskActivity $record): ?string => self::contactUrl($record))
             ->filters([
                 SelectFilter::make('action')
                     ->options(fn (): array => DeskActivity::query()
@@ -76,5 +81,14 @@ class Activity extends Page implements HasTable
         return $schema->components([
             EmbeddedTable::make(),
         ]);
+    }
+
+    private static function contactUrl(DeskActivity $record): ?string
+    {
+        if (! filled($record->contact_id)) {
+            return null;
+        }
+
+        return ContactResource::getUrl('view', ['record' => $record->contact_id]);
     }
 }
