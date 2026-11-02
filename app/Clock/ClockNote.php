@@ -5,6 +5,7 @@ namespace App\Clock;
 use DateInvalidTimeZoneException;
 use DateTimeImmutable;
 use DateTimeZone;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 final class ClockNote
@@ -321,7 +322,12 @@ final class ClockNote
 
         try {
             $zone = new DateTimeZone($matches[2]);
-        } catch (DateInvalidTimeZoneException) {
+        } catch (DateInvalidTimeZoneException $exception) {
+            Log::debug('Clock note timezone could not be parsed.', [
+                'timezone' => $matches[2],
+                'error' => $exception->getMessage(),
+            ]);
+
             return null;
         }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Desk;
 
 use App\Models\DeskActivity;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 final class LogDeskActivity
@@ -24,8 +25,12 @@ final class LogDeskActivity
                 'context' => $entry->context,
                 'created_at' => now(),
             ]);
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
             // Activity must not block the desk action.
+            Log::debug('Desk activity could not be recorded.', [
+                'action' => $entry->action,
+                'error' => $exception->getMessage(),
+            ]);
         }
     }
 }
