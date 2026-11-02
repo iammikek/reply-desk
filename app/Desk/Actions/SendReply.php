@@ -3,6 +3,7 @@
 namespace App\Desk\Actions;
 
 use App\Clock\ReplyClock;
+use App\Desk\DeskActivityEntry;
 use App\Desk\DeskException;
 use App\Desk\LogDeskActivity;
 use App\Desk\Mailbox\Mailbox;
@@ -54,15 +55,15 @@ final readonly class SendReply
                 $messageId = null;
             }
         } catch (Throwable $exception) {
-            ($this->log)(
-                'reply.send_failed',
-                'Send refused.',
+            ($this->log)(new DeskActivityEntry(
+                action: 'reply.send_failed',
+                summary: 'Send refused.',
                 inboundId: $inboundId,
                 company: $inbound->companyName,
                 contact: $inbound->contactName,
                 companyId: $inbound->companyId,
                 contactId: $inbound->contactId,
-            );
+            ));
 
             throw $exception instanceof DeskException
                 ? $exception
@@ -85,9 +86,9 @@ final readonly class SendReply
             MailMessageId::remember($messageId, $sentId, 'sent');
         }
 
-        ($this->log)(
-            'reply.sent',
-            'Reply sent.',
+        ($this->log)(new DeskActivityEntry(
+            action: 'reply.sent',
+            summary: 'Reply sent.',
             inboundId: $inboundId,
             noteId: $sentId,
             company: $inbound->companyName,
@@ -98,7 +99,7 @@ final readonly class SendReply
                 'message_id' => $messageId,
                 'mailbox' => $this->mailbox->configured(),
             ],
-        );
+        ));
 
         return $sentId;
     }

@@ -1,11 +1,13 @@
 <?php
 
 use App\Clock\ReceiptSource;
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\PollMailbox;
 use App\Desk\Actions\SendReply;
 use App\Desk\DeskException;
 use App\Desk\Mailbox\FakeMailbox;
+use App\Desk\Mailbox\FakeMessageOptions;
 use App\Desk\Mailbox\Mailbox;
 use App\Desk\Queue\ListOpenReplies;
 use App\Models\DeskActivity;
@@ -25,8 +27,10 @@ it('logs a known contact from the mailbox', function (): void {
         'ada@northwharf.example',
         'Which PHP to use',
         "Can you look today?\n\n> Old mail",
-        london('2026-10-22 10:00'),
-        cursor: '000001',
+        new FakeMessageOptions(
+            london('2026-10-22 10:00'),
+            cursor: '000001',
+        )
     ));
 
     $result = app(PollMailbox::class)(force: true);
@@ -43,16 +47,42 @@ it('logs a known contact from the mailbox', function (): void {
 
 it('skips unknown from, own from, date-only, and duplicates', function (): void {
     $mailbox = app(FakeMailbox::class);
-    $mailbox->seed(FakeMailbox::message('stranger@example.com', 'Hi', 'Hello', london('2026-10-22 10:00'), cursor: '1'));
-    $mailbox->seed(FakeMailbox::message('desk@example.com', 'Self', 'Hello', london('2026-10-22 10:01'), cursor: '2'));
-    $mailbox->seed(FakeMailbox::message('ada@northwharf.example', 'No time', 'Hello', null, cursor: '3'));
+    $mailbox->seed(FakeMailbox::message(
+        'stranger@example.com',
+        'Hi',
+        'Hello',
+        new FakeMessageOptions(
+            london('2026-10-22 10:00'),
+            cursor: '1',
+        )
+    ));
+    $mailbox->seed(FakeMailbox::message(
+        'desk@example.com',
+        'Self',
+        'Hello',
+        new FakeMessageOptions(
+            london('2026-10-22 10:01'),
+            cursor: '2',
+        )
+    ));
+    $mailbox->seed(FakeMailbox::message(
+        'ada@northwharf.example',
+        'No time',
+        'Hello',
+        new FakeMessageOptions(
+            null,
+            cursor: '3',
+        )
+    ));
     $mailbox->seed(FakeMailbox::message(
         'ada@northwharf.example',
         'Keep',
         'Hello',
-        london('2026-10-22 10:02'),
-        messageId: '<dup@test>',
-        cursor: '4',
+        new FakeMessageOptions(
+            london('2026-10-22 10:02'),
+            messageId: '<dup@test>',
+            cursor: '4',
+        )
     ));
     MailMessageId::remember('<dup@test>', '999', 'inbound');
 
@@ -79,9 +109,11 @@ it('logs a reply when In-Reply-To matches a stored sent Message-ID', function ()
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
     app(SendReply::class)($id, 'PHP', 'Use 8.3.');
 
@@ -96,10 +128,12 @@ it('logs a reply when In-Reply-To matches a stored sent Message-ID', function ()
         'ada@northwharf.example',
         'Re: PHP',
         'Thanks',
-        london('2026-10-22 11:00'),
-        messageId: '<reply-1@test>',
-        inReplyTo: '<sent-1@test>',
-        cursor: '10',
+        new FakeMessageOptions(
+            london('2026-10-22 11:00'),
+            messageId: '<reply-1@test>',
+            inReplyTo: '<sent-1@test>',
+            cursor: '10',
+        )
     ));
 
     $result = app(PollMailbox::class)(force: true);
@@ -118,8 +152,10 @@ it('no-ops when polling is disabled unless forced', function (): void {
         'ada@northwharf.example',
         'Hi',
         'Body',
-        london('2026-10-22 10:00'),
-        cursor: '1',
+        new FakeMessageOptions(
+            london('2026-10-22 10:00'),
+            cursor: '1',
+        )
     ));
 
     expect(app(PollMailbox::class)(force: false)['noop'])->toBeTrue()
@@ -139,8 +175,10 @@ it('skips a scheduled run when the interval has not elapsed', function (): void 
         'ada@northwharf.example',
         'Hi',
         'Body',
-        london('2026-10-22 10:00'),
-        cursor: '1',
+        new FakeMessageOptions(
+            london('2026-10-22 10:00'),
+            cursor: '1',
+        )
     ));
 
     expect(app(PollMailbox::class)(force: false)['noop'])->toBeTrue();
@@ -184,8 +222,10 @@ it('resets the inbox cursor when UIDVALIDITY changes', function (): void {
         'ada@northwharf.example',
         'Old uid reused',
         'Please look today',
-        london('2026-10-22 10:00'),
-        cursor: '3',
+        new FakeMessageOptions(
+            london('2026-10-22 10:00'),
+            cursor: '3',
+        )
     ));
 
     $result = app(PollMailbox::class)(force: true);
@@ -202,8 +242,10 @@ it('stores inbox UIDVALIDITY on a successful poll', function (): void {
         'ada@northwharf.example',
         'Hi',
         'Body',
-        london('2026-10-22 10:00'),
-        cursor: '9',
+        new FakeMessageOptions(
+            london('2026-10-22 10:00'),
+            cursor: '9',
+        )
     ));
 
     app(PollMailbox::class)(force: true);

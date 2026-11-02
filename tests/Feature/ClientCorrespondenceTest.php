@@ -1,6 +1,7 @@
 <?php
 
 use App\Clock\ReceiptSource;
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
 use App\Filament\Pages\Client;
@@ -24,10 +25,12 @@ it('opens one timeline for that company and contact', function (): void {
     $first = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
-        'Which loaf for Friday.',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+            'Which loaf for Friday.',
+        )
     );
 
     app(MarkReplySent::class)($first, london('2026-10-20 16:04'), 'PHP on the new server', 'Use 8.3 on the new box.');
@@ -35,28 +38,34 @@ it('opens one timeline for that company and contact', function (): void {
     app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-22 09:00'),
-        ReceiptSource::MailClient,
-        'The form can come off',
-        'Can you look today?',
+        new InboundLogInput(
+            london('2026-10-22 09:00'),
+            ReceiptSource::MailClient,
+            'The form can come off',
+            'Can you look today?',
+        )
     );
 
     app(LogInbound::class)(
         'Northwharf Bakery',
         'bea@northwharf.example',
-        london('2026-10-21 11:00'),
-        ReceiptSource::MailClient,
-        'Bea only',
-        'This is for Bea.',
+        new InboundLogInput(
+            london('2026-10-21 11:00'),
+            ReceiptSource::MailClient,
+            'Bea only',
+            'This is for Bea.',
+        )
     );
 
     app(LogInbound::class)(
         'Harbour Cafe',
         'ned@harbour.example',
-        london('2026-10-21 12:00'),
-        ReceiptSource::MailClient,
-        'The till tape',
-        'The tape jammed.',
+        new InboundLogInput(
+            london('2026-10-21 12:00'),
+            ReceiptSource::MailClient,
+            'The till tape',
+            'The tape jammed.',
+        )
     );
 
     $url = Client::urlFor('10', '20');

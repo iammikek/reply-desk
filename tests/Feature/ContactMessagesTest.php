@@ -1,6 +1,7 @@
 <?php
 
 use App\Clock\ReceiptSource;
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,11 +17,13 @@ it('shows messages on the contact page', function (): void {
     app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-22 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
-        'Can you look today?',
-        subject: 'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-22 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+            'Can you look today?',
+            subject: 'Which PHP to use',
+        )
     );
 
     $this->get('/contacts/20')

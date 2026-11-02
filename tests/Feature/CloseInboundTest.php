@@ -2,6 +2,7 @@
 
 use App\Clock\ReceiptSource;
 use App\Desk\Actions\CloseInbound;
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\SaveDraft;
 use App\Desk\Actions\SendReply;
@@ -29,10 +30,12 @@ it('closes an inbound without a reply and removes it from the open queue', funct
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-28 11:45'),
-        ReceiptSource::MailClient,
-        'Thanks and next steps',
-        "thanks for confirmation. I'll keep you updated.",
+        new InboundLogInput(
+            london('2026-10-28 11:45'),
+            ReceiptSource::MailClient,
+            'Thanks and next steps',
+            "thanks for confirmation. I'll keep you updated.",
+        )
     );
 
     app(SaveDraft::class)($id, 'Draft', 'Would have replied');
@@ -70,10 +73,12 @@ it('closes from the open queue action', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-28 11:45'),
-        ReceiptSource::MailClient,
-        'Thanks',
-        'Speak soon.',
+        new InboundLogInput(
+            london('2026-10-28 11:45'),
+            ReceiptSource::MailClient,
+            'Thanks',
+            'Speak soon.',
+        )
     );
 
     Livewire::test(ListOpenQueue::class)
@@ -88,9 +93,11 @@ it('closes through reply:close', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-28 11:45'),
-        ReceiptSource::MailClient,
-        'Thanks',
+        new InboundLogInput(
+            london('2026-10-28 11:45'),
+            ReceiptSource::MailClient,
+            'Thanks',
+        )
     );
 
     expect(Artisan::call('reply:close', [

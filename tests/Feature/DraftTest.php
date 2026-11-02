@@ -2,6 +2,7 @@
 
 use App\Clock\ReceiptSource;
 use App\Desk\Actions\DiscardDraft;
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
 use App\Desk\Actions\SaveDraft;
@@ -22,9 +23,11 @@ it('keeps the row open when a draft is saved', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     $before = app(ListOpenReplies::class)(london('2026-10-23 12:00'))[0]->replyDue;
@@ -48,9 +51,11 @@ it('deletes the draft when the reply is marked sent', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::Logged,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::Logged,
+            'Which PHP to use',
+        )
     );
 
     app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3.');
@@ -63,9 +68,11 @@ it('returns the same draft from the command', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     Artisan::call('reply:save-draft', [
@@ -85,9 +92,11 @@ it('keeps a pasted draft', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     $body = "Thanks.\n\n    I will  bake it.";
@@ -103,9 +112,11 @@ it('shows a saved draft on the queue', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     Livewire::test(ListOpenQueue::class)
@@ -132,9 +143,11 @@ it('closes an unchanged draft without asking to save it', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');
@@ -165,9 +178,11 @@ it('asks to save when a saved draft was edited', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');
@@ -205,9 +220,11 @@ it('closes reply without a draft when cancel has no message', function (): void 
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     Livewire::test(ListOpenQueue::class)
@@ -224,9 +241,11 @@ it('discards the message when cancel declines the draft', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     Livewire::test(ListOpenQueue::class)
@@ -248,9 +267,11 @@ it('discards a draft from the queue and leaves the row open', function (): void 
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');

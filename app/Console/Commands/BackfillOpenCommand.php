@@ -6,6 +6,7 @@ use App\Clock\ClockNote;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
 use App\Clock\ReceiptSource;
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
 use App\Desk\Actions\SaveDraft;
@@ -112,12 +113,14 @@ class BackfillOpenCommand extends ReplyDeskCommand
             $id = $logInbound(
                 $row->company,
                 $row->email,
-                $row->receipt,
-                $row->receiptSource,
-                $row->summary,
-                $client?->body ?? '',
-                $reply?->body ?? '',
-                subject: $client?->subject ?? '',
+                new InboundLogInput(
+                    receipt: $row->receipt,
+                    receiptSource: $row->receiptSource,
+                    summary: $row->summary,
+                    clientEmail: $client?->body ?? '',
+                    reply: $reply?->body ?? '',
+                    subject: $client?->subject ?? '',
+                ),
             );
             $existing[] = new StoredNote($id, $note, $company->id, $company->name, '', '', $row->email);
             $this->line("Wrote {$id} for {$row->company}");
@@ -158,11 +161,13 @@ class BackfillOpenCommand extends ReplyDeskCommand
                 $inboundId = $logInbound(
                     $row->company,
                     $row->email,
-                    $row->receipt,
-                    $row->receiptSource,
-                    $row->summary,
-                    $client?->body ?? '',
-                    subject: $client?->subject ?? '',
+                    new InboundLogInput(
+                        receipt: $row->receipt,
+                        receiptSource: $row->receiptSource,
+                        summary: $row->summary,
+                        clientEmail: $client?->body ?? '',
+                        subject: $client?->subject ?? '',
+                    ),
                 );
                 $existing[] = new StoredNote($inboundId, $note, $company->id, $company->name, '', '', $row->email);
                 $this->line("Wrote {$inboundId} for {$company->name}");

@@ -3,6 +3,7 @@
 use App\Clock\ClockNote;
 use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\DeskException;
 use App\Desk\LogDeskActivity;
@@ -36,9 +37,11 @@ it('stops before writing when the portal id does not match', function (): void {
     expect(fn (): string => (new LogInbound(app(HubSpotNoteStore::class), app(LogDeskActivity::class)))(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::Logged,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::Logged,
+            'Which PHP to use',
+        )
     ))->toThrow(DeskException::class, 'does not match');
 
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/crm/'));
@@ -94,9 +97,11 @@ it('writes an inbound note when the portal matches one company and one contact',
     $id = (new LogInbound(app(HubSpotNoteStore::class), app(LogDeskActivity::class)))(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     expect($id)->toBe('55');
@@ -170,10 +175,12 @@ it('uploads an attachment and stores its id on the note', function (): void {
     $id = (new LogInbound(app(HubSpotNoteStore::class), app(LogDeskActivity::class)))(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
-        file: new NoteFile($path, 'audit.txt'),
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+            file: new NoteFile($path, 'audit.txt'),
+        )
     );
 
     expect($id)->toBe('55');
@@ -310,9 +317,11 @@ it('uses the one company whose name contains every word', function (): void {
     $id = (new LogInbound(app(HubSpotNoteStore::class), app(LogDeskActivity::class)))(
         'V8 Hosting',
         'lawrence@v8hosting.uk',
-        london('2026-10-22 10:42'),
-        ReceiptSource::Logged,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-22 10:42'),
+            ReceiptSource::Logged,
+            'Which PHP to use',
+        )
     );
 
     expect($id)->toBe('55');
@@ -340,9 +349,11 @@ it('stops when more than one company matches on the portal', function (): void {
     expect(fn (): string => (new LogInbound(app(HubSpotNoteStore::class), app(LogDeskActivity::class)))(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::Logged,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::Logged,
+            'Which PHP to use',
+        )
     ))->toThrow(DeskException::class, 'More than one company matched (10, 11)');
 
     Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST'

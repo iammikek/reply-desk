@@ -4,6 +4,7 @@ namespace App\Desk\Actions;
 
 use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
+use App\Desk\DeskActivityEntry;
 use App\Desk\InboundSummary;
 use App\Desk\LogDeskActivity;
 use App\Desk\Mailbox\ExtractLatestMessage;
@@ -42,7 +43,7 @@ final readonly class PollMailbox
             return ['kept' => 0, 'skipped' => 0, 'noop' => true, 'failed' => false, 'skipped_reasons' => []];
         }
 
-        ($this->log)('poll.started', 'Mailbox poll started.');
+        ($this->log)(new DeskActivityEntry('poll.started', 'Mailbox poll started.'));
 
         try {
             $fetch = $this->mailbox->fetchSince($state->inbox_cursor, $state->inbox_uidvalidity);
@@ -56,10 +57,10 @@ final readonly class PollMailbox
                 'last_poll_error' => 'Poll failed.',
             ])->save();
 
-            ($this->log)('poll.failed', 'Mailbox poll failed.', context: [
+            ($this->log)(new DeskActivityEntry('poll.failed', 'Mailbox poll failed.', context: [
                 'error' => 'connection',
                 'detail' => $exception->getMessage(),
-            ]);
+            ]));
 
             return ['kept' => 0, 'skipped' => 0, 'noop' => false, 'failed' => true, 'skipped_reasons' => []];
         }
@@ -69,10 +70,10 @@ final readonly class PollMailbox
             && $fetch->uidValidity !== $state->inbox_uidvalidity;
 
         if ($uidValidityChanged) {
-            ($this->log)('poll.uidvalidity_reset', 'Inbox UIDVALIDITY changed; cursor reset.', context: [
+            ($this->log)(new DeskActivityEntry('poll.uidvalidity_reset', 'Inbox UIDVALIDITY changed; cursor reset.', context: [
                 'previous' => $state->inbox_uidvalidity,
                 'current' => $fetch->uidValidity,
-            ]);
+            ]));
         }
 
         $kept = 0;
@@ -91,11 +92,11 @@ final readonly class PollMailbox
             } else {
                 $skipped++;
                 $skippedReasons[$result] = ($skippedReasons[$result] ?? 0) + 1;
-                ($this->log)(
-                    'poll.skipped',
-                    'Mailbox message skipped.',
+                ($this->log)(new DeskActivityEntry(
+                    action: 'poll.skipped',
+                    summary: 'Mailbox message skipped.',
                     context: ['reason' => $result, 'message_id' => $message->messageId],
-                );
+                ));
             }
         }
 
@@ -107,11 +108,11 @@ final readonly class PollMailbox
         ])->save();
 
         if ($kept > 0) {
-            ($this->log)('poll.kept', "Logged {$kept} inbound message(s).", context: [
+            ($this->log)(new DeskActivityEntry('poll.kept', "Logged {$kept} inbound message(s).", context: [
                 'kept' => $kept,
                 'skipped' => $skipped,
                 'skipped_reasons' => $skippedReasons,
-            ]);
+            ]));
         }
 
         return [
@@ -190,16 +191,18 @@ final readonly class PollMailbox
         $inboundId = $this->logInbound->record(
             $companyId,
             $contactId,
-            $receipt,
-            ReceiptSource::MailClient,
-            $summary,
-            $body,
-            subject: $message->subject,
-            activityContext: [
-                'message_id' => $message->messageId,
-                'via' => 'poll',
-                'reply_to_stored' => $this->referencesKnown($message),
-            ],
+            new InboundLogInput(
+                receipt: $receipt,
+                receiptSource: ReceiptSource::MailClient,
+                summary: $summary,
+                clientEmail: $body,
+                subject: $message->subject,
+                activityContext: [
+                    'message_id' => $message->messageId,
+                    'via' => 'poll',
+                    'reply_to_stored' => $this->referencesKnown($message),
+                ],
+            ),
         );
 
         if ($message->messageId !== '') {

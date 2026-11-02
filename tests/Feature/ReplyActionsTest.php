@@ -1,6 +1,7 @@
 <?php
 
 use App\Clock\ReceiptSource;
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
 use App\Desk\DeskException;
@@ -18,9 +19,11 @@ it('lists an open inbound with the due time from the clock', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-22 21:00'),
-        ReceiptSource::Logged,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-22 21:00'),
+            ReceiptSource::Logged,
+            'Which PHP to use',
+        )
     );
 
     $open = app(ListOpenReplies::class)(london('2026-10-23 09:00'));
@@ -38,9 +41,11 @@ it('keeps a later reply and refuses the same minute', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     app(MarkReplySent::class)($id, london('2026-10-20 16:04'), 'PHP on the new server', 'Use 8.3.');
@@ -64,9 +69,11 @@ it('stops when more than one company matches and writes no note', function (): v
     expect(fn () => app(LogInbound::class)(
         'Northwharf',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::Logged,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::Logged,
+            'Which PHP to use',
+        )
     ))->toThrow(DeskException::class, 'More than one company matched');
 
     expect(DB::table('emails')->count())->toBe(0);
@@ -76,10 +83,12 @@ it('keeps the pasted reply and shows that thread on the next open note', functio
     $closed = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
-        'Which loaf for Friday.',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+            'Which loaf for Friday.',
+        )
     );
 
     Artisan::call('reply:mark-sent', [
@@ -92,9 +101,11 @@ it('keeps the pasted reply and shows that thread on the next open note', functio
     $openId = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-21 09:00'),
-        ReceiptSource::MailClient,
-        'The form can come off',
+        new InboundLogInput(
+            london('2026-10-21 09:00'),
+            ReceiptSource::MailClient,
+            'The form can come off',
+        )
     );
 
     $open = app(ListOpenReplies::class)(london('2026-10-21 12:00'));
@@ -164,9 +175,11 @@ it('refuses a contact who is not on that company', function (): void {
     expect(fn () => app(LogInbound::class)->record(
         '10',
         '21',
-        london('2026-10-20 10:00'),
-        ReceiptSource::Logged,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::Logged,
+            'Which PHP to use',
+        )
     ))->toThrow(DeskException::class, 'No contact matched.');
 
     expect(DB::table('emails')->count())->toBe(0);
@@ -176,9 +189,11 @@ it('prints the open queue as json', function (): void {
     app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     Artisan::call('reply:list-open', ['--now' => '2026-10-20 12:00']);

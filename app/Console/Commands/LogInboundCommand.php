@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\DeskException;
 
@@ -17,11 +18,13 @@ class LogInboundCommand extends ReplyDeskCommand
             $id = $logInbound(
                 (string) $this->argument('company'),
                 (string) $this->argument('email'),
-                $this->moment((string) $this->argument('receipt')),
-                $this->source((string) $this->argument('source')),
-                (string) $this->argument('summary'),
-                (string) ($this->argument('client') ?? ''),
-                subject: (string) $this->option('subject'),
+                new InboundLogInput(
+                    receipt: $this->moment((string) $this->argument('receipt')),
+                    receiptSource: $this->source((string) $this->argument('source')),
+                    summary: (string) $this->argument('summary'),
+                    clientEmail: (string) ($this->argument('client') ?? ''),
+                    subject: (string) $this->option('subject'),
+                ),
             );
 
             return $this->json(['id' => $id]);

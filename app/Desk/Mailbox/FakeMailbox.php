@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Desk\Mailbox;
 
 use App\Desk\DeskException;
-use DateTimeImmutable;
 
 final class FakeMailbox implements Mailbox
 {
@@ -120,26 +121,22 @@ final class FakeMailbox implements Mailbox
         string $fromEmail,
         string $subject,
         string $body,
-        ?DateTimeImmutable $date = null,
-        string $messageId = '',
-        string $inReplyTo = '',
-        array $references = [],
-        string $cursor = '',
-        string $htmlBody = '',
+        ?FakeMessageOptions $options = null,
     ): IncomingMessage {
         static $seq = 0;
         $seq++;
+        $options ??= new FakeMessageOptions;
 
         return new IncomingMessage(
-            messageId: $messageId !== '' ? $messageId : '<fake-in-'.$seq.'@reply-desk.test>',
+            messageId: $options->messageId !== '' ? $options->messageId : '<fake-in-'.$seq.'@reply-desk.test>',
             fromEmail: $fromEmail,
             subject: $subject,
             textBody: $body,
-            htmlBody: $htmlBody,
-            date: $date,
-            inReplyTo: $inReplyTo,
-            references: $references,
-            cursor: $cursor !== '' ? $cursor : sprintf('%06d', $seq),
+            htmlBody: $options->htmlBody,
+            date: $options->date,
+            inReplyTo: $options->inReplyTo,
+            references: $options->references,
+            cursor: $options->cursor !== '' ? $options->cursor : sprintf('%06d', $seq),
         );
     }
 }

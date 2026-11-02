@@ -1,6 +1,7 @@
 <?php
 
 use App\Clock\ReceiptSource;
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\SaveDraft;
 use App\Desk\Actions\SendReply;
@@ -29,10 +30,12 @@ it('sends a reply with the subject of the client email when none is given', func
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
-        subject: 'Friday loaf',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+            subject: 'Friday loaf',
+        )
     );
 
     app(SendReply::class)($id, '', 'Use 8.3 on the new box.');
@@ -50,9 +53,11 @@ it('closes the row after the mail server accepts', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');
@@ -85,9 +90,11 @@ it('sends the attachment with the reply and stores it on the note', function ():
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     $sentId = app(SendReply::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.', new NoteFile($path, 'audit.txt'));
@@ -110,9 +117,11 @@ it('sends a pasted reply without flattening it', function (): void {
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     app(SendReply::class)($id, 'The loaf', $body);
@@ -145,9 +154,11 @@ it('leaves the row and the draft when the mail server refuses', function (): voi
     $id = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
-        london('2026-10-20 10:00'),
-        ReceiptSource::MailClient,
-        'Which PHP to use',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+        )
     );
 
     app(SaveDraft::class)($id, 'PHP on the new server', 'Use 8.3 on the new box.');

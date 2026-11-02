@@ -52,47 +52,49 @@ final class ImapSmtpMailbox implements Mailbox
 
         /** @var Message $message */
         foreach ($collection as $message) {
-            $uid = (string) $message->getUid();
-
-            $date = null;
-            $rawDate = (string) $message->getDate();
-
-            if ($rawDate !== '') {
-                try {
-                    $date = new DateTimeImmutable($rawDate);
-                } catch (Throwable $exception) {
-                    Log::debug('Mailbox message date could not be parsed.', [
-                        'date' => $rawDate,
-                        'error' => $exception->getMessage(),
-                    ]);
-                    $date = null;
-                }
-            }
-
-            $references = [];
-            $rawReferences = (string) $message->getReferences();
-
-            if ($rawReferences !== '') {
-                preg_match_all('/<[^>]+>/', $rawReferences, $matches);
-                $references = $matches[0] ?? [];
-            }
-
-            $messages[] = new IncomingMessage(
-                messageId: trim((string) $message->getMessageId()),
-                fromEmail: strtolower(trim((string) $message->getFrom()->first()?->mail)),
-                subject: (string) $message->getSubject(),
-                textBody: (string) $message->getTextBody(),
-                htmlBody: (string) $message->getHTMLBody(),
-                date: $date,
-                inReplyTo: trim((string) $message->getInReplyTo()),
-                references: $references,
-                cursor: $uid,
-            );
+            $messages[] = $this->toIncomingMessage($message);
         }
 
         $client->disconnect();
 
         return new InboxFetch($messages, $uidValidity);
+    }
+
+    private function toIncomingMessage(Message $message): IncomingMessage
+    {
+        $date = null;
+        $rawDate = (string) $message->getDate();
+
+        if ($rawDate !== '') {
+            try {
+                $date = new DateTimeImmutable($rawDate);
+            } catch (Throwable $exception) {
+                Log::debug('Mailbox message date could not be parsed.', [
+                    'date' => $rawDate,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        $references = [];
+        $rawReferences = (string) $message->getReferences();
+
+        if ($rawReferences !== '') {
+            preg_match_all('/<[^>]+>/', $rawReferences, $matches);
+            $references = $matches[0] ?? [];
+        }
+
+        return new IncomingMessage(
+            messageId: trim((string) $message->getMessageId()),
+            fromEmail: strtolower(trim((string) $message->getFrom()->first()?->mail)),
+            subject: (string) $message->getSubject(),
+            textBody: (string) $message->getTextBody(),
+            htmlBody: (string) $message->getHTMLBody(),
+            date: $date,
+            inReplyTo: trim((string) $message->getInReplyTo()),
+            references: $references,
+            cursor: (string) $message->getUid(),
+        );
     }
 
     public function upsertDraft(string $identity, string $to, string $subject, string $body): string
