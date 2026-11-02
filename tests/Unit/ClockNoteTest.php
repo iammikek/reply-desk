@@ -70,6 +70,17 @@ it('writes a pasted WhatsApp message that parses back', function (): void {
         ->and($body)->toContain('Receipt source: whatsapp');
 });
 
+it('writes a pasted LinkedIn message that parses back', function (): void {
+    $receipt = new DateTimeImmutable('2026-11-02 13:55', new DateTimeZone('Europe/London'));
+    $body = ClockNote::inbound($receipt, ReceiptSource::LinkedIn, 'Asked for day rate');
+    $parsed = ClockNote::parse($body);
+
+    expect($parsed)->toBeInstanceOf(ParsedInbound::class)
+        ->and($parsed->receiptSource)->toBe(ReceiptSource::LinkedIn)
+        ->and($parsed->receiptSource->label())->toBe('LinkedIn')
+        ->and($body)->toContain('Receipt source: linkedin');
+});
+
 it('writes an inbound note that parses back', function (): void {
     $receipt = new DateTimeImmutable('2026-10-22 10:42', new DateTimeZone('Europe/London'));
     $body = ClockNote::inbound($receipt, ReceiptSource::MailClient, 'Which PHP to use');
