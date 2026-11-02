@@ -107,11 +107,15 @@ it('resolves the php mail mailer and still sends a reset notification', function
 
     config([
         'mail.default' => 'mail',
-        'mail.mailers.mail' => ['transport' => 'mail'],
+        'mail.mailers.mail' => [
+            'transport' => 'sendmail',
+            'path' => '/usr/sbin/sendmail -t -i',
+        ],
     ]);
 
     expect(fn () => app('mail.manager')->mailer('mail'))->not->toThrow(Throwable::class)
-        ->and(config('mail.default'))->toBe('mail');
+        ->and(config('mail.default'))->toBe('mail')
+        ->and(config('mail.mailers.mail.transport'))->toBe('sendmail');
 
     $user = User::factory()->create([
         'email' => 'admin@example.com',
