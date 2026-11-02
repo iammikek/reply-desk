@@ -68,11 +68,12 @@ return [
         ],
 
         /*
-        | PHP mail() path: Laravel’s “mail” transport uses Symfony SendmailTransport
-        | with the host sendmail binary (same route as sendmail_path in php.ini).
+        | PHP mail() path: use sendmail -t -i (php.ini sendmail_path), not Laravel’s
+        | bare “mail” transport which defaults to sendmail -bs and fails on Railway.
         */
         'mail' => [
-            'transport' => 'mail',
+            'transport' => 'sendmail',
+            'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -t -i'),
         ],
 
         'sendmail' => [
