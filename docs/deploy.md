@@ -71,7 +71,7 @@ Set these in the Railway variables UI for **both** services (raw editor is fine)
 | `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | From address on password-reset mail                                          |
 | `MAIL_SENDMAIL_PATH` | Optional for the sendmail mailer; default `/usr/sbin/sendmail -t -i`         |
 
-Password-reset delivery uses PHP `mail()`. [railpack.json](../railpack.json) installs `msmtp-mta` so `/usr/sbin/sendmail` exists in the image.
+Password-reset delivery uses PHP `mail()` (`MAIL_MAILER=mail`). [railpack.json](../railpack.json) installs `msmtp-mta` so `/usr/sbin/sendmail` exists in the image. Railway still needs a reachable outbound mail path for `mail()` to return true; without one the forgot-password form shows an error instead of a 500.
 
 Trust proxies are enabled in [bootstrap/app.php](../bootstrap/app.php) so HTTPS behind Railway works with `APP_URL`.
 
