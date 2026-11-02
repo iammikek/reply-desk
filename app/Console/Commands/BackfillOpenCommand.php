@@ -11,6 +11,7 @@ use App\Desk\Actions\MarkReplySent;
 use App\Desk\Actions\SaveDraft;
 use App\Desk\Backfill\FiledEmail;
 use App\Desk\Backfill\OpenTable;
+use App\Desk\Backfill\OpenTableRow;
 use App\Desk\Backfill\SentTableRow;
 use App\Desk\DeskException;
 use App\Desk\Notes\NoteStore;
@@ -27,83 +28,115 @@ class BackfillOpenCommand extends ReplyDeskCommand
     public function handle(OpenTable $openTable, LogInbound $logInbound, MarkReplySent $markReplySent, SaveDraft $saveDraft, NoteStore $notes): int
     {
         try {
-            $path = (string) $this->argument('path');
-            $markdown = file_get_contents($path);
-
-            if ($markdown === false) {
-                throw new DeskException('That Open table could not be read.');
-            }
-
-            $rows = $openTable->rows($markdown);
+            [$path, $markdown] = $this->markdownPath();
 
             if (! $this->option('write')) {
-                foreach ($openTable->preview($markdown, dirname($path)) as $line) {
-                    $this->line($line);
-                }
-
-                return 0;
+                return $this->previewOnly($openTable, $markdown, $path);
             }
 
-            if (config('reply-desk.store') !== 'hubspot' || (string) config('reply-desk.portal_id') === '') {
-                throw new DeskException('Backfill writes only when the store is HubSpot and a portal id is set.');
-            }
-
-            $notes->assertPortal();
+            $this->assertHubSpotWrite($notes);
             $existing = $notes->notes();
-
-            foreach ($rows as $row) {
-                try {
-                    $company = $notes->findCompany($row->company);
-                } catch (DeskException $exception) {
-                    if ($this->unmatched($exception)) {
-                        $this->line('Skipped: '.$exception->getMessage());
-
-                        continue;
-                    }
-
-                    throw $exception;
-                }
-
-                $client = $this->mail($path, $row->clientEmailPath, $row->company, 'client email');
-                $reply = $this->mail($path, $row->replyPath, $row->company, 'reply');
-
-                if ($this->alreadyOpen($existing, $company->id, $row->receipt)) {
-                    $this->fileOnto($existing, $company->id, $row->receipt, $client, $reply, $notes);
-                    $this->saveDraft($this->inboundId($existing, $company->id, $row->receipt), $reply, $saveDraft, $company->name);
-                    $this->line("Already open for {$company->name}");
-
-                    continue;
-                }
-
-                $note = $this->inboundNote($row->receipt, $row->receiptSource, $row->summary, $client, $reply);
-                $id = $logInbound(
-                    $row->company,
-                    $row->email,
-                    $row->receipt,
-                    $row->receiptSource,
-                    $row->summary,
-                    $client?->body ?? '',
-                    $reply?->body ?? '',
-                    subject: $client?->subject ?? '',
-                );
-                $existing[] = new StoredNote($id, $note, $company->id, $company->name, '', '', $row->email);
-                $this->line("Wrote {$id} for {$row->company}");
-                $this->saveDraft($id, $reply, $saveDraft, $company->name);
-            }
-
-            $sent = $openTable->sent($markdown);
-
-            foreach ($sent['skipped'] as $message) {
-                $this->line('Skipped: '.$message);
-            }
-
-            foreach ($sent['rows'] as $row) {
-                $this->writeSent($row, $path, $logInbound, $markReplySent, $notes, $existing);
-            }
+            $this->writeOpenRows($openTable->rows($markdown), $path, $logInbound, $saveDraft, $notes, $existing);
+            $this->writeSentRows($openTable->sent($markdown), $path, $logInbound, $markReplySent, $notes, $existing);
 
             return 0;
         } catch (DeskException $exception) {
             return $this->failure($exception);
+        }
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function markdownPath(): array
+    {
+        $path = (string) $this->argument('path');
+        $markdown = file_get_contents($path);
+
+        if ($markdown === false) {
+            throw new DeskException('That Open table could not be read.');
+        }
+
+        return [$path, $markdown];
+    }
+
+    private function previewOnly(OpenTable $openTable, string $markdown, string $path): int
+    {
+        foreach ($openTable->preview($markdown, dirname($path)) as $line) {
+            $this->line($line);
+        }
+
+        return 0;
+    }
+
+    private function assertHubSpotWrite(NoteStore $notes): void
+    {
+        if (config('reply-desk.store') !== 'hubspot' || (string) config('reply-desk.portal_id') === '') {
+            throw new DeskException('Backfill writes only when the store is HubSpot and a portal id is set.');
+        }
+
+        $notes->assertPortal();
+    }
+
+    /**
+     * @param  list<OpenTableRow>  $rows
+     * @param  list<StoredNote>  $existing
+     */
+    private function writeOpenRows(array $rows, string $path, LogInbound $logInbound, SaveDraft $saveDraft, NoteStore $notes, array &$existing): void
+    {
+        foreach ($rows as $row) {
+            try {
+                $company = $notes->findCompany($row->company);
+            } catch (DeskException $exception) {
+                if ($this->unmatched($exception)) {
+                    $this->line('Skipped: '.$exception->getMessage());
+
+                    continue;
+                }
+
+                throw $exception;
+            }
+
+            $client = $this->mail($path, $row->clientEmailPath, $row->company, 'client email');
+            $reply = $this->mail($path, $row->replyPath, $row->company, 'reply');
+
+            if ($this->alreadyOpen($existing, $company->id, $row->receipt)) {
+                $this->fileOnto($existing, $company->id, $row->receipt, $client, $reply, $notes);
+                $this->saveDraft($this->inboundId($existing, $company->id, $row->receipt), $reply, $saveDraft, $company->name);
+                $this->line("Already open for {$company->name}");
+
+                continue;
+            }
+
+            $note = $this->inboundNote($row->receipt, $row->receiptSource, $row->summary, $client, $reply);
+            $id = $logInbound(
+                $row->company,
+                $row->email,
+                $row->receipt,
+                $row->receiptSource,
+                $row->summary,
+                $client?->body ?? '',
+                $reply?->body ?? '',
+                subject: $client?->subject ?? '',
+            );
+            $existing[] = new StoredNote($id, $note, $company->id, $company->name, '', '', $row->email);
+            $this->line("Wrote {$id} for {$row->company}");
+            $this->saveDraft($id, $reply, $saveDraft, $company->name);
+        }
+    }
+
+    /**
+     * @param  array{rows: list<SentTableRow>, skipped: list<string>}  $sent
+     * @param  list<StoredNote>  $existing
+     */
+    private function writeSentRows(array $sent, string $path, LogInbound $logInbound, MarkReplySent $markReplySent, NoteStore $notes, array &$existing): void
+    {
+        foreach ($sent['skipped'] as $message) {
+            $this->line('Skipped: '.$message);
+        }
+
+        foreach ($sent['rows'] as $row) {
+            $this->writeSent($row, $path, $logInbound, $markReplySent, $notes, $existing);
         }
     }
 

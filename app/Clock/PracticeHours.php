@@ -29,6 +29,23 @@ final class PracticeHours
      */
     public static function fromConfig(array $config): self
     {
+        $timezone = self::timezoneFromConfig($config);
+        $interval = self::intervalFromConfig($config);
+        $hours = self::hoursFromConfig($config);
+        $ranges = self::rangesFromHours($hours);
+
+        if ($ranges === []) {
+            throw new PracticeHoursException('At least one open range is required.');
+        }
+
+        return new self($timezone, $interval, $ranges);
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     */
+    private static function timezoneFromConfig(array $config): string
+    {
         $timezone = is_string($config['timezone'] ?? null) ? $config['timezone'] : '';
 
         try {
@@ -37,18 +54,50 @@ final class PracticeHours
             throw new PracticeHoursException('That timezone is not known.');
         }
 
+        return $timezone;
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     */
+    private static function intervalFromConfig(array $config): int
+    {
         $interval = (int) ($config['interval_hours'] ?? 0);
 
         if ($interval < 1) {
             throw new PracticeHoursException('The reply interval must be at least one hour.');
         }
 
+        return $interval;
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    private static function hoursFromConfig(array $config): array
+    {
         $hours = $config['hours'] ?? null;
 
         if (! is_array($hours)) {
             throw new PracticeHoursException('Practice hours must list ranges for each day.');
         }
 
+        foreach (array_keys($hours) as $day) {
+            if (! in_array($day, self::DAYS, true)) {
+                throw new PracticeHoursException('That day is not known.');
+            }
+        }
+
+        return $hours;
+    }
+
+    /**
+     * @param  array<string, mixed>  $hours
+     * @return array<string, list<DayRange>>
+     */
+    private static function rangesFromHours(array $hours): array
+    {
         /** @var array<string, list<DayRange>> $ranges */
         $ranges = [];
         $any = false;
@@ -58,54 +107,59 @@ final class PracticeHours
                 throw new PracticeHoursException('Practice hours must list ranges for each day.');
             }
 
-            $dayRanges = $hours[$day];
-
-            if (! is_array($dayRanges)) {
-                throw new PracticeHoursException('Each day must be a list of open ranges.');
-            }
-
-            $parsed = [];
-
-            foreach ($dayRanges as $range) {
-                if (! is_array($range) || count($range) !== 2 || ! is_string($range[0] ?? null) || ! is_string($range[1] ?? null)) {
-                    throw new PracticeHoursException('Each range must be an open time and a close time.');
-                }
-
-                if (! self::validTime($range[0]) || ! self::validTime($range[1])) {
-                    throw new PracticeHoursException('Each open and close must be H:i.');
-                }
-
-                $dayRange = new DayRange($range[0], $range[1]);
-
-                if (! $dayRange->openBeforeClose()) {
-                    throw new PracticeHoursException('A range close must be after its open.');
-                }
-
-                foreach ($parsed as $existing) {
-                    if ($dayRange->overlaps($existing)) {
-                        throw new PracticeHoursException('Ranges on the same day must not overlap.');
-                    }
-                }
-
-                $parsed[] = $dayRange;
-                $any = true;
-            }
-
-            usort($parsed, fn (DayRange $left, DayRange $right): int => $left->open <=> $right->open);
+            $parsed = self::dayRanges($hours[$day]);
             $ranges[$day] = $parsed;
+            $any = $any || $parsed !== [];
         }
 
-        foreach (array_keys($hours) as $day) {
-            if (! in_array($day, self::DAYS, true)) {
-                throw new PracticeHoursException('That day is not known.');
+        return $any ? $ranges : [];
+    }
+
+    /**
+     * @return list<DayRange>
+     */
+    private static function dayRanges(mixed $dayRanges): array
+    {
+        if (! is_array($dayRanges)) {
+            throw new PracticeHoursException('Each day must be a list of open ranges.');
+        }
+
+        $parsed = [];
+
+        foreach ($dayRanges as $range) {
+            $dayRange = self::dayRange($range);
+
+            foreach ($parsed as $existing) {
+                if ($dayRange->overlaps($existing)) {
+                    throw new PracticeHoursException('Ranges on the same day must not overlap.');
+                }
             }
+
+            $parsed[] = $dayRange;
         }
 
-        if (! $any) {
-            throw new PracticeHoursException('At least one open range is required.');
+        usort($parsed, fn (DayRange $left, DayRange $right): int => $left->open <=> $right->open);
+
+        return $parsed;
+    }
+
+    private static function dayRange(mixed $range): DayRange
+    {
+        if (! is_array($range) || count($range) !== 2 || ! is_string($range[0] ?? null) || ! is_string($range[1] ?? null)) {
+            throw new PracticeHoursException('Each range must be an open time and a close time.');
         }
 
-        return new self($timezone, $interval, $ranges);
+        if (! self::validTime($range[0]) || ! self::validTime($range[1])) {
+            throw new PracticeHoursException('Each open and close must be H:i.');
+        }
+
+        $dayRange = new DayRange($range[0], $range[1]);
+
+        if (! $dayRange->openBeforeClose()) {
+            throw new PracticeHoursException('A range close must be after its open.');
+        }
+
+        return $dayRange;
     }
 
     public function timezone(): string

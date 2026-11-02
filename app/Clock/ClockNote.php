@@ -2,6 +2,7 @@
 
 namespace App\Clock;
 
+use DateInvalidTimeZoneException;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
@@ -320,7 +321,7 @@ final class ClockNote
 
         try {
             $zone = new DateTimeZone($matches[2]);
-        } catch (\Exception) {
+        } catch (DateInvalidTimeZoneException) {
             return null;
         }
 

@@ -60,7 +60,11 @@ final class ImapSmtpMailbox implements Mailbox
             if ($rawDate !== '') {
                 try {
                     $date = new DateTimeImmutable($rawDate);
-                } catch (Throwable) {
+                } catch (Throwable $exception) {
+                    Log::debug('Mailbox message date could not be parsed.', [
+                        'date' => $rawDate,
+                        'error' => $exception->getMessage(),
+                    ]);
                     $date = null;
                 }
             }
@@ -101,8 +105,12 @@ final class ImapSmtpMailbox implements Mailbox
             try {
                 $existing = $folder->messages()->getMessageByUid((int) $identity);
                 $existing?->delete(expunge: true);
-            } catch (Throwable) {
+            } catch (Throwable $exception) {
                 // Replace when possible; a missing draft is recreated.
+                Log::debug('Mailbox draft could not be removed before replace.', [
+                    'identity' => $identity,
+                    'error' => $exception->getMessage(),
+                ]);
             }
         }
 
@@ -125,8 +133,11 @@ final class ImapSmtpMailbox implements Mailbox
             $message = $folder->messages()->getMessageByUid((int) $identity);
             $message?->delete(expunge: true);
             $client->disconnect();
-        } catch (Throwable) {
-            //
+        } catch (Throwable $exception) {
+            Log::warning('Mailbox draft could not be deleted.', [
+                'identity' => $identity,
+                'error' => $exception->getMessage(),
+            ]);
         }
     }
 
