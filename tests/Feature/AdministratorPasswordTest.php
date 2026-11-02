@@ -101,3 +101,26 @@ it('sends a password reset link and accepts a new password', function (): void {
     expect($user->fresh()->mustChangePassword())->toBeFalse()
         ->and(password_verify('reset-password-1', $user->fresh()->password))->toBeTrue();
 });
+
+it('resolves the php mail mailer and still sends a reset notification', function (): void {
+    Notification::fake();
+
+    config([
+        'mail.default' => 'mail',
+        'mail.mailers.mail' => ['transport' => 'mail'],
+    ]);
+
+    expect(fn () => app('mail.manager')->mailer('mail'))->not->toThrow(Throwable::class)
+        ->and(config('mail.default'))->toBe('mail');
+
+    $user = User::factory()->create([
+        'email' => 'admin@example.com',
+    ]);
+
+    Livewire::test(RequestPasswordReset::class)
+        ->fillForm(['email' => 'admin@example.com'])
+        ->call('request')
+        ->assertNotified();
+
+    Notification::assertSentTo($user, ResetPasswordNotification::class);
+});
