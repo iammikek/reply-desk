@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\Pages\ChangePassword;
 use App\Filament\Auth\Pages\EditProfile;
+use App\Filament\Auth\Pages\RequestPasswordReset;
 use App\Http\Middleware\EnsurePasswordChanged;
 use Filament\Auth\Pages\Login;
 use Filament\Http\Middleware\Authenticate;
@@ -32,7 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('')
             ->login()
             ->profile(EditProfile::class)
-            ->passwordReset()
+            ->passwordReset(RequestPasswordReset::class)
             ->pages([
                 ChangePassword::class,
             ])

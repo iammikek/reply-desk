@@ -1,14 +1,18 @@
 <?php
 
 use App\Filament\Auth\Pages\ChangePassword;
+use App\Filament\Auth\Pages\RequestPasswordReset;
 use App\Models\User;
 use Filament\Auth\Notifications\ResetPassword as ResetPasswordNotification;
-use Filament\Auth\Pages\PasswordReset\RequestPasswordReset;
 use Filament\Auth\Pages\PasswordReset\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Livewire\Livewire;
+use Symfony\Component\Mailer\Exception\TransportException;
+use Symfony\Component\Mailer\SentMessage;
+use Symfony\Component\Mailer\Transport\AbstractTransport;
 
 uses(RefreshDatabase::class);
 
@@ -107,11 +111,15 @@ it('resolves the php mail mailer and still sends a reset notification', function
 
     config([
         'mail.default' => 'mail',
-        'mail.mailers.mail' => ['transport' => 'mail'],
+        'mail.mailers.mail' => [
+            'transport' => 'php',
+        ],
     ]);
 
     expect(fn () => app('mail.manager')->mailer('mail'))->not->toThrow(Throwable::class)
-        ->and(config('mail.default'))->toBe('mail');
+        ->and(config('mail.default'))->toBe('mail')
+        ->and(config('mail.mailers.mail.transport'))->toBe('php')
+        ->and((string) app('mail.manager')->mailer('mail')->getSymfonyTransport())->toBe('php');
 
     $user = User::factory()->create([
         'email' => 'admin@example.com',
@@ -123,4 +131,36 @@ it('resolves the php mail mailer and still sends a reset notification', function
         ->assertNotified();
 
     Notification::assertSentTo($user, ResetPasswordNotification::class);
+});
+
+it('shows a danger notice when php mail refuses the reset message', function (): void {
+    Mail::extend('broken', function () {
+        return new class extends AbstractTransport
+        {
+            protected function doSend(SentMessage $message): void
+            {
+                throw new TransportException('refused');
+            }
+
+            public function __toString(): string
+            {
+                return 'broken';
+            }
+        };
+    });
+
+    config([
+        'mail.default' => 'broken',
+        'mail.mailers.broken' => ['transport' => 'broken'],
+    ]);
+
+    User::factory()->create([
+        'email' => 'admin@example.com',
+    ]);
+
+    Livewire::test(RequestPasswordReset::class)
+        ->fillForm(['email' => 'admin@example.com'])
+        ->call('request')
+        ->assertNotified()
+        ->assertSuccessful();
 });
