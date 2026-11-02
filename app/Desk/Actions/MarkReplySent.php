@@ -6,6 +6,7 @@ use App\Clock\ClockNote;
 use App\Clock\ParsedInbound;
 use App\Clock\ParsedSent;
 use App\Clock\ReplyClock;
+use App\Desk\DeskActivityEntry;
 use App\Desk\DeskException;
 use App\Desk\LogDeskActivity;
 use App\Desk\Notes\NoteFile;
@@ -58,16 +59,16 @@ final readonly class MarkReplySent
 
         Draft::deleteForInbound($inboundId);
 
-        ($this->log)(
-            'reply.marked_sent',
-            'Reply marked sent.',
+        ($this->log)(new DeskActivityEntry(
+            action: 'reply.marked_sent',
+            summary: 'Reply marked sent.',
             inboundId: $inboundId,
             noteId: $id,
             company: $inbound->companyName,
             contact: $inbound->contactName,
             companyId: $inbound->companyId,
             contactId: $inbound->contactId,
-        );
+        ));
 
         return $id;
     }

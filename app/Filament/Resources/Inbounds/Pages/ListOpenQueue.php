@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Inbounds\Pages;
 
 use App\Clock\ReceiptSource;
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\DeskException;
 use App\Desk\InboundSummary;
@@ -54,12 +55,14 @@ class ListOpenQueue extends ListInboundPage
                         app(LogInbound::class)->record(
                             (string) $data['company_id'],
                             (string) $data['contact_id'],
-                            LondonTime::parse($data['receipt']),
-                            ReceiptSource::from((string) $data['receipt_source']),
-                            $summary,
-                            $body,
-                            NoteFile::fromForm($data['attachment'] ?? null, $data['attachment_name'] ?? null),
-                            $subject,
+                            new InboundLogInput(
+                                receipt: LondonTime::parse($data['receipt']),
+                                receiptSource: ReceiptSource::from((string) $data['receipt_source']),
+                                summary: $summary,
+                                clientEmail: $body,
+                                file: NoteFile::fromForm($data['attachment'] ?? null, $data['attachment_name'] ?? null),
+                                subject: $subject,
+                            ),
                         );
                     } catch (DeskException $exception) {
                         DeskNotify::halt($exception);

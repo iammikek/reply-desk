@@ -2,6 +2,7 @@
 
 namespace App\Desk\Actions;
 
+use App\Desk\DeskActivityEntry;
 use App\Desk\LogDeskActivity;
 use App\Desk\Mailbox\Mailbox;
 use App\Models\Draft;
@@ -24,13 +25,13 @@ final readonly class DiscardDraft
 
         Draft::deleteForInbound($inboundId);
 
-        ($this->log)(
-            'draft.discarded',
-            'Draft discarded.',
+        ($this->log)(new DeskActivityEntry(
+            action: 'draft.discarded',
+            summary: 'Draft discarded.',
             inboundId: $inboundId,
             context: [
                 'mailbox_draft_id' => $mailboxDraftId,
             ],
-        );
+        ));
     }
 }

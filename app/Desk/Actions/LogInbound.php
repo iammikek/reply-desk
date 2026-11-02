@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Desk\Actions;
 
 use App\Clock\ClockNote;
-use App\Clock\ReceiptSource;
+use App\Desk\DeskActivityEntry;
 use App\Desk\DeskException;
 use App\Desk\LogDeskActivity;
-use App\Desk\Notes\NoteFile;
 use App\Desk\Notes\NoteStore;
-use DateTimeImmutable;
 
 final readonly class LogInbound
 {
@@ -19,20 +17,10 @@ final readonly class LogInbound
         private LogDeskActivity $log,
     ) {}
 
-    /**
-     * @param  array<string, mixed>|null  $activityContext
-     */
     public function __invoke(
         string $company,
         string $email,
-        DateTimeImmutable $receipt,
-        ReceiptSource $receiptSource,
-        string $summary,
-        string $clientEmail = '',
-        string $reply = '',
-        ?NoteFile $file = null,
-        string $subject = '',
-        ?array $activityContext = null,
+        InboundLogInput $input,
     ): string {
         $this->notes->assertPortal();
         $companyParty = $this->notes->findCompany($company);
@@ -43,30 +31,14 @@ final readonly class LogInbound
             $contact->id,
             $companyParty->name,
             $contact->name !== '' ? $contact->name : $contact->email,
-            $receipt,
-            $receiptSource,
-            $summary,
-            $clientEmail,
-            $reply,
-            $file,
-            $subject,
-            $activityContext,
+            $input,
         );
     }
 
-    /**
-     * @param  array<string, mixed>|null  $activityContext
-     */
     public function record(
         string $companyId,
         string $contactId,
-        DateTimeImmutable $receipt,
-        ReceiptSource $receiptSource,
-        string $summary,
-        string $clientEmail = '',
-        ?NoteFile $file = null,
-        string $subject = '',
-        ?array $activityContext = null,
+        InboundLogInput $input,
     ): string {
         $this->notes->assertPortal();
 
@@ -85,13 +57,7 @@ final readonly class LogInbound
                     $contactId,
                     (string) $company['name'],
                     (string) (($contact['name'] !== '' ? $contact['name'] : $contact['email'])),
-                    $receipt,
-                    $receiptSource,
-                    $summary,
-                    $clientEmail,
-                    file: $file,
-                    subject: $subject,
-                    activityContext: $activityContext,
+                    $input,
                 );
             }
 
@@ -101,41 +67,35 @@ final readonly class LogInbound
         throw new DeskException('No company matched.');
     }
 
-    /**
-     * @param  array<string, mixed>|null  $activityContext
-     */
     private function write(
         string $companyId,
         string $contactId,
         string $companyName,
         string $contactName,
-        DateTimeImmutable $receipt,
-        ReceiptSource $receiptSource,
-        string $summary,
-        string $clientEmail = '',
-        string $reply = '',
-        ?NoteFile $file = null,
-        string $subject = '',
-        ?array $activityContext = null,
+        InboundLogInput $input,
     ): string {
         $id = $this->notes->writeNote(
-            ClockNote::withMail(ClockNote::inbound($receipt, $receiptSource, $summary, $subject), $clientEmail, $reply),
+            ClockNote::withMail(
+                ClockNote::inbound($input->receipt, $input->receiptSource, $input->summary, $input->subject),
+                $input->clientEmail,
+                $input->reply,
+            ),
             $companyId,
             $contactId,
-            $file,
+            $input->file,
         );
 
-        ($this->log)(
-            'inbound.logged',
-            'Inbound logged.',
+        ($this->log)(new DeskActivityEntry(
+            action: 'inbound.logged',
+            summary: 'Inbound logged.',
             inboundId: $id,
             noteId: $id,
             company: $companyName,
             contact: $contactName,
             companyId: $companyId,
             contactId: $contactId,
-            context: $activityContext,
-        );
+            context: $input->activityContext,
+        ));
 
         return $id;
     }

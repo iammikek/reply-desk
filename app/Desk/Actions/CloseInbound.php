@@ -4,6 +4,7 @@ namespace App\Desk\Actions;
 
 use App\Clock\ClockNote;
 use App\Clock\ReplyClock;
+use App\Desk\DeskActivityEntry;
 use App\Desk\LogDeskActivity;
 use App\Desk\Notes\NoteStore;
 use App\Models\Draft;
@@ -30,16 +31,16 @@ final readonly class CloseInbound
 
         Draft::deleteForInbound($inboundId);
 
-        ($this->log)(
-            'inbound.closed',
-            'Inbound closed without a reply.',
+        ($this->log)(new DeskActivityEntry(
+            action: 'inbound.closed',
+            summary: 'Inbound closed without a reply.',
             inboundId: $inboundId,
             noteId: $id,
             company: $inbound->companyName,
             contact: $inbound->contactName,
             companyId: $inbound->companyId,
             contactId: $inbound->contactId,
-        );
+        ));
 
         return $id;
     }

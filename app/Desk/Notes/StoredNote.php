@@ -29,4 +29,35 @@ final readonly class StoredNote
 
         return trim($company.' / '.$contact, ' /');
     }
+
+    /**
+     * @param  array<mixed>  $row
+     */
+    public static function tryFromRow(array $row): ?self
+    {
+        foreach (['id', 'body', 'companyId', 'companyName', 'contactId', 'contactName', 'contactEmail'] as $key) {
+            if (! is_string($row[$key] ?? null)) {
+                return null;
+            }
+        }
+
+        $attachmentName = $row['attachmentName'] ?? null;
+        $attachmentId = $row['attachmentId'] ?? null;
+
+        if (($attachmentName !== null && ! is_string($attachmentName)) || ($attachmentId !== null && ! is_string($attachmentId))) {
+            return null;
+        }
+
+        return new self(
+            $row['id'],
+            $row['body'],
+            $row['companyId'],
+            $row['companyName'],
+            $row['contactId'],
+            $row['contactName'],
+            $row['contactEmail'],
+            $attachmentName !== '' ? $attachmentName : null,
+            $attachmentId !== '' ? $attachmentId : null,
+        );
+    }
 }

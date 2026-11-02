@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Clock\ReceiptSource;
 use App\Clock\ReplyClock;
+use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
 use App\Desk\Actions\SaveDraft;
@@ -50,17 +51,21 @@ class DemoSeeder extends Seeder
         $overdue = app(LogInbound::class)(
             'Northwharf Bakery',
             'ada@northwharf.example',
-            $this->overdueReceipt($now),
-            ReceiptSource::MailClient,
-            'Which PHP to use',
+            new InboundLogInput(
+                $this->overdueReceipt($now),
+                ReceiptSource::MailClient,
+                'Which PHP to use',
+            ),
         );
 
         app(LogInbound::class)(
             'Harbour Cafe',
             'ned@harbour.example',
-            $now,
-            ReceiptSource::Logged,
-            'Menu for the weekend',
+            new InboundLogInput(
+                $now,
+                ReceiptSource::Logged,
+                'Menu for the weekend',
+            ),
         );
 
         app(SaveDraft::class)($overdue, 'PHP on the new server', 'Use 8.3 on the new box.');
@@ -69,10 +74,12 @@ class DemoSeeder extends Seeder
         $closed = app(LogInbound::class)(
             'Riverside Books',
             'jo@riverside.example',
-            $answered,
-            ReceiptSource::MailClient,
-            'Reprint of the spring catalogue',
-            "Can you reprint the spring catalogue for the shop?\n\nJo",
+            new InboundLogInput(
+                $answered,
+                ReceiptSource::MailClient,
+                'Reprint of the spring catalogue',
+                "Can you reprint the spring catalogue for the shop?\n\nJo",
+            ),
         );
         app(MarkReplySent::class)(
             $closed,

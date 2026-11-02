@@ -15,13 +15,20 @@ final class OpenTable
 
     private const string FOLLOW_UP_SUMMARY = 'Follow-up sent';
 
+    private MarkdownTable $markdown;
+
+    public function __construct(?MarkdownTable $markdown = null)
+    {
+        $this->markdown = $markdown ?? new MarkdownTable;
+    }
+
     /**
      * @return list<OpenTableRow>
      */
     public function rows(string $markdown): array
     {
-        $section = $this->section($markdown, 'Open');
-        $table = $this->table($section);
+        $section = $this->markdown->section($markdown, 'Open');
+        $table = $this->markdown->table($section);
 
         if ($table === []) {
             throw new DeskException('The Open section has no table.');
@@ -30,19 +37,19 @@ final class OpenTable
         $header = array_map(strtolower(...), array_shift($table));
         $columns = array_flip($header);
 
-        $this->requireColumns($columns, 'Open');
+        $this->markdown->requireColumns($columns, 'Open');
 
         $rows = [];
 
         foreach ($table as $cells) {
-            if ($this->sentAtCell($columns, $cells) !== '') {
+            if ($this->markdown->sentAtCell($columns, $cells) !== '') {
                 continue;
             }
 
             $rows[] = $this->row(
                 $cells[$columns['client']] ?? '',
                 $cells[$columns['inbound']] ?? '',
-                $this->cell($columns, $cells, 'clock start'),
+                $this->markdown->cell($columns, $cells, 'clock start'),
                 $this->mailCells($columns, $cells),
             );
         }
@@ -55,13 +62,13 @@ final class OpenTable
      */
     public function sent(string $markdown): array
     {
-        $section = $this->section($markdown, 'Sent', required: false);
+        $section = $this->markdown->section($markdown, 'Sent', required: false);
 
         if ($section === '') {
             return ['rows' => [], 'skipped' => []];
         }
 
-        $table = $this->table($section);
+        $table = $this->markdown->table($section);
 
         if ($table === []) {
             return ['rows' => [], 'skipped' => []];
@@ -70,13 +77,13 @@ final class OpenTable
         $header = array_map(strtolower(...), array_shift($table));
         $columns = array_flip($header);
 
-        $this->requireColumns($columns, 'Sent');
+        $this->markdown->requireColumns($columns, 'Sent');
 
         $rows = [];
         $skipped = [];
 
         foreach ($table as $cells) {
-            $sent = $this->sentAtCell($columns, $cells);
+            $sent = $this->markdown->sentAtCell($columns, $cells);
 
             if ($sent === '') {
                 continue;
@@ -86,7 +93,7 @@ final class OpenTable
                 $rows[] = $this->sentRow(
                     $cells[$columns['client']] ?? '',
                     $cells[$columns['inbound']] ?? '',
-                    $this->cell($columns, $cells, 'clock start'),
+                    $this->markdown->cell($columns, $cells, 'clock start'),
                     $sent,
                     $this->mailCells($columns, $cells),
                 );
@@ -179,126 +186,6 @@ final class OpenTable
         return $lines;
     }
 
-    private function section(string $markdown, string $heading, bool $required = true): string
-    {
-        $lines = preg_split("/\r\n|\n|\r/", $markdown) ?: [];
-        $capturing = false;
-        $section = [];
-
-        foreach ($lines as $line) {
-            if (preg_match('/^##\s+(.*)$/', $line, $matches) === 1) {
-                if ($capturing) {
-                    break;
-                }
-
-                $capturing = strcasecmp(trim($matches[1]), $heading) === 0;
-
-                continue;
-            }
-
-            if ($capturing) {
-                $section[] = $line;
-            }
-        }
-
-        if (! $capturing) {
-            if (! $required) {
-                return '';
-            }
-
-            throw new DeskException("No {$heading} section in that file.");
-        }
-
-        return implode("\n", $section);
-    }
-
-    /**
-     * @return list<list<string>>
-     */
-    private function table(string $section): array
-    {
-        $rows = [];
-        $started = false;
-
-        foreach (preg_split("/\r\n|\n|\r/", $section) ?: [] as $line) {
-            if (! str_starts_with(trim($line), '|')) {
-                if ($started) {
-                    break;
-                }
-
-                continue;
-            }
-
-            $cells = array_map(trim(...), explode('|', trim($line)));
-
-            if ($cells[0] === '') {
-                array_shift($cells);
-            }
-
-            if ($cells !== [] && $cells[array_key_last($cells)] === '') {
-                array_pop($cells);
-            }
-
-            if ($cells !== [] && preg_match('/^-+$/', $cells[0]) === 1) {
-                continue;
-            }
-
-            $started = true;
-            $rows[] = $cells;
-        }
-
-        return $rows;
-    }
-
-    /**
-     * @param  array<string, int>  $columns
-     */
-    private function requireColumns(array $columns, string $which): void
-    {
-        foreach (['client', 'inbound'] as $name) {
-            if (! array_key_exists($name, $columns)) {
-                throw new DeskException("The {$which} table needs a {$name} column.");
-            }
-        }
-
-        if (! array_key_exists('replied on', $columns) && ! array_key_exists('reply sent', $columns)) {
-            throw new DeskException("The {$which} table needs a replied on column.");
-        }
-
-        $split = (array_key_exists('inbound email', $columns) || array_key_exists('client email', $columns))
-            && (array_key_exists('reply to', $columns) || array_key_exists('reply', $columns));
-
-        if (! $split && ! array_key_exists('attachment', $columns)) {
-            throw new DeskException("The {$which} table needs an inbound email column and a reply to column.");
-        }
-    }
-
-    /**
-     * @param  array<string, int>  $columns
-     * @param  list<string>  $cells
-     */
-    private function cell(array $columns, array $cells, string $name): string
-    {
-        if (! array_key_exists($name, $columns)) {
-            return '';
-        }
-
-        return $cells[$columns[$name]] ?? '';
-    }
-
-    /**
-     * @param  array<string, int>  $columns
-     * @param  list<string>  $cells
-     */
-    private function sentAtCell(array $columns, array $cells): string
-    {
-        if (array_key_exists('replied on', $columns)) {
-            return trim($this->cell($columns, $cells, 'replied on'));
-        }
-
-        return trim($this->cell($columns, $cells, 'reply sent'));
-    }
-
     /**
      * @param  array<string, int>  $columns
      * @param  list<string>  $cells
@@ -306,20 +193,20 @@ final class OpenTable
      */
     private function mailCells(array $columns, array $cells): array
     {
-        $clientEmail = $this->cell($columns, $cells, 'inbound email');
+        $clientEmail = $this->markdown->cell($columns, $cells, 'inbound email');
 
         if ($clientEmail === '') {
-            $clientEmail = $this->cell($columns, $cells, 'client email');
+            $clientEmail = $this->markdown->cell($columns, $cells, 'client email');
         }
-        $replyTo = $this->cell($columns, $cells, 'reply to');
-        $replyEmail = $this->cell($columns, $cells, 'reply email');
-        $replySummary = $this->cell($columns, $cells, 'reply summary');
+        $replyTo = $this->markdown->cell($columns, $cells, 'reply to');
+        $replyEmail = $this->markdown->cell($columns, $cells, 'reply email');
+        $replySummary = $this->markdown->cell($columns, $cells, 'reply summary');
         $replySent = array_key_exists('replied on', $columns)
-            ? $this->cell($columns, $cells, 'replied on')
-            : $this->cell($columns, $cells, 'reply sent');
-        $reply = $this->cell($columns, $cells, 'reply');
-        $attachment = $this->cell($columns, $cells, 'attachment');
-        $client = $this->cell($columns, $cells, 'client');
+            ? $this->markdown->cell($columns, $cells, 'replied on')
+            : $this->markdown->cell($columns, $cells, 'reply sent');
+        $reply = $this->markdown->cell($columns, $cells, 'reply');
+        $attachment = $this->markdown->cell($columns, $cells, 'attachment');
+        $client = $this->markdown->cell($columns, $cells, 'client');
         $text = trim($client.' '.$clientEmail.' '.$replySent.' '.$replyEmail.' '.$replySummary.' '.$replyTo.' '.$reply.' '.$attachment);
         $legacy = trim($reply.' '.$attachment);
 

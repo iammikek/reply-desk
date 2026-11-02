@@ -2,6 +2,7 @@
 
 namespace App\Desk\Actions;
 
+use App\Desk\DeskActivityEntry;
 use App\Desk\LogDeskActivity;
 use App\Desk\Mailbox\Mailbox;
 use App\Models\Draft;
@@ -36,9 +37,9 @@ final readonly class SaveDraft
             $attributes,
         );
 
-        ($this->log)(
-            'draft.saved',
-            'Draft saved.',
+        ($this->log)(new DeskActivityEntry(
+            action: 'draft.saved',
+            summary: 'Draft saved.',
             inboundId: $inboundId,
             company: $inbound->companyName,
             contact: $inbound->contactName,
@@ -48,6 +49,6 @@ final readonly class SaveDraft
                 'mailbox' => $this->mailbox->configured(),
                 'mailbox_draft_id' => $attributes['mailbox_draft_id'] ?? null,
             ],
-        );
+        ));
     }
 }
