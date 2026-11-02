@@ -69,7 +69,7 @@ Set these in the Railway variables UI for **both** services (raw editor is fine)
 | `REPLY_DESK_MAILBOX_*` / `REPLY_DESK_IMAP_*` / `REPLY_DESK_SMTP_*` | Practice mailbox; omit to leave poll idle                                   |
 | `MAIL_MAILER` | Production: `resend`. Showable copy stays `log`. |
 | `RESEND_API_KEY` | Resend API key (both web and cron) |
-| `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | From address on a Resend-verified domain (e.g. `mike@automica.io`) |
+| `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | From address on the Resend-verified domain (live: `noreply@reply-desk.automica.io`) |
 | `MAIL_SENDMAIL_PATH` | Unused when `MAIL_MAILER=resend`; kept for local sendmail experiments |
 
 Password-reset mail goes through Resend. Verify the sending domain in the Resend dashboard (SPF/DKIM) before expecting inbox delivery. The forgot-password page still shows a danger notice if Resend refuses the message, instead of a bare 500.
