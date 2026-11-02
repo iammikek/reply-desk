@@ -67,11 +67,12 @@ Set these in the Railway variables UI for **both** services (raw editor is fine)
 | `HUBSPOT_PORTAL_ID` | Must match the token’s portal                                               |
 | `HUBSPOT_API_BASE` | `https://api.hubapi.com`                                                    |
 | `REPLY_DESK_MAILBOX_*` / `REPLY_DESK_IMAP_*` / `REPLY_DESK_SMTP_*` | Practice mailbox; omit to leave poll idle                                   |
-| `MAIL_MAILER` | Production: `mail` (PHP `mail()` via `PhpMailTransport`). Showable copy stays `log`. |
-| `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | From address on password-reset mail                                          |
-| `MAIL_SENDMAIL_PATH` | Optional for the sendmail mailer; default `/usr/sbin/sendmail -t -i`         |
+| `MAIL_MAILER` | Production: `resend`. Showable copy stays `log`. |
+| `RESEND_API_KEY` | Resend API key (both web and cron) |
+| `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | From address on a Resend-verified domain (e.g. `mike@automica.io`) |
+| `MAIL_SENDMAIL_PATH` | Unused when `MAIL_MAILER=resend`; kept for local sendmail experiments |
 
-Password-reset delivery uses PHP `mail()` (`MAIL_MAILER=mail`). [railpack.json](../railpack.json) installs `msmtp-mta` so `/usr/sbin/sendmail` exists in the image. Railway still needs a reachable outbound mail path for `mail()` to return true; without one the forgot-password form shows an error instead of a 500.
+Password-reset mail goes through Resend. Verify the sending domain in the Resend dashboard (SPF/DKIM) before expecting inbox delivery. The forgot-password page still shows a danger notice if Resend refuses the message, instead of a bare 500.
 
 Trust proxies are enabled in [bootstrap/app.php](../bootstrap/app.php) so HTTPS behind Railway works with `APP_URL`.
 
