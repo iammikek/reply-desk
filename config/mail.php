@@ -31,7 +31,7 @@ return [
     | when delivering an email. You may specify which one you're using for
     | your mailers below. You may also add additional mailers if needed.
     |
-    | Supported: "smtp", "sendmail", "mail", "mailgun", "ses", "ses-v2",
+    | Supported: "smtp", "sendmail", "mail", "php", "mailgun", "ses", "ses-v2",
     |            "postmark", "resend", "log", "array",
     |            "failover", "roundrobin"
     |
@@ -68,12 +68,15 @@ return [
         ],
 
         /*
-        | PHP mail() path: use sendmail -t -i (php.ini sendmail_path), not Laravel’s
-        | bare “mail” transport which defaults to sendmail -bs and fails on Railway.
+        | Built-in PHP mail(): App\Mail\Transport\PhpMailTransport. Needs a working
+        | sendmail binary on the host (msmtp-mta on Railway via railpack.json).
         */
         'mail' => [
-            'transport' => 'sendmail',
-            'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -t -i'),
+            'transport' => 'php',
+        ],
+
+        'php' => [
+            'transport' => 'php',
         ],
 
         'sendmail' => [

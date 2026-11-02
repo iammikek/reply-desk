@@ -67,9 +67,11 @@ Set these in the Railway variables UI for **both** services (raw editor is fine)
 | `HUBSPOT_PORTAL_ID` | Must match the token’s portal                                               |
 | `HUBSPOT_API_BASE` | `https://api.hubapi.com`                                                    |
 | `REPLY_DESK_MAILBOX_*` / `REPLY_DESK_IMAP_*` / `REPLY_DESK_SMTP_*` | Practice mailbox; omit to leave poll idle                                   |
-| `MAIL_MAILER` | Production: `mail` (PHP sendmail path / `/usr/sbin/sendmail`). Showable copy stays `log`. Container must expose a working sendmail binary (`ini_get('sendmail_path')`). |
+| `MAIL_MAILER` | Production: `mail` (PHP `mail()` via `PhpMailTransport`). Showable copy stays `log`. |
 | `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | From address on password-reset mail                                          |
-| `MAIL_SENDMAIL_PATH` | Optional; default `/usr/sbin/sendmail -t -i`                                 |
+| `MAIL_SENDMAIL_PATH` | Optional for the sendmail mailer; default `/usr/sbin/sendmail -t -i`         |
+
+Password-reset delivery uses PHP `mail()`. [railpack.json](../railpack.json) installs `msmtp-mta` so `/usr/sbin/sendmail` exists in the image.
 
 Trust proxies are enabled in [bootstrap/app.php](../bootstrap/app.php) so HTTPS behind Railway works with `APP_URL`.
 
