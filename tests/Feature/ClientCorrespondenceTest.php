@@ -4,6 +4,7 @@ use App\Clock\ReceiptSource;
 use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
+use App\Desk\Queue\ListClientCorrespondence;
 use App\Filament\Pages\Client;
 use App\Filament\Resources\Inbounds\Pages\ListHistory;
 use App\Filament\Resources\Inbounds\Pages\ListOpenQueue;
@@ -81,16 +82,267 @@ it('opens one timeline for that company and contact', function (): void {
         ->assertSuccessful()
         ->assertSee('Northwharf Bakery / Ada North')
         ->assertSee('ada@northwharf.example')
+        ->assertSee('Replies')
+        ->assertSee('Outreach')
         ->assertSeeInOrder([
-            '2026-10-20 10:00',
+            'Started 2026-10-20 10:00',
+            'PHP on the new server',
             'Which loaf for Friday.',
             '2026-10-20 16:04',
             'Use 8.3 on the new box.',
-            '2026-10-22 09:00',
+            'Started 2026-10-22 09:00',
             'Can you look today?',
         ])
         ->assertDontSee('This is for Bea.')
         ->assertDontSee('The tape jammed.');
+});
+
+it('keeps outreach threads in their own section', function (): void {
+    app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+            'Which loaf for Friday.',
+        )
+    );
+
+    app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-21 09:00'),
+            ReceiptSource::Logged,
+            'Outreach started',
+            '',
+        )
+    );
+
+    $found = app(ListClientCorrespondence::class)('10', '20');
+
+    expect($found)->not->toBeNull()
+        ->and($found->replies())->toHaveCount(1)
+        ->and($found->outreach())->toHaveCount(1)
+        ->and($found->outreach()[0]['summary'])->toBe('Outreach started')
+        ->and($found->outreach()[0]['started_at'])->toBe('2026-10-21 09:00');
+
+    $this->get(Client::urlFor('10', '20'))
+        ->assertSuccessful()
+        ->assertSeeInOrder([
+            'Replies',
+            'Which PHP to use',
+            'Outreach',
+            'Started 2026-10-21 09:00',
+            'Outreach started',
+        ]);
+});
+
+it('lists threads oldest first and keeps messages oldest at the top', function (): void {
+    $older = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-18 09:00'),
+            ReceiptSource::MailClient,
+            'Older thread',
+            'Started earlier.',
+            subject: 'Friday loaf order',
+        )
+    );
+
+    app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-20 09:00'),
+            ReceiptSource::MailClient,
+            'Newer open thread',
+            'Opened later.',
+            subject: 'Till tape jammed',
+        )
+    );
+
+    app(MarkReplySent::class)($older, london('2026-10-22 14:00'), 'Friday loaf order', 'Replied after the newer open.');
+
+    $found = app(ListClientCorrespondence::class)('10', '20');
+
+    expect($found->replies()[0]['subject'])->toBe('Friday loaf order')
+        ->and($found->replies()[0]['started_at'])->toBe('2026-10-18 09:00')
+        ->and($found->replies()[0]['latest_at'])->toBe('2026-10-22 14:00')
+        ->and($found->replies()[1]['subject'])->toBe('Till tape jammed')
+        ->and($found->replies()[1]['started_at'])->toBe('2026-10-20 09:00')
+        ->and($found->replies()[0]['events'][0]['side'])->toBe('client')
+        ->and($found->replies()[0]['events'][1]['side'])->toBe('owner');
+
+    $this->get(Client::urlFor('10', '20'))
+        ->assertSuccessful()
+        ->assertSeeInOrder([
+            'Started 2026-10-18 09:00',
+            'Friday loaf order',
+            'Started earlier.',
+            'Replied after the newer open.',
+            'Started 2026-10-20 09:00',
+            'Till tape jammed',
+            'Opened later.',
+        ]);
+});
+
+it('keeps a LinkedIn back-and-forth as one conversation', function (): void {
+    $first = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-11-02 12:39'),
+            ReceiptSource::LinkedIn,
+            'Asked for hourly or weekly rate',
+            'What kind of hourly/weekly rate are you?',
+        )
+    );
+
+    app(MarkReplySent::class)($first, london('2026-11-02 13:59'), 'LinkedIn', 'About £450–£500/day.');
+
+    $second = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-11-02 19:42'),
+            ReceiptSource::LinkedIn,
+            'Thanks.',
+            'Thanks Mike',
+        )
+    );
+
+    app(MarkReplySent::class)($second, london('2026-11-02 19:43'), 'LinkedIn', 'Quickest role filled.');
+
+    $third = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-11-02 19:52'),
+            ReceiptSource::LinkedIn,
+            'India rate £2k for 160 hours full stack.',
+            '£2k - 160 hours Full Stack',
+        )
+    );
+
+    app(MarkReplySent::class)($third, london('2026-11-02 19:54'), 'LinkedIn', 'Way cheaper than UK.');
+
+    $found = app(ListClientCorrespondence::class)('10', '20');
+
+    expect($found->replies())->toHaveCount(1)
+        ->and($found->replies()[0]['started_at'])->toBe('2026-11-02 12:39')
+        ->and($found->replies()[0]['latest_at'])->toBe('2026-11-02 19:54')
+        ->and($found->replies()[0]['subject'])->toBe('LinkedIn')
+        ->and($found->replies()[0]['status'])->toBe('replied')
+        ->and(collect($found->replies()[0]['events'])->pluck('side')->all())->toBe([
+            'client',
+            'owner',
+            'client',
+            'owner',
+            'client',
+            'owner',
+        ]);
+
+    $this->get(Client::urlFor('10', '20'))
+        ->assertSuccessful()
+        ->assertSeeInOrder([
+            'Started 2026-11-02 12:39',
+            'LinkedIn',
+            'What kind of hourly/weekly rate are you?',
+            'About £450–£500/day.',
+            'Thanks Mike',
+            '£2k - 160 hours Full Stack',
+            'Way cheaper than UK.',
+        ])
+        ->assertDontSee('Started 2026-11-02 19:42')
+        ->assertDontSee('Started 2026-11-02 19:52');
+});
+
+it('merges mail that shares a subject into one conversation', function (): void {
+    $first = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+            'Which loaf for Friday.',
+            subject: 'PHP on the new server',
+        )
+    );
+
+    app(MarkReplySent::class)($first, london('2026-10-20 16:04'), 'Re: PHP on the new server', 'Use 8.3.');
+
+    app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-21 09:00'),
+            ReceiptSource::MailClient,
+            'Form can come off',
+            'Can you look today?',
+            subject: 'Re: PHP on the new server',
+        )
+    );
+
+    $found = app(ListClientCorrespondence::class)('10', '20');
+
+    expect($found->replies())->toHaveCount(1)
+        ->and($found->replies()[0]['started_at'])->toBe('2026-10-20 10:00')
+        ->and($found->replies()[0]['subject'])->toBe('PHP on the new server')
+        ->and($found->replies()[0]['status'])->toBe('open');
+
+    $this->get(Client::urlFor('10', '20'))
+        ->assertSuccessful()
+        ->assertSee('PHP on the new server')
+        ->assertDontSee('Re: PHP on the new server');
+});
+
+it('starts a new thread when the subject changes', function (): void {
+    $outreach = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-22 09:50'),
+            ReceiptSource::Logged,
+            'Outreach started',
+            '',
+        )
+    );
+
+    app(MarkReplySent::class)(
+        $outreach,
+        london('2026-10-22 09:50'),
+        'technical-textiles.net still on PHP 5.5.9',
+        'Still on old PHP.',
+    );
+
+    $reply = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-23 07:58'),
+            ReceiptSource::MailClient,
+            'Asked for a site dump',
+            'Can you send a dump?',
+        )
+    );
+
+    app(MarkReplySent::class)(
+        $reply,
+        london('2026-10-23 07:58'),
+        'Access to technical textiles site',
+        'Here is the ask.',
+    );
+
+    $found = app(ListClientCorrespondence::class)('10', '20');
+
+    expect($found->outreach())->toHaveCount(1)
+        ->and($found->replies())->toHaveCount(1)
+        ->and($found->outreach()[0]['subject'])->toBe('technical-textiles.net still on PHP 5.5.9')
+        ->and($found->replies()[0]['subject'])->toBe('Access to technical textiles site');
 });
 
 it('does not open a client with no correspondence', function (): void {

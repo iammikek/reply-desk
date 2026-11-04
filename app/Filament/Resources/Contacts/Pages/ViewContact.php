@@ -23,9 +23,14 @@ class ViewContact extends ViewRecord
     protected static string $resource = ContactResource::class;
 
     /**
-     * @var list<array{at: string, kind: string, title: string, body: string, attachment: string, note_id: string}>
+     * @var list<array<string, mixed>>
      */
-    public array $events = [];
+    public array $replies = [];
+
+    /**
+     * @var list<array<string, mixed>>
+     */
+    public array $outreach = [];
 
     protected function resolveRecord(int|string $key): Model
     {
@@ -45,26 +50,31 @@ class ViewContact extends ViewRecord
 
         try {
             $found = app(ListClientCorrespondence::class)($companyId, $contactId);
-            $this->events = $found?->events ?? [];
+            $this->replies = $found?->replies() ?? [];
+            $this->outreach = $found?->outreach() ?? [];
         } catch (DeskException) {
             // Directory can render without a live note store (for example HubSpot token missing).
-            $this->events = [];
+            $this->replies = [];
+            $this->outreach = [];
         }
     }
 
     public function content(Schema $schema): Schema
     {
+        $empty = $this->replies === [] && $this->outreach === [];
+
         return $schema->components([
             EmbeddedSchema::make('infolist'),
             Section::make('Messages')->schema(
-                $this->events === []
+                $empty
                     ? [Text::make('No messages with this contact yet.')]
                     : [
-                        View::make('filament.thread-timeline')
+                        View::make('filament.client-threads')
                             ->viewData([
                                 'client' => '',
                                 'email' => '',
-                                'events' => $this->events,
+                                'replies' => $this->replies,
+                                'outreach' => $this->outreach,
                                 'showClient' => false,
                             ]),
                     ],

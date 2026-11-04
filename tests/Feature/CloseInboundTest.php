@@ -58,8 +58,10 @@ it('closes an inbound without a reply and removes it from the open queue', funct
     $correspondence = app(ListClientCorrespondence::class)('10', '20');
 
     expect($correspondence)->not->toBeNull()
-        ->and(collect($correspondence->events)->contains(
-            fn (array $event): bool => $event['kind'] === 'Closed' && $event['title'] === 'No reply',
+        ->and(collect($correspondence->threads)->contains(
+            fn (array $thread): bool => collect($thread['events'])->contains(
+                fn (array $event): bool => $event['side'] === 'system' && $event['body'] === 'Closed — no reply',
+            ),
         ))->toBeTrue();
 
     expect(fn () => app(CloseInbound::class)($id))->toThrow(DeskException::class, 'already closed');

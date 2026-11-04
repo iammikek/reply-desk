@@ -108,7 +108,7 @@ Tests are `./vendor/bin/sail composer test`, in the Tests section below.
 
 ## Run the desk
 
-Sail runs the desk in Docker, on PHP 8.4. The database is MySQL in that same Compose file. The container sets `REPLY_DESK_STORE=memory`, so the copy needs no HubSpot token and no real names. Docker has to be running. PHP does not need to be installed on the host.
+Sail runs the desk in Docker, on PHP 8.4. The database is MySQL in that same Compose file. Compose defaults `REPLY_DESK_STORE` to `memory` (no HubSpot token, no real names). Set `REPLY_DESK_STORE=hubspot` in `.env` to use the live portal in the panel, then recreate the app container. Docker has to be running. PHP does not need to be installed on the host.
 
 ```bash
 cp .env.example .env
