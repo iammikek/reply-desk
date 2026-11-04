@@ -208,17 +208,6 @@ final readonly class ListClientCorrespondence
         $latestPiece = $left['latest_moment'] >= $right['latest_moment'] ? $left : $right;
         $subjectKeeper = $this->preferSubject($left, $right);
 
-        $events = array_merge($left['events'], $right['events']);
-        usort($events, function (array $a, array $b): int {
-            $byTime = $a['moment'] <=> $b['moment'];
-
-            if ($byTime !== 0) {
-                return $byTime;
-            }
-
-            return $this->eventOrder($a['side']) <=> $this->eventOrder($b['side']);
-        });
-
         return [
             'id' => $earlierFirst['id'],
             'started_moment' => $earlierFirst['started_moment'],
@@ -230,8 +219,55 @@ final readonly class ListClientCorrespondence
             'status' => $this->mergedStatus($left['status'], $right['status']),
             'channel' => $earlierFirst['channel'],
             'conversation_key' => $subjectKeeper['conversation_key'],
-            'events' => $events,
+            'events' => $this->uniqueEvents(array_merge($left['events'], $right['events'])),
         ];
+    }
+
+    /**
+     * Drop duplicate notes for the same message (same side, minute, and body).
+     * HubSpot can hold two clock notes for one paste; the timeline shows one bubble.
+     *
+     * @param  list<array{moment: DateTimeImmutable, side: string, kind: string, body: string, attachment: string, note_id: string}>  $events
+     * @return list<array{moment: DateTimeImmutable, side: string, kind: string, body: string, attachment: string, note_id: string}>
+     */
+    private function uniqueEvents(array $events): array
+    {
+        usort($events, function (array $a, array $b): int {
+            $byTime = $a['moment'] <=> $b['moment'];
+
+            if ($byTime !== 0) {
+                return $byTime;
+            }
+
+            $bySide = $this->eventOrder($a['side']) <=> $this->eventOrder($b['side']);
+
+            if ($bySide !== 0) {
+                return $bySide;
+            }
+
+            return $a['note_id'] <=> $b['note_id'];
+        });
+
+        $unique = [];
+        $seen = [];
+
+        foreach ($events as $event) {
+            $key = $event['side'].'|'.$this->format($event['moment']).'|'.$this->normaliseBody($event['body']);
+
+            if (array_key_exists($key, $seen)) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $unique[] = $event;
+        }
+
+        return $unique;
+    }
+
+    private function normaliseBody(string $body): string
+    {
+        return preg_replace('/\s+/u', ' ', trim($body)) ?? '';
     }
 
     /**

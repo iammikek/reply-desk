@@ -274,6 +274,54 @@ it('keeps a LinkedIn back-and-forth as one conversation', function (): void {
         ->assertDontSee('Started 2026-11-02 19:52');
 });
 
+it('shows one bubble when the same message was logged twice', function (): void {
+    $first = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-26 16:17'),
+            ReceiptSource::MailClient,
+            'He will digest the note. The attached audit looks like another company.',
+            "Thanks, Mike. I'll digest this. In the meantime, I think you've attached an audit for another company.\nBest wishes,\nJames",
+            subject: 'Re: Technical-textiles.net',
+        )
+    );
+
+    app(MarkReplySent::class)(
+        $first,
+        london('2026-10-26 16:54'),
+        'Re: Technical-textiles.net',
+        "Hi James\nGood spot.\n\nIts been a long day!\n\nTry this:\n\nBest regards\nMike",
+    );
+
+    $duplicate = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-26 16:17'),
+            ReceiptSource::MailClient,
+            'He will digest the note. He thinks the attachment is an audit for another company.',
+            "Thanks, Mike. I'll digest this. In the meantime, I think you've attached an audit for another company.\nBest wishes,\nJames",
+            subject: 'Re: Technical-textiles.net',
+        )
+    );
+
+    app(MarkReplySent::class)(
+        $duplicate,
+        london('2026-10-26 16:54'),
+        'Re: Technical-textiles.net',
+        "Hi James\n\nGood spot.\n\nIts been a long day!\n\nTry this:\n\nBest regards\nMike",
+    );
+
+    $events = app(ListClientCorrespondence::class)('10', '20')->replies()[0]['events'];
+
+    expect($events)->toHaveCount(2)
+        ->and(collect($events)->where('side', 'client')->count())->toBe(1)
+        ->and(collect($events)->where('side', 'owner')->count())->toBe(1)
+        ->and($events[0]['body'])->toContain("I'll digest this")
+        ->and($events[1]['body'])->toContain('Good spot');
+});
+
 it('merges mail that shares a subject into one conversation', function (): void {
     $first = app(LogInbound::class)(
         'Northwharf Bakery',
