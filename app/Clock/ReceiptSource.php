@@ -9,6 +9,7 @@ enum ReceiptSource: string
     case MailClient = 'mail client';
     case Logged = 'logged';
     case WhatsApp = 'whatsapp';
+    case LinkedIn = 'linkedin';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum ReceiptSource: string
             self::MailClient => 'Mail client',
             self::Logged => 'Logged',
             self::WhatsApp => 'WhatsApp',
+            self::LinkedIn => 'LinkedIn',
         };
     }
 

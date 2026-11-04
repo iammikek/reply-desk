@@ -32,7 +32,7 @@ A client email starts a clock. This practice is due to reply 24 hours after the 
 
 The reply is sent from this screen, or sent from Mail and then marked sent here. A draft can sit on the row while the reply is written. The draft does not stop the clock. Sending, or marking sent, takes the row off the queue. What has already been answered stays on History, each message in the order it was sent.
 
-The person who answers the mail opens that queue and sees who is waiting, and whether the reply is late on the practice's own clock. They write on the row. The next time they open that client, the last answer is already on History.
+The person who answers the mail opens that queue and sees who is waiting, and whether the reply is late on the practice's own clock. They write on the row. Opening the client, the contact, or the inbound shows the full conversation as messenger-style threads, with subject links in the sidebar, so earlier answers sit with the current open message.
 
 The client receives the reply within the 24 hours this practice set. A practice that answers in its own time keeps the next instruction. A late reply is late on that clock, and it shows on the queue while there is still time to send it. The time saved is the time that used to go on working out who was waiting.
 
@@ -108,7 +108,7 @@ Tests are `./vendor/bin/sail composer test`, in the Tests section below.
 
 ## Run the desk
 
-Sail runs the desk in Docker, on PHP 8.4. The database is MySQL in that same Compose file. The container sets `REPLY_DESK_STORE=memory`, so the copy needs no HubSpot token and no real names. Docker has to be running. PHP does not need to be installed on the host.
+Sail runs the desk in Docker, on PHP 8.4. The database is MySQL in that same Compose file. Compose defaults `REPLY_DESK_STORE` to `memory` (no HubSpot token, no real names). Set `REPLY_DESK_STORE=hubspot` in `.env` to use the live portal in the panel, then recreate the app container. Docker has to be running. PHP does not need to be installed on the host.
 
 ```bash
 cp .env.example .env
@@ -133,8 +133,10 @@ docker run --rm \
 The site is the Filament panel. Sign-in is at `/login`.
 
 - `app/Filament/Resources/Companies/CompanyResource.php` lists companies. The page reads HubSpot or the local `companies` table, whichever store is plugged in. New company adds a company on that store. A company page lists the contacts on that company, and New contact adds one. There is no edit.
-- `app/Filament/Resources/Contacts/ContactResource.php` lists contacts from that same directory. New contact adds a name and an email on one company.
-- `app/Filament/Resources/Inbounds/InboundResource.php` is the open queue and History. The open list is the panel home. A count shows how many rows are open, and how many are overdue. Each row is one client email. There is no create and no edit for a message.
+- `app/Filament/Resources/Contacts/ContactResource.php` lists contacts from that same directory. New contact adds a name and an email on one company. The contact view shows Messages for that contact.
+- `app/Filament/Resources/Inbounds/InboundResource.php` is the open queue and History. The open list is the panel home. A count shows how many rows are open, and how many are overdue. Each row is one client email. There is no create and no edit for a message. The inbound view shows the same Messages correspondence as the contact.
+- `app/Filament/Pages/Client.php` is the client page opened from a client name on the queue or History
+- `app/Filament/ClientThreadNav.php` lists thread subjects in the sidebar under Threads
 - `app/Filament/Tables/OpenRepliesTable.php` is the open table, the overdue filter, and the row actions
 - `app/Filament/Widgets/OpenQueueOverview.php` counts open and overdue rows
 - `app/Providers/Filament/AdminPanelProvider.php` registers the panel
@@ -142,6 +144,8 @@ The site is the Filament panel. Sign-in is at `/login`.
 Log inbound, save a draft, discard a draft, send, and mark sent are actions on the queue.
 
 History lists closed threads, newest sent time first, ten at a time. A company with nothing open is on that page. Thread opens a timeline: the client email first, then each reply in the order it was sent.
+
+Messages on the client, contact, and inbound pages group related subjects into threads (client left, owner right). Replies and Outreach are separate; empty Outreach is hidden. The sidebar Threads list jumps to `#thread-{id}` on the page.
 
 ## Local record
 

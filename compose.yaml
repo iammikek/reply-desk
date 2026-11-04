@@ -24,7 +24,8 @@ services:
             DB_USERNAME: sail
             DB_PASSWORD: password
             DB_URL: ''
-            REPLY_DESK_STORE: memory
+            # Default memory keeps the showable demo. Set REPLY_DESK_STORE=hubspot in .env for the live portal.
+            REPLY_DESK_STORE: ${REPLY_DESK_STORE:-memory}
         volumes:
             - '.:/var/www/html'
         networks:

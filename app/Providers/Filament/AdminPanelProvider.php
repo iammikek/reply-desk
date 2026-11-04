@@ -46,6 +46,10 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::PAGE_START,
                 fn (): string => (string) view('filament.outside-hours'),
             )
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_NAV_END,
+                fn (): string => (string) view('filament.client-thread-nav'),
+            )
             ->brandName('Reply desk')
             ->colors([
                 'primary' => Color::Stone,

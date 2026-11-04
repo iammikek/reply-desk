@@ -38,7 +38,9 @@ Due time is calculated when the page or a tool runs. It is not stored.
 
 A filter shows rows whose reply is overdue. Marking a reply sent fills the sent time and the row leaves the queue. Closing without a reply also removes the row when the mail needs no response.
 
-The clock note opens as a timeline: earlier threads oldest first, then this inbound, the clock start when it is later than the receipt, and the reply due. A reply on that timeline, and on History, shows how long it took from the clock start. Only time inside the open ranges is counted, so time outside those ranges is not part of that figure. When the panel is opened outside those ranges, a banner names the next open. The reply window still lists those earlier threads above the form. The History page lists closed threads, newest sent time first, ten at a time, including a company that has nothing open. Opening a thread shows a timeline: the client email, then each reply in sent order. The client name on History and the open queue opens that client's page: every inbound and reply for that company and contact, in time order, including a row that is still open. Open queue and History are one Filament resource: `form()`, `table()`, and a relation manager for the replies that close the inbound. The open list is the panel home. Due time is calculated when that list loads. A row that is not overdue is not in the loaded set when the overdue filter is on.
+The clock note opens as a timeline: earlier threads oldest first, then this inbound, the clock start when it is later than the receipt, and the reply due. A reply on that timeline, and on History, shows how long it took from the clock start. Only time inside the open ranges is counted, so time outside those ranges is not part of that figure. When the panel is opened outside those ranges, a banner names the next open. The reply window still lists those earlier threads above the form. The History page lists closed threads, newest sent time first, ten at a time, including a company that has nothing open. Opening a History thread shows a timeline: the client email, then each reply in sent order.
+
+The client name on History and the open queue opens that client's page. The same Messages view is on the contact page and on the inbound view. It groups related subjects into messenger-style threads (client on the left, owner on the right), newest thread first, with each thread oldest event first under a Started header. Replies and Outreach are separate sections; an empty Outreach section is hidden. LinkedIn and WhatsApp share one chat per channel. Exact and related subjects (for example a Re: reply) merge into one thread. Outreach markers, summary-only lines, and short subjects are not shown as bubbles. The sidebar lists those thread subjects under Threads, each linking to `#thread-{id}` on the page. Opening an inbound shows that contact's full correspondence, including earlier closed threads and the current open message, not only notes that close that inbound. Open queue and History are one Filament resource. The open list is the panel home. Due time is calculated when that list loads. A row that is not overdue is not in the loaded set when the overdue filter is on.
 
 ```mermaid
 flowchart LR
@@ -171,6 +173,8 @@ The panel logs an inbound from that directory. Company is a searchable list of c
 
 The Artisan command and the MCP tool take the company name and the contact email from that same list. The company match is the full name, then a token match on every word of the name. The contact match is the lowercased email. Zero matches or more than one match stops, and no note is written. The contact must be on the chosen company when the panel records by id.
 
+`ListClientCorrespondence` builds the Messages threads for a company and contact. The client page (`/clients/{company}/{contact}`), the contact view, and the inbound view all load that list through `LoadsClientCorrespondence`. `ClientThreadNav` resolves the party from the current path (or Livewire referer) and renders the Threads links at the end of the sidebar.
+
 ## 8. Actions
 
 | Action | Does |
@@ -226,7 +230,7 @@ That markdown file is the archive. New receipts and sent replies go through the 
 
 ## 11. Showable copy
 
-A separate setup, with stand-in companies and `REPLY_DESK_STORE=memory`. No token, no real names, no portal id on screen. It is the Filament panel on the local tables: companies and their contacts, the open queue, a draft that leaves the row open, an overdue filter that does not load a row that is not due, History, and the thread for one contact. Send and mark sent write the outbound email and delete the draft. `php artisan db:seed` refuses to run when the store is HubSpot. That copy is the one that can be shown.
+A separate setup, with stand-in companies and `REPLY_DESK_STORE=memory`. No token, no real names, no portal id on screen. It is the Filament panel on the local tables: companies and their contacts, the open queue, a draft that leaves the row open, an overdue filter that does not load a row that is not due, History, the client Messages page with sidebar Threads, and the same correspondence on a contact or inbound view. Send and mark sent write the outbound email and delete the draft. `php artisan db:seed` refuses to run when the store is HubSpot. That copy is the one that can be shown.
 
 ## 12. Outside this desk
 
@@ -257,7 +261,7 @@ Action tests use the memory note store and the draft table:
 - A contact who is not on the chosen company is refused.
 - A portal id that does not match the env value stops before any write.
 
-Panel tests drive the Filament page through Livewire. The open row renders, the overdue filter hides a row that is not due, the note slide-over opens, and log inbound, save, discard, send, and mark sent behave as the action tests describe. Log inbound offers only the contacts on the chosen company. Send and mark sent can carry one file. Mark sent requires the pasted reply.
+Panel tests drive the Filament page through Livewire. The open row renders, the overdue filter hides a row that is not due, the note slide-over opens, and log inbound, save, discard, send, and mark sent behave as the action tests describe. Log inbound offers only the contacts on the chosen company. Send and mark sent can carry one file. Mark sent requires the pasted reply. Client correspondence tests cover subject merge, bubble sides, hidden empty Outreach, sidebar Threads links on the client and inbound pages, and an open inbound that still shows earlier company replies.
 
 The MCP test starts the stdio server, checks the tool list, and logs an inbound from the directory. The backfill test uses a saved copy of the communications file. It does not pass `--write`.
 

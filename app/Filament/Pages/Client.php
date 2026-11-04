@@ -23,7 +23,7 @@ class Client extends Page
     public string $contact = '';
 
     /**
-     * @var array{client: string, email: string, events: list<array{at: string, kind: string, title: string, body: string, attachment: string, note_id: string}>}|null
+     * @var array{client: string, email: string, replies: list<array<string, mixed>>, outreach: list<array<string, mixed>>}|null
      */
     public ?array $correspondence = null;
 
@@ -41,8 +41,11 @@ class Client extends Page
         $this->correspondence = [
             'client' => $found->client,
             'email' => $found->email,
-            'events' => $found->events,
+            'replies' => $found->replies(),
+            'outreach' => $found->outreach(),
         ];
+
+        $this->dispatch('refresh-sidebar');
     }
 
     public function getTitle(): string
@@ -68,11 +71,12 @@ class Client extends Page
     public function content(Schema $schema): Schema
     {
         return $schema->components([
-            View::make('filament.thread-timeline')
+            View::make('filament.client-threads')
                 ->viewData([
                     'client' => $this->correspondence['client'] ?? '',
                     'email' => $this->correspondence['email'] ?? '',
-                    'events' => $this->correspondence['events'] ?? [],
+                    'replies' => $this->correspondence['replies'] ?? [],
+                    'outreach' => $this->correspondence['outreach'] ?? [],
                     'showClient' => false,
                 ]),
         ]);

@@ -30,7 +30,9 @@ it('shows messages on the contact page', function (): void {
         ->assertSuccessful()
         ->assertSee('Ada North')
         ->assertSee('Messages')
-        ->assertSee('Client email')
+        ->assertSee('Replies')
+        ->assertSee('Started 2026-10-22 10:00')
+        ->assertSee('Which PHP to use')
         ->assertSee('Can you look today?');
 });
 
