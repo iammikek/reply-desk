@@ -9,7 +9,7 @@
         : ($thread['summary'] ?? '');
 @endphp
 
-<article class="client-thread">
+<article class="client-thread" id="thread-{{ $thread['id'] }}">
     <header class="client-thread__meta">
         <p class="client-thread__started">Started {{ $thread['started_at'] }}</p>
         @if ($heading !== '')
@@ -22,27 +22,33 @@
         @foreach ($thread['events'] ?? [] as $event)
             @php
                 $side = $event['side'] ?? 'system';
+                $hasBody = ($event['body'] ?? '') !== '';
+                $hasAttachment = ($event['attachment'] ?? '') !== '' && ($event['note_id'] ?? '') !== '';
             @endphp
-            <li class="client-thread__row client-thread__row--{{ $side }}">
-                @if ($side === 'system')
-                    <p class="client-thread__system">
-                        <time>{{ $event['at'] }}</time>
-                        <span>{{ $event['body'] ?? '' }}</span>
-                    </p>
-                @else
-                    <div class="client-thread__bubble client-thread__bubble--{{ $side }}">
-                        <time>{{ $event['at'] }}</time>
-                        @if (($event['body'] ?? '') !== '')
-                            <div class="client-thread__body">{{ $event['body'] }}</div>
-                        @endif
-                        @if (($event['attachment'] ?? '') !== '' && ($event['note_id'] ?? '') !== '')
-                            <p class="client-thread__attachment">
-                                <a href="{{ route('reply-desk.notes.attachment', ['note' => $event['note_id']]) }}">{{ $event['attachment'] }}</a>
-                            </p>
-                        @endif
-                    </div>
-                @endif
-            </li>
+            @if ($side === 'system' || $hasBody || $hasAttachment)
+                <li class="client-thread__row client-thread__row--{{ $side }}">
+                    @if ($side === 'system')
+                        <p class="client-thread__system">
+                            <time>{{ $event['at'] }}</time>
+                            @if ($hasBody)
+                                <span>{{ $event['body'] }}</span>
+                            @endif
+                        </p>
+                    @else
+                        <div class="client-thread__bubble client-thread__bubble--{{ $side }}">
+                            <time>{{ $event['at'] }}</time>
+                            @if ($hasBody)
+                                <div class="client-thread__body">{{ $event['body'] }}</div>
+                            @endif
+                            @if ($hasAttachment)
+                                <p class="client-thread__attachment">
+                                    <a href="{{ route('reply-desk.notes.attachment', ['note' => $event['note_id']]) }}">{{ $event['attachment'] }}</a>
+                                </p>
+                            @endif
+                        </div>
+                    @endif
+                </li>
+            @endif
         @endforeach
     </ol>
 </article>

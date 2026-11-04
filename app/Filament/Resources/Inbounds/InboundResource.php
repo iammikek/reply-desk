@@ -7,7 +7,6 @@ use App\Desk\Notes\StoredNote;
 use App\Filament\Resources\Inbounds\Pages\ListHistory;
 use App\Filament\Resources\Inbounds\Pages\ListOpenQueue;
 use App\Filament\Resources\Inbounds\Pages\ViewInbound;
-use App\Filament\Resources\Inbounds\RelationManagers\RepliesRelationManager;
 use App\Filament\Tables\OpenRepliesTable;
 use App\Models\Email;
 use BackedEnum;
@@ -86,13 +85,6 @@ class InboundResource extends Resource
     public static function table(Table $table): Table
     {
         return OpenRepliesTable::configure($table);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            RepliesRelationManager::class,
-        ];
     }
 
     public static function getPages(): array

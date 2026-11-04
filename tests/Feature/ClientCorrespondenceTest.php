@@ -5,11 +5,13 @@ use App\Desk\Actions\InboundLogInput;
 use App\Desk\Actions\LogInbound;
 use App\Desk\Actions\MarkReplySent;
 use App\Desk\Queue\ListClientCorrespondence;
+use App\Filament\ClientThreadNav;
 use App\Filament\Pages\Client;
 use App\Filament\Resources\Inbounds\Pages\ListHistory;
 use App\Filament\Resources\Inbounds\Pages\ListOpenQueue;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -78,19 +80,31 @@ it('opens one timeline for that company and contact', function (): void {
     Livewire::test(ListOpenQueue::class)
         ->assertSee($url, false);
 
+    $found = app(ListClientCorrespondence::class)('10', '20');
+    $firstThreadId = $found->replies()[0]['id'];
+    $secondThreadId = $found->replies()[1]['id'];
+
     $this->get($url)
         ->assertSuccessful()
         ->assertSee('Northwharf Bakery / Ada North')
         ->assertSee('ada@northwharf.example')
         ->assertSee('Replies')
-        ->assertSee('Outreach')
+        ->assertDontSee('Outreach')
+        ->assertSee('Threads')
+        ->assertSee('href="'.$url.'#thread-'.$firstThreadId.'"', false)
+        ->assertSee('href="'.$url.'#thread-'.$secondThreadId.'"', false)
+        ->assertSee('id="thread-'.$firstThreadId.'"', false)
         ->assertSeeInOrder([
+            'Threads',
+            'PHP on the new server',
+            'The form can come off',
             'Started 2026-10-20 10:00',
             'PHP on the new server',
             'Which loaf for Friday.',
             '2026-10-20 16:04',
             'Use 8.3 on the new box.',
             'Started 2026-10-22 09:00',
+            'The form can come off',
             'Can you look today?',
         ])
         ->assertDontSee('This is for Bea.')
@@ -135,8 +149,8 @@ it('keeps outreach threads in their own section', function (): void {
             'Which PHP to use',
             'Outreach',
             'Started 2026-10-21 09:00',
-            'Outreach started',
-        ]);
+        ])
+        ->assertDontSee('>Outreach started</');
 });
 
 it('lists threads oldest first and keeps messages oldest at the top', function (): void {
@@ -300,7 +314,7 @@ it('merges mail that shares a subject into one conversation', function (): void 
         ->assertDontSee('Re: PHP on the new server');
 });
 
-it('starts a new thread when the subject changes', function (): void {
+it('keeps one mail thread when outreach and replies share a conversation', function (): void {
     $outreach = app(LogInbound::class)(
         'Northwharf Bakery',
         'ada@northwharf.example',
@@ -317,6 +331,24 @@ it('starts a new thread when the subject changes', function (): void {
         london('2026-10-22 09:50'),
         'technical-textiles.net still on PHP 5.5.9',
         'Still on old PHP.',
+    );
+
+    $followUp = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-23 16:00'),
+            ReceiptSource::Logged,
+            'Follow-up sent',
+            '',
+        )
+    );
+
+    app(MarkReplySent::class)(
+        $followUp,
+        london('2026-10-23 16:00'),
+        'Looks like I’ve got enough to boot the app but db looks like it’s from 2024 if the sql/intdrupal/ directory is anything to go by.',
+        '',
     );
 
     $reply = app(LogInbound::class)(
@@ -339,10 +371,88 @@ it('starts a new thread when the subject changes', function (): void {
 
     $found = app(ListClientCorrespondence::class)('10', '20');
 
-    expect($found->outreach())->toHaveCount(1)
-        ->and($found->replies())->toHaveCount(1)
-        ->and($found->outreach()[0]['subject'])->toBe('technical-textiles.net still on PHP 5.5.9')
-        ->and($found->replies()[0]['subject'])->toBe('Access to technical textiles site');
+    $bodies = collect($found->replies()[0]['events'])->pluck('body')->all();
+
+    expect($found->replies())->toHaveCount(1)
+        ->and($found->outreach())->toHaveCount(0)
+        ->and($found->replies()[0]['subject'])->toBe('Access to technical textiles site')
+        ->and($found->replies()[0]['started_at'])->toBe('2026-10-22 09:50')
+        ->and($bodies)->toContain('Still on old PHP.')
+        ->and($bodies)->toContain('Can you send a dump?')
+        ->and($bodies)->toContain(
+            'Looks like I’ve got enough to boot the app but db looks like it’s from 2024 if the sql/intdrupal/ directory is anything to go by.',
+        )
+        ->and($bodies)->not->toContain('Outreach started')
+        ->and($bodies)->not->toContain('Asked for a site dump')
+        ->and($bodies)->not->toContain('technical-textiles.net still on PHP 5.5.9');
+});
+
+it('starts a new thread when the subject is clearly different', function (): void {
+    app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Loaf question',
+            'Which loaf?',
+            subject: 'Friday loaf order',
+        )
+    );
+
+    app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-21 10:00'),
+            ReceiptSource::MailClient,
+            'Till question',
+            'Till stuck.',
+            subject: 'Till tape jammed',
+        )
+    );
+
+    $found = app(ListClientCorrespondence::class)('10', '20');
+
+    expect($found->replies())->toHaveCount(2)
+        ->and($found->replies()[0]['subject'])->toBe('Friday loaf order')
+        ->and($found->replies()[1]['subject'])->toBe('Till tape jammed');
+});
+
+it('keeps thread nav available after a sidebar refresh on the client page', function (): void {
+    $first = app(LogInbound::class)(
+        'Northwharf Bakery',
+        'ada@northwharf.example',
+        new InboundLogInput(
+            london('2026-10-20 10:00'),
+            ReceiptSource::MailClient,
+            'Which PHP to use',
+            'Which loaf for Friday.',
+            subject: 'PHP on the new server',
+        )
+    );
+
+    app(MarkReplySent::class)($first, london('2026-10-20 16:04'), 'PHP on the new server', 'Use 8.3.');
+
+    $url = Client::urlFor('10', '20');
+    $threadId = app(ListClientCorrespondence::class)('10', '20')->replies()[0]['id'];
+
+    expect(ClientThreadNav::partyFromPath('/clients/10/20'))
+        ->toBe(['10', '20', 'client', null]);
+
+    // Sidebar Livewire refresh posts to Livewire, not the client route.
+    app()->instance(
+        'request',
+        Request::create('/livewire/update', 'POST', server: [
+            'HTTP_REFERER' => url($url),
+        ]),
+    );
+
+    $items = ClientThreadNav::items();
+
+    expect($items)->not->toBeEmpty()
+        ->and($items[0]['label'])->toBe('PHP on the new server')
+        ->and($items[0]['url'])->toEndWith('#thread-'.$threadId);
 });
 
 it('does not open a client with no correspondence', function (): void {

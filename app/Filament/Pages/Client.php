@@ -44,6 +44,8 @@ class Client extends Page
             'replies' => $found->replies(),
             'outreach' => $found->outreach(),
         ];
+
+        $this->dispatch('refresh-sidebar');
     }
 
     public function getTitle(): string

@@ -11,27 +11,27 @@
         @endif
     @endif
 
-    <section class="client-threads__section">
-        <h2>Replies</h2>
-        @if ($replies === [])
-            <p class="client-threads__empty">No reply threads with this contact yet.</p>
-        @else
+    @if ($replies !== [])
+        <section class="client-threads__section">
+            <h2>Replies</h2>
             @foreach ($replies as $thread)
                 @include('filament.partials.client-thread', ['thread' => $thread])
             @endforeach
-        @endif
-    </section>
+        </section>
+    @endif
 
-    <section class="client-threads__section">
-        <h2>Outreach</h2>
-        @if ($outreach === [])
-            <p class="client-threads__empty">No outreach threads with this contact yet.</p>
-        @else
+    @if ($outreach !== [])
+        <section class="client-threads__section">
+            <h2>Outreach</h2>
             @foreach ($outreach as $thread)
                 @include('filament.partials.client-thread', ['thread' => $thread])
             @endforeach
-        @endif
-    </section>
+        </section>
+    @endif
+
+    @if ($replies === [] && $outreach === [])
+        <p class="client-threads__empty">No messages with this contact yet.</p>
+    @endif
 </div>
 
 <style>
@@ -69,6 +69,7 @@
     .client-thread {
         margin: 0 0 1.75rem;
         padding: 0;
+        scroll-margin-top: 5rem;
     }
 
     .client-thread:last-child {
