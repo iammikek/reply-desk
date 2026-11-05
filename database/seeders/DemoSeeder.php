@@ -48,13 +48,34 @@ class DemoSeeder extends Seeder
             'email' => 'jo@riverside.example',
         ]);
 
+        $flourAsked = $this->answeredReceipt($now)->modify('-2 days');
+        $flour = app(LogInbound::class)(
+            'Northwharf Bakery',
+            'ada@northwharf.example',
+            new InboundLogInput(
+                $flourAsked,
+                ReceiptSource::MailClient,
+                'Stoneground flour delivery slipped a day.',
+                "Hi Mike,\n\nOur mill says the stoneground wholemeal will arrive a day late. Can we still cover the wholesale trays with what we have in the store, or should I add a second bag of strong white?\n\nThanks,\nAda",
+                subject: 'Stoneground flour delivery',
+            ),
+        );
+        app(MarkReplySent::class)(
+            $flour,
+            $flourAsked->modify('+3 hours'),
+            'Re: Stoneground flour delivery',
+            "Hi Ada,\n\nUse the strong white for the batch loaves and keep the stoneground for the counter tin. That should cover the trays without a second bag.\n\nMike",
+        );
+
         $overdue = app(LogInbound::class)(
             'Northwharf Bakery',
             'ada@northwharf.example',
             new InboundLogInput(
                 $this->overdueReceipt($now),
                 ReceiptSource::MailClient,
-                'Which PHP to use',
+                'Cafe wholesale needs twenty extra wholemeal loaves.',
+                "Hi Mike,\n\nThe cafe order is up again. Can we add twenty wholemeal tin loaves to the usual wholesale tray, and keep the seeded batch as it is?\n\nAda",
+                subject: 'Wholesale tray for the cafe',
             ),
         );
 
@@ -64,11 +85,17 @@ class DemoSeeder extends Seeder
             new InboundLogInput(
                 $now,
                 ReceiptSource::Logged,
-                'Menu for the weekend',
+                'Weekend brunch board needs a short rewrite.',
+                "Mike — the weekend brunch board still lists last month's specials. Can you send a short rewrite for Saturday and Sunday before we print the chalk cards?\n\nNed",
+                subject: 'Weekend brunch board',
             ),
         );
 
-        app(SaveDraft::class)($overdue, 'PHP on the new server', 'Use 8.3 on the new box.');
+        app(SaveDraft::class)(
+            $overdue,
+            'Re: Wholesale tray for the cafe',
+            "Hi Ada,\n\nYes — twenty wholemeal tins on the wholesale tray. Seeded batch stays as planned. I will confirm quantities with the night bake.\n\nMike",
+        );
 
         $answered = $this->answeredReceipt($now);
         $closed = app(LogInbound::class)(
@@ -77,15 +104,16 @@ class DemoSeeder extends Seeder
             new InboundLogInput(
                 $answered,
                 ReceiptSource::MailClient,
-                'Reprint of the spring catalogue',
-                "Can you reprint the spring catalogue for the shop?\n\nJo",
+                'Shop needs a reprint of the spring catalogue.',
+                "Hi Mike,\n\nCan you reprint the spring catalogue for the shop floor? We are down to the last dozen and Saturday's signing will finish them.\n\nJo",
+                subject: 'Spring catalogue reprint',
             ),
         );
         app(MarkReplySent::class)(
             $closed,
             $answered->modify('+2 hours +30 minutes'),
-            'Spring catalogue',
-            'Yes. The reprint can go next week.',
+            'Re: Spring catalogue reprint',
+            "Hi Jo,\n\nYes. The reprint can go next week — I will send a proof tomorrow and book the run once you are happy with the cover price line.\n\nMike",
         );
     }
 

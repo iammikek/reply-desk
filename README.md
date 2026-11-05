@@ -102,7 +102,7 @@ The desk can send a reply. Mark sent records a reply that already went from Mail
 
 A draft does not stop the clock.
 
-Seed the desk with `./vendor/bin/sail artisan db:seed` while `REPLY_DESK_STORE` is `memory`. The command refuses to run when the store is HubSpot. The seed loads three stand-in companies: one overdue row, one open row, a draft on the overdue row, and one closed thread.
+Seed the desk with `./vendor/bin/sail artisan db:seed` while `REPLY_DESK_STORE` is `memory`. The command refuses to run when the store is HubSpot. The seed loads three stand-in companies with copy that fits each trade: a bakery overdue row with a draft, a cafe open row, a closed bakery thread, and a closed bookshop thread.
 
 Tests are `./vendor/bin/sail composer test`, in the Tests section below.
 

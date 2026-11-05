@@ -16,11 +16,13 @@ final class ClosedThreadInfolist
     public static function forRecord(array $record): array
     {
         return [
-            View::make('filament.thread-timeline')
+            View::make('filament.client-threads')
                 ->viewData([
                     'client' => (string) ($record['client'] ?? ''),
                     'email' => (string) ($record['contact_email'] ?? ''),
-                    'events' => self::events($record),
+                    'replies' => [self::thread($record)],
+                    'outreach' => [],
+                    'showClient' => true,
                 ])
                 ->columnSpanFull(),
         ];
@@ -28,18 +30,61 @@ final class ClosedThreadInfolist
 
     /**
      * @param  array<string, mixed>  $record
-     * @return list<array{at: string, kind: string, title: string, body: string, attachment: string, note_id: string}>
+     * @return array{id: string, started_at: string, subject: string, summary: string, status: string, events: list<array{at: string, side: string, kind: string, body: string, attachment: string, note_id: string}>}
      */
-    private static function events(array $record): array
+    private static function thread(array $record): array
     {
-        $events = [[
-            'at' => (string) ($record['inbound'] ?? ''),
-            'kind' => 'Client email',
-            'title' => (string) ($record['summary'] ?? ''),
-            'body' => (string) ($record['client_email'] ?? ''),
-            'attachment' => (string) ($record['attachment'] ?? ''),
-            'note_id' => (string) ($record['id'] ?? ''),
-        ]];
+        $closedWithoutReply = ($record['closed_without_reply'] ?? false) === true;
+
+        return [
+            'id' => (string) ($record['id'] ?? ''),
+            'started_at' => (string) ($record['inbound'] ?? ''),
+            'subject' => self::subject($record),
+            'summary' => (string) ($record['summary'] ?? ''),
+            'status' => $closedWithoutReply ? 'closed' : 'replied',
+            'events' => self::events($record, $closedWithoutReply),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     */
+    private static function subject(array $record): string
+    {
+        foreach ($record['replies'] ?? [] as $reply) {
+            if (! is_array($reply)) {
+                continue;
+            }
+
+            $subject = trim((string) ($reply['subject'] ?? ''));
+
+            if ($subject !== '') {
+                return $subject;
+            }
+        }
+
+        return trim((string) ($record['summary'] ?? ''));
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     * @return list<array{at: string, side: string, kind: string, body: string, attachment: string, note_id: string}>
+     */
+    private static function events(array $record, bool $closedWithoutReply): array
+    {
+        $events = [];
+        $clientBody = (string) ($record['client_email'] ?? '');
+
+        if ($clientBody !== '') {
+            $events[] = [
+                'at' => (string) ($record['inbound'] ?? ''),
+                'side' => 'client',
+                'kind' => 'Client email',
+                'body' => $clientBody,
+                'attachment' => (string) ($record['attachment'] ?? ''),
+                'note_id' => (string) ($record['id'] ?? ''),
+            ];
+        }
 
         foreach ($record['replies'] ?? [] as $reply) {
             if (! is_array($reply)) {
@@ -49,21 +94,33 @@ final class ClosedThreadInfolist
             $sent = (string) ($reply['sent'] ?? '');
             $events[] = [
                 'at' => $sent,
+                'side' => 'owner',
                 'kind' => 'Reply',
-                'title' => (string) ($reply['subject'] ?? ''),
-                'detail' => ReplyInfolist::repliedIn((string) ($record['inbound'] ?? ''), $sent),
                 'body' => (string) ($reply['body'] ?? ''),
                 'attachment' => (string) ($reply['attachment'] ?? ''),
                 'note_id' => (string) ($reply['note_id'] ?? ''),
             ];
+
+            $repliedIn = ReplyInfolist::repliedIn((string) ($record['inbound'] ?? ''), $sent);
+
+            if ($repliedIn !== '') {
+                $events[] = [
+                    'at' => $sent,
+                    'side' => 'system',
+                    'kind' => 'Elapsed',
+                    'body' => $repliedIn,
+                    'attachment' => '',
+                    'note_id' => '',
+                ];
+            }
         }
 
-        if (($record['closed_without_reply'] ?? false) === true) {
+        if ($closedWithoutReply) {
             $events[] = [
                 'at' => (string) ($record['closed_at'] ?? $record['sent'] ?? ''),
+                'side' => 'system',
                 'kind' => 'Closed',
-                'title' => 'No reply',
-                'body' => '',
+                'body' => 'Closed — no reply',
                 'attachment' => '',
                 'note_id' => '',
             ];

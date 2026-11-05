@@ -64,15 +64,16 @@ it('lists a closed thread when that company has nothing open', function (): void
         ->assertDontSee('Still waiting')
         ->mountAction(TestAction::make('view')->table($closed))
         ->assertSeeInOrder([
+            'Started 2026-10-20 10:00',
+            'PHP on the new server',
             '2026-10-20 10:00',
-            'Client email',
-            'Which PHP to use',
             'Which loaf for Friday.',
             '2026-10-20 16:04',
-            'Reply',
-            'PHP on the new server',
             'Use 8.3 on the new box.',
-        ]);
+            'Replied in 6 hours 4 minutes',
+        ])
+        ->assertMountedActionModalSee('client-thread__bubble--client', false)
+        ->assertMountedActionModalSee('client-thread__bubble--owner', false);
 });
 
 it('orders closed threads by the latest sent time', function (): void {
@@ -177,31 +178,42 @@ it('shows a pasted client email and reply on the thread', function (): void {
     expect($thread->clientEmail)->toBe($client)
         ->and($thread->replies[0]['body'])->toBe($reply);
 
-    $html = view('filament.thread-timeline', [
+    $html = view('filament.client-threads', [
         'client' => $thread->client,
         'email' => $thread->contactEmail,
-        'events' => [
-            [
-                'at' => '2026-10-20 10:00',
-                'kind' => 'Client email',
-                'title' => 'The loaf',
-                'body' => $thread->clientEmail,
-                'attachment' => '',
-                'note_id' => '',
+        'replies' => [[
+            'id' => $thread->id,
+            'started_at' => '2026-10-20 10:00',
+            'subject' => 'The loaf',
+            'summary' => '',
+            'status' => 'replied',
+            'events' => [
+                [
+                    'at' => '2026-10-20 10:00',
+                    'side' => 'client',
+                    'kind' => 'Client email',
+                    'body' => $thread->clientEmail,
+                    'attachment' => '',
+                    'note_id' => '',
+                ],
+                [
+                    'at' => '2026-10-20 16:04',
+                    'side' => 'owner',
+                    'kind' => 'Reply',
+                    'body' => $thread->replies[0]['body'],
+                    'attachment' => '',
+                    'note_id' => '',
+                ],
             ],
-            [
-                'at' => '2026-10-20 16:04',
-                'kind' => 'Reply',
-                'title' => 'The loaf',
-                'body' => $thread->replies[0]['body'],
-                'attachment' => '',
-                'note_id' => '',
-            ],
-        ],
+        ]],
+        'outreach' => [],
+        'showClient' => true,
     ])->render();
 
     expect($html)->toContain($client)
         ->and($html)->toContain($reply)
+        ->and($html)->toContain('client-thread__bubble--client')
+        ->and($html)->toContain('client-thread__bubble--owner')
         ->and($html)->toContain('white-space: pre-wrap')
         ->and($html)->not->toContain('<br');
 
@@ -210,6 +222,7 @@ it('shows a pasted client email and reply on the thread', function (): void {
         ->assertMountedActionModalSee($client)
         ->assertMountedActionModalSee($reply)
         ->assertMountedActionModalSee('Replied in 6 hours 4 minutes')
+        ->assertMountedActionModalSee('client-thread__bubble--client', false)
         ->assertMountedActionModalSee('white-space: pre-wrap');
 });
 
@@ -252,11 +265,11 @@ it('shows an attachment on the inbound note and the reply', function (): void {
 
     Livewire::test(ListHistory::class)
         ->mountAction(TestAction::make('view')->table($closed))
-        ->assertMountedActionModalSee('Client email')
         ->assertMountedActionModalSee('Which loaf for Friday.')
         ->assertMountedActionModalSee('brief.txt')
         ->assertMountedActionModalSee('Use 8.3 on the new box.')
         ->assertMountedActionModalSee('answer.txt')
+        ->assertMountedActionModalSee('client-thread__bubble--client', false)
         ->assertMountedActionModalSee('/notes/'.$closed.'/attachment')
         ->assertMountedActionModalSee('/notes/'.$sent.'/attachment');
 
